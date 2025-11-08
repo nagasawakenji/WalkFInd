@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="nagasawakenji.WalkFind.infra.MyBatis.mapper.VoteMapper">
+
+    <resultMap id="VoteResultMap" type="nagasawakenji.WalkFind.domain.model.Vote">
+        <id property="id" column="id"/>
+        <result property="photoId" column="photo_id"/>
+        <result property="userId" column="user_id"/>
+        <result property="votedAt" column="voted_at"/>
+    </resultMap>
+
+    <insert id="insert">
+        INSERT INTO votes (photo_id, user_id)
+        VALUES (#{photoId}, #{userId})
+    </insert>
+
+    <select id="findByPhotoAndUser" resultMap="VoteResultMap">
+        SELECT id
+        FROM votes
+        WHERE photo_id = #{photoId} AND user_id = #{userId}
+    </select>
+
+    <select id="countVotesByPhoto" resultType="java.lang.Integer">
+        SELECT COUNT(id)
+        FROM votes
+        WHERE photo_id = #{photoId}
+    </select>
+
+</mapper>

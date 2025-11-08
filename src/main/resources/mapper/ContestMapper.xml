@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="nagasawakenji.WalkFind.infra.MyBatis.mapper.ContestMapper">
+
+    <resultMap id="ContestResultMap" type="nagasawakenji.WalkFind.domain.model.Contest">
+        <id property="id" column="id"/>
+        <result property="startDate" column="start_date"/>
+        <result property="endDate" column="end_date"/>
+    </resultMap>
+
+    <select id="findAllActiveContests" resultMap="ContestResultMap">
+        SELECT id, name, theme, start_date, end_date, status, created_at, updated_at
+        FROM contests
+        WHERE status IN ('UPCOMING', 'IN_PROGRESS')
+        ORDER BY start_date ASC
+    </select>
+
+    <select id="findById" resultMap="ContestResultMap">
+        SELECT *
+        FROM contests
+        WHERE id = #{contestId}
+    </select>
+
+    <select id="findContestStatus" resultMap="ContestResultMap">
+        SELECT status, start_date, end_date
+        FROM contests
+        WHERE id = #{contestId}
+    </select>
+
+    <insert id="insert" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO contests (name, theme, start_date, end_date, status)
+        VALUES (#{name}, #{theme}, #{startDate}, #{endDate}, #{status})
+    </insert>
+
+</mapper>
