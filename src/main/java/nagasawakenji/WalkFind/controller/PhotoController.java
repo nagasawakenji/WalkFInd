@@ -1,6 +1,5 @@
 package nagasawakenji.WalkFind.controller;
 
-import nagasawakenji.WalkFind.domain.dto.PhotoSubmissionRequest;
 import nagasawakenji.WalkFind.domain.dto.SubmitPhotoRequest;
 import nagasawakenji.WalkFind.domain.dto.SubmitPhotoResult;
 import nagasawakenji.WalkFind.domain.statusenum.SubmitPhotoStatus;
