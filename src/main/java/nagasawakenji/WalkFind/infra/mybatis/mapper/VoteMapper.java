@@ -9,7 +9,7 @@ import java.util.Optional;
 public interface VoteMapper {
 
     // 投票レコードを登録
-    void insert(Vote vote);
+    int insert(Vote vote);
 
     // 指定投稿に対してユーザーが既に投票済みかを確認
     Optional<Vote> findByPhotoAndUser(@Param("photoId") Long photoId, @Param("userId") String userId);

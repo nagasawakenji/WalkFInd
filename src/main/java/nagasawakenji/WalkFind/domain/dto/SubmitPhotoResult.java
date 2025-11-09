@@ -9,7 +9,7 @@ import java.time.OffsetDateTime;
 @Value
 @Builder
 public class SubmitPhotoResult {
-    Long photoId;
-    SubmitPhotoStatus status;
-    String message;
+    private final Long photoId;
+    private final SubmitPhotoStatus status;
+    private final String message;
 }
