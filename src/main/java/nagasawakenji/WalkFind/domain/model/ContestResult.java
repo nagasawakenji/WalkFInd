@@ -1,6 +1,7 @@
 package nagasawakenji.WalkFind.domain.model;
 
 import lombok.Data;
+import java.time.OffsetDateTime;
 
 @Data
 public class ContestResult {
