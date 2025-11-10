@@ -1,6 +1,7 @@
 package nagasawakenji.WalkFind.infra.mybatis.mapper;
 
 import nagasawakenji.WalkFind.domain.model.Contest;
+import nagasawakenji.WalkFind.domain.statusenum.ContestStatus;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 
@@ -21,4 +22,10 @@ public interface ContestMapper {
 
     // 新しいコンテストを作成（管理者機能）
     int insert(Contest contest);
+
+    // 集計を実行するコンテストを取得する
+    List<Contest> findContestsNeedingCalculation();
+
+    // コンテストのstatusを変更する
+    int updateContestStatus(Long contestId, ContestStatus status);
 }

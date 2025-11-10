@@ -12,7 +12,7 @@ public class Contest {
     private String theme;
     private OffsetDateTime startDate;
     private OffsetDateTime endDate;
-    private ContestStatus status; //
+    private ContestStatus status;
     private OffsetDateTime createdAt;
     private OffsetDateTime updatedAt;
 }

@@ -24,4 +24,7 @@ public interface PhotoMapper {
 
     // 投票があった際、total_votesをインクリメント（+1）する
     int incrementTotalVotes(Long photoId);
+
+    // 指定コンテストの投稿写真を取得
+    List<UserPhoto> findAllSubmissionsForCalculation(@Param("contestId") Long contestId);
 }

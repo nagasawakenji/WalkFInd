@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="nagasawakenji.WalkFind.infra.MyBatis.mapper.ContestResultMapper">
+
+    <resultMap id="ContestResultMap" type="nagasawakenji.WalkFind.domain.model.ContestResult">
+        <id property="id" column="id"/>
+        <id property="contestId" column="contest_id"/>
+        <id property="photoId" column="photo_id"/>
+        <id property="finalRank" column="final_rank"/>
+        <id property="finalScore" column="final_score"/>
+        <id property="isWinner" column="is_winner"/>
+        <id property="calculatedAt" column="calculated_at"/>
+    </resultMap>
+
+    <!-- ★ 結果集計機能：集計済みのレコードを一括で登録する ★ -->
+    <insert id="insertAll">
+        INSERT INTO contest_results (contest_id, photo_id, final_rank, final_score, is_winner)
+        VALUES
+        <foreach collection="list" item="item" separator=",">
+            (#{item.contestId}, #{item.photoId}, #{item.finalRank}, #{item.finalScore}, #{item.isWinner})
+        </foreach>
+        ON CONFLICT (contest_id, photo_id) DO NOTHING
+    </insert>
+
+    <!-- 写真取得機能 : コンテストidから写真を一括取得する -->
+    <select id="findByContestId" resultMap="ContestResultMap">
+        SELECT *
+        FROM contest_results
+        WHERE contest_id = #{contestId}
+        ORDER BY final_rank
+    </select>
+
+    <!-- 写真取得機能 : photoIdから写真を一括取得する -->
+    <select id="findByPhotoId" resultMap="ContestResultMap">
+        SELECT *
+        FROM contest_results
+        WHERE photo_id = #{photoId}
+        ORDER BY final_rank
+    </select>
+
+    <!-- 写真削除機能 : contestIdから写真を一括削除する -->
+    <select id="deleteByContestId">
+        DELETE FROM contest_results
+        WHERE contest_id = #{contestId}
+    </select>
+
+
+
+</mapper>

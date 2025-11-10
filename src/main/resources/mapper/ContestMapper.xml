@@ -32,4 +32,21 @@
         VALUES (#{name}, #{theme}, #{startDate}, #{endDate}, #{status})
     </insert>
 
+    <!-- 集計が必要なコンテストを取得する (findContestsNeedingCalculation) -->
+    <select id="findContestsNeedingCalculation" resultMap="ContestResultMap">
+        SELECT id, name, theme, start_date, end_date, status, created_at, updated_at
+        FROM contests
+        WHERE end_date <![CDATA[ < ]]> CURRENT_TIMESTAMP
+        AND status = 'IN_PROGRESS'
+        ORDER BY end_date ASC
+    </select>
+
+    <!-- コンテストのステータスを更新する (updateContestStatus) -->
+    <update id="updateContestStatus">
+        UPDATE contests
+        SET status = #{newStatus, typeHandler=org.apache.ibatis.type.EnumTypeHandler},
+        updated_at = CURRENT_TIMESTAMP
+        WHERE id = #{contestId}
+    </update>
+
 </mapper>
