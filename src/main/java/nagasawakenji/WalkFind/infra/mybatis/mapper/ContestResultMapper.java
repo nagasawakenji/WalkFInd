@@ -1,5 +1,6 @@
 package nagasawakenji.WalkFind.infra.mybatis.mapper;
 
+import nagasawakenji.WalkFind.domain.dto.ContestResultResponse;
 import nagasawakenji.WalkFind.domain.model.ContestResult;
 import org.apache.ibatis.annotations.Mapper;
 
@@ -18,4 +19,6 @@ public interface ContestResultMapper {
 
     Optional<ContestResult> findByPhotoId(Long photoId);
     int deleteByContestId(Long contestId);
+
+    List<ContestResultResponse> findDetailedResultsByContestId(Long contestId);
 }
