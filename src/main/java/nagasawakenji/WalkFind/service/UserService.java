@@ -2,12 +2,14 @@ package nagasawakenji.WalkFind.service;
 
 import nagasawakenji.WalkFind.domain.model.User;
 import nagasawakenji.WalkFind.domain.dto.UserProfileResponse;
+import nagasawakenji.WalkFind.domain.model.UserProfile;
 import nagasawakenji.WalkFind.domain.statusenum.UserRole;
 import nagasawakenji.WalkFind.infra.mybatis.mapper.UserMapper;
 import nagasawakenji.WalkFind.exception.UserStatusException;
 import nagasawakenji.WalkFind.exception.DatabaseOperationException; // ★ 追加
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import nagasawakenji.WalkFind.infra.mybatis.mapper.UserProfileMapper;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -22,6 +24,7 @@ import java.time.OffsetDateTime;
 public class UserService {
 
     private final UserMapper userMapper;
+    private final UserProfileMapper userProfileMapper;
 
     // ユーザー情報の取得、新規登録を行う
     @Transactional
@@ -40,12 +43,16 @@ public class UserService {
                     newUser.setUserId(cognitoId);
                     newUser.setEmail(email);
                     newUser.setUserName(username);
-                    newUser.setRole(UserRole.USER); // 暫定的に文字列のまま
+                    newUser.setRole(UserRole.USER);
                     newUser.setActive(true);
 
+                    UserProfile newProfile = new UserProfile();
+                    newProfile.setUserId(cognitoId);
+
                     try {
-                        int inserted = userMapper.insert(newUser);
-                        if (inserted == 0) {
+                        int insertedUser = userMapper.insert(newUser);
+                        int insertedProfile = userProfileMapper.insert(newProfile);
+                        if (insertedUser == 0 || insertedProfile == 0) {
                             // 更新行数0の場合はDB操作失敗とみなす
                             throw new DatabaseOperationException("User insertion failed. Rows affected: 0");
                         }
