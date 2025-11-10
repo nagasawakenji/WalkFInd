@@ -4,12 +4,30 @@
 
     <resultMap id="ContestResultMap" type="nagasawakenji.WalkFind.domain.model.ContestResult">
         <id property="id" column="id"/>
-        <id property="contestId" column="contest_id"/>
-        <id property="photoId" column="photo_id"/>
-        <id property="finalRank" column="final_rank"/>
-        <id property="finalScore" column="final_score"/>
-        <id property="isWinner" column="is_winner"/>
-        <id property="calculatedAt" column="calculated_at"/>
+        <result property="contestId" column="contest_id"/>
+        <result property="photoId" column="photo_id"/>
+        <result property="finalRank" column="final_rank"/>
+        <result property="finalScore" column="final_score"/>
+        <result property="isWinner" column="is_winner"/>
+        <result property="calculatedAt" column="calculated_at"/>
+    </resultMap>
+
+    <!-- ContestResultResponse.java に対応する結果マップ -->
+    <resultMap id="ContestResultResponseResultMap" type="nagasawakenji.WalkFind.domain.dto.ContestResultResponse">
+        <!-- R: contest_results, P: user_photos, U: users -->
+        <result property="photoId" column="photo_id"/>
+        <result property="contestId" column="contest_id"/>
+        <result property="finalRank" column="final_rank"/>
+        <result property="finalScore" column="final_score"/>
+        <result property="isWinner" column="is_winner"/>
+
+        <!-- user_photos から取得する情報 -->
+        <result property="title" column="title"/>
+        <result property="photoUrl" column="photo_url"/>
+        <result property="submissionDate" column="submission_date"/>
+
+        <!-- users から取得する情報 -->
+        <result property="username" column="username"/>
     </resultMap>
 
     <!-- ★ 結果集計機能：集計済みのレコードを一括で登録する ★ -->
@@ -42,6 +60,27 @@
     <select id="deleteByContestId">
         DELETE FROM contest_results
         WHERE contest_id = #{contestId}
+    </select>
+
+    <!-- ★ 結果表示用クエリ: findDetailedResultsByContestId ★ -->
+    <select id="findDetailedResultsByContestId" resultMap="ContestResultResponseResultMap">
+        SELECT
+        R.photo_id,
+        R.contest_id,
+        R.final_rank,
+        R.final_score,
+        R.is_winner,
+        P.title,
+        P.photo_url,
+        P.submission_date,
+        U.username
+        FROM contest_results R
+        -- 写真情報と投稿日時を取得
+        JOIN user_photos P ON R.photo_id = P.id
+        -- 投稿者名を取得
+        JOIN users U ON P.user_id = U.id
+        WHERE R.contest_id = #{contestId}
+        ORDER BY R.final_rank ASC, R.final_score DESC
     </select>
 
 
