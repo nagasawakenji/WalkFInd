@@ -21,6 +21,13 @@
         <result property="submissionDate" column="submissionDate"/>
     </resultMap>
 
+    <resultMap id="UserPhotoResultMapForCalculation" type="nagasawakenji.WalkFind.domain.model.UserPhoto">
+        <!-- 集計処理に必要なフィールドのみ定義 -->
+        <id property="id" column="id"/>
+        <result property="totalVotes" column="total_votes"/>
+        <result property="submissionDate" column="submission_date"/>
+    </resultMap>
+
     <insert id="insert" useGeneratedKeys="true" keyProperty="id">
         INSERT INTO user_photos
         (contest_id, user_id, photo_url, title, description, is_approved)
@@ -59,5 +66,18 @@
         SET total_votes = total_votes + 1, updated_at = CURRENT_TIMESTAMP
         WHERE id = #{photoId}
     </update>
+
+    <!-- ★ 集計対象の投稿リストを取得 (total_votesが多い順、submission_dateが古い順) ★ -->
+    <!-- ResultCalculationService.javaで使用 -->
+    <select id="findAllSubmissionsForCalculation" resultMap="UserPhotoResultMapForCalculation">
+        SELECT
+        id,
+        total_votes,
+        submission_date
+        FROM user_photos
+        WHERE contest_id = #{contestId}
+        ORDER BY total_votes DESC, submission_date ASC
+    </select>
+
 
 </mapper>
