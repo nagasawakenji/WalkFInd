@@ -28,4 +28,7 @@ public interface ContestMapper {
 
     // コンテストのstatusを変更する
     int updateContestStatus(Long contestId, ContestStatus status);
+
+    // 名前からコンテストの存在確認を行う
+    boolean isExistContestByName(String name);
 }

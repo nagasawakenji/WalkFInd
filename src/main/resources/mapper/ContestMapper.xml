@@ -49,4 +49,13 @@
         WHERE id = #{contestId}
     </update>
 
+    <!-- コンテストの存在判定を名前から実行する -->
+    <select id="isExistContestByName" resultType="boolean">
+        SELECT EXISTS(
+        SELECT 1
+        FROM contests
+        WHERE name = #{name}
+        )
+    </select>
+
 </mapper>
