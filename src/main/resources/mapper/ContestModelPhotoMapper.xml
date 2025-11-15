@@ -1,0 +1,57 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="nagasawakenji.walkfind.infra.mybatis.mapper.ContestModelPhotoMapper">
+
+    <!-- Result Mapping -->
+    <resultMap id="ContestModelPhotoMap" type="nagasawakenji.walkfind.domain.model.ContestModelPhoto">
+        <id property="id" column="id"/>
+        <result property="contestId" column="contest_id"/>
+        <result property="photoUrl" column="photo_url"/>
+        <result property="title" column="title"/>
+        <result property="description" column="description"/>
+        <result property="createdAt" column="created_at"/>
+    </resultMap>
+
+
+    <!-- INSERT -->
+    <insert id="insert" parameterType="nagasawakenji.walkfind.domain.model.ContestModelPhoto" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO contest_model_photos
+        (contest_id, photo_url, title, description)
+        VALUES
+        (#{contestId}, #{photoUrl}, #{title}, #{description})
+    </insert>
+
+
+    <!-- SELECT: by contestId -->
+    <select id="findByContestId" resultMap="ContestModelPhotoMap">
+        SELECT *
+        FROM contest_model_photos
+        WHERE contest_id = #{contestId}
+        ORDER BY created_at ASC
+    </select>
+
+
+    <!-- SELECT: by id -->
+    <select id="findById" resultMap="ContestModelPhotoMap">
+        SELECT *
+        FROM contest_model_photos
+        WHERE id = #{id}
+    </select>
+
+
+    <!-- DELETE: by id -->
+    <delete id="deleteById">
+        DELETE FROM contest_model_photos
+        WHERE id = #{id}
+    </delete>
+
+
+    <!-- DELETE: by contest_id -->
+    <delete id="deleteByContestId">
+        DELETE FROM contest_model_photos
+        WHERE contest_id = #{contestId}
+    </delete>
+
+</mapper>
