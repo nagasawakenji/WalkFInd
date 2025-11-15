@@ -1,7 +1,7 @@
-package nagasawakenji.WalkFind.service;
+package nagasawakenji.walkfind.service;
 
-import nagasawakenji.WalkFind.domain.dto.UserPublicProfileResponse;
-import nagasawakenji.WalkFind.domain.dto.UserHistoryResponse;
+import nagasawakenji.walkfind.domain.dto.UserPublicProfileResponse;
+import nagasawakenji.walkfind.domain.dto.UserHistoryResponse;
 
 /**
  * 他ユーザー向けの公開プロフィール情報および活動履歴の集計・取得を行うサービスインターフェース。
@@ -12,7 +12,7 @@ public interface UserHistoryService {
      * 特定ユーザーの公開プロフィール情報（サマリー統計を含む）を取得します。
      * @param userId 対象ユーザーID
      * @return ユーザー公開プロフィールDTO
-     * @throws nagasawakenji.WalkFind.exception.UserStatusException ユーザーが見つからない場合
+     * @throws nagasawakenji.walkfind.exception.UserStatusException ユーザーが見つからない場合
      */
     UserPublicProfileResponse getPublicProfileSummary(String userId);
 

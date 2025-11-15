@@ -1,0 +1,192 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: WalkFind Contest Serverless Infrastructure
+
+Parameters:
+  DbSecretArn:
+    Type: String
+    Description: ARN of the database secret (provided via SAM deploy parameters)
+
+Globals:
+  Function:
+    Runtime: java17
+    Timeout: 30
+    MemorySize: 1024
+    Architectures:
+      - x86_64
+
+Resources:
+
+  # =======================================================
+  # 1. Cognito User Pool
+  # =======================================================
+  WalkFindUserPool:
+    Type: AWS::Cognito::UserPool
+    Properties:
+      UserPoolName: WalkFindContestUserPool
+      AutoVerifiedAttributes: [ email ]
+      UsernameConfiguration:
+        CaseSensitive: false
+
+  WalkFindUserPoolClient:
+    Type: AWS::Cognito::UserPoolClient
+    Properties:
+      ClientName: WalkFindWebClient
+      UserPoolId: !Ref WalkFindUserPool
+      SupportedIdentityProviders: [ COGNITO ]
+
+  # =======================================================
+  # 2. API Gateway — DefaultAuthorizer を設定しないことが最重要
+  # =======================================================
+  WalkFindApi:
+    Type: AWS::Serverless::Api
+    Properties:
+      StageName: prod
+      Auth:
+        Authorizers:
+          CognitoAuth:
+            UserPoolArn: !GetAtt WalkFindUserPool.Arn
+
+  # =======================================================
+  # 3. Lambda Function (Spring Boot)
+  # =======================================================
+  UserApiFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: WalkFindUserApi
+      CodeUri: .
+      Handler: nagasawakenji.walkfind.handler.StreamLambdaHandler::handleRequest
+      Environment:
+        Variables:
+          DB_SECRET_ARN: !Ref DbSecretArn
+
+      # Secrets Manager の読み取り権限
+      Policies:
+        - Statement:
+            Effect: Allow
+            Action:
+              - secretsmanager:GetSecretValue
+            Resource: !Sub "arn:aws:secretsmanager:${AWS::Region}:${AWS::AccountId}:secret:/walkfind/database-*"
+
+      Events:
+
+        # -----------------------------------------
+        # 認証不要：contests
+        # -----------------------------------------
+        ContestsRoot:
+          Type: Api
+          Properties:
+            Path: /api/v1/contests
+            Method: ANY
+            RestApiId: !Ref WalkFindApi
+
+        ContestsProxy:
+          Type: Api
+          Properties:
+            Path: /api/v1/contests/{proxy+}
+            Method: ANY
+            RestApiId: !Ref WalkFindApi
+
+        # -----------------------------------------
+        # 認証不要：results
+        # -----------------------------------------
+        ResultsRoot:
+          Type: Api
+          Properties:
+            Path: /api/v1/results
+            Method: ANY
+            RestApiId: !Ref WalkFindApi
+
+        ResultsProxy:
+          Type: Api
+          Properties:
+            Path: /api/v1/results/{proxy+}
+            Method: ANY
+            RestApiId: !Ref WalkFindApi
+
+        # -----------------------------------------
+        # 認証不要：users（/me 以外）
+        # -----------------------------------------
+        UsersRoot:
+          Type: Api
+          Properties:
+            Path: /api/v1/users
+            Method: ANY
+            RestApiId: !Ref WalkFindApi
+
+        UsersProxy:
+          Type: Api
+          Properties:
+            Path: /api/v1/users/{proxy+}
+            Method: ANY
+            RestApiId: !Ref WalkFindApi
+
+        # -----------------------------------------
+        # 認証必要：votes
+        # -----------------------------------------
+        VotesRoot:
+          Type: Api
+          Properties:
+            Path: /api/v1/votes
+            Method: ANY
+            RestApiId: !Ref WalkFindApi
+            Auth:
+              Authorizer: CognitoAuth
+
+        VotesProxy:
+          Type: Api
+          Properties:
+            Path: /api/v1/votes/{proxy+}
+            Method: ANY
+            RestApiId: !Ref WalkFindApi
+            Auth:
+              Authorizer: CognitoAuth
+
+        # -----------------------------------------
+        # 認証必要：photos
+        # -----------------------------------------
+        PhotosRoot:
+          Type: Api
+          Properties:
+            Path: /api/v1/photos
+            Method: ANY
+            RestApiId: !Ref WalkFindApi
+            Auth:
+              Authorizer: CognitoAuth
+
+        PhotosProxy:
+          Type: Api
+          Properties:
+            Path: /api/v1/photos/{proxy+}
+            Method: ANY
+            RestApiId: !Ref WalkFindApi
+            Auth:
+              Authorizer: CognitoAuth
+
+        # -----------------------------------------
+        # 認証必要：/users/me
+        # -----------------------------------------
+        MeApi:
+          Type: Api
+          Properties:
+            Path: /api/v1/users/me
+            Method: ANY
+            RestApiId: !Ref WalkFindApi
+            Auth:
+              Authorizer: CognitoAuth
+
+# =======================================================
+# Outputs
+# =======================================================
+Outputs:
+  WalkFindApiUrl:
+    Description: "API Gateway endpoint URL"
+    Value: !Sub "https://${WalkFindApi}.execute-api.${AWS::Region}.amazonaws.com/prod"
+
+  UserPoolId:
+    Description: "Cognito User Pool ID"
+    Value: !Ref WalkFindUserPool
+
+  UserPoolClientId:
+    Description: "Cognito User Pool Client ID"
+    Value: !Ref WalkFindUserPoolClient

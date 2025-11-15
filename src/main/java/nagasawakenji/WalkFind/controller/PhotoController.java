@@ -1,11 +1,11 @@
-package nagasawakenji.WalkFind.controller;
+package nagasawakenji.walkfind.controller;
 
-import nagasawakenji.WalkFind.domain.dto.SubmitPhotoRequest;
-import nagasawakenji.WalkFind.domain.dto.SubmitPhotoResult;
-import nagasawakenji.WalkFind.domain.statusenum.SubmitPhotoStatus;
-import nagasawakenji.WalkFind.exception.DatabaseOperationException;
-import nagasawakenji.WalkFind.service.AuthService;
-import nagasawakenji.WalkFind.service.PhotoSubmissionService;
+import nagasawakenji.walkfind.domain.dto.SubmitPhotoRequest;
+import nagasawakenji.walkfind.domain.dto.SubmitPhotoResult;
+import nagasawakenji.walkfind.domain.statusenum.SubmitPhotoStatus;
+import nagasawakenji.walkfind.exception.DatabaseOperationException;
+import nagasawakenji.walkfind.service.AuthService;
+import nagasawakenji.walkfind.service.PhotoSubmissionService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;

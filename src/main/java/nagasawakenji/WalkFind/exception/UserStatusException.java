@@ -1,4 +1,4 @@
-package nagasawakenji.WalkFind.exception;
+package nagasawakenji.walkfind.exception;
 
 /**
  * ユーザーの状態に関するビジネスルール違反（例：アカウント停止、ユーザー未登録）を示す例外。

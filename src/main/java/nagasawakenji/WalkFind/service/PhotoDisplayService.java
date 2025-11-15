@@ -1,9 +1,9 @@
-package nagasawakenji.WalkFind.service;
+package nagasawakenji.walkfind.service;
 
-import nagasawakenji.WalkFind.domain.dto.PhotoResponse;
-import nagasawakenji.WalkFind.infra.mybatis.mapper.ContestMapper;
-import nagasawakenji.WalkFind.infra.mybatis.mapper.PhotoMapper;
-import nagasawakenji.WalkFind.exception.ContestNotFoundException;
+import nagasawakenji.walkfind.domain.dto.PhotoResponse;
+import nagasawakenji.walkfind.infra.mybatis.mapper.ContestMapper;
+import nagasawakenji.walkfind.infra.mybatis.mapper.PhotoMapper;
+import nagasawakenji.walkfind.exception.ContestNotFoundException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;

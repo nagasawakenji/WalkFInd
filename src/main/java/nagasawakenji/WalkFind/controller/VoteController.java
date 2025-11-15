@@ -1,17 +1,19 @@
-package nagasawakenji.WalkFind.controller;
+package nagasawakenji.walkfind.controller;
 
-import nagasawakenji.WalkFind.domain.dto.VoteRequest;
-import nagasawakenji.WalkFind.domain.dto.VoteResult;
-import nagasawakenji.WalkFind.domain.statusenum.VoteStatus;
-import nagasawakenji.WalkFind.exception.DatabaseOperationException;
-import nagasawakenji.WalkFind.service.AuthService;
-import nagasawakenji.WalkFind.service.VotingService;
+import nagasawakenji.walkfind.domain.dto.VoteRequest;
+import nagasawakenji.walkfind.domain.dto.VoteResult;
+import nagasawakenji.walkfind.domain.statusenum.VoteStatus;
+import nagasawakenji.walkfind.exception.DatabaseOperationException;
+import nagasawakenji.walkfind.service.AuthService;
+import nagasawakenji.walkfind.service.VotingService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+
+
 
 @RestController
 @RequestMapping("/api/v1/votes")

@@ -1,6 +1,6 @@
-package nagasawakenji.WalkFind.infra.mybatis.mapper;
+package nagasawakenji.walkfind.infra.mybatis.mapper;
 
-import nagasawakenji.WalkFind.domain.model.Vote;
+import nagasawakenji.walkfind.domain.model.Vote;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 import java.util.Optional;

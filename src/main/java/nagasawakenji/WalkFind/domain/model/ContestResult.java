@@ -1,4 +1,4 @@
-package nagasawakenji.WalkFind.domain.model;
+package nagasawakenji.walkfind.domain.model;
 
 import lombok.Builder;
 import lombok.Data;

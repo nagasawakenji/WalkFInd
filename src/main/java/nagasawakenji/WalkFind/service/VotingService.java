@@ -1,18 +1,18 @@
-package nagasawakenji.WalkFind.service;
+package nagasawakenji.walkfind.service;
 
-import nagasawakenji.WalkFind.domain.dto.VoteRequest;
-import nagasawakenji.WalkFind.domain.dto.VoteResult;
-import nagasawakenji.WalkFind.domain.model.Contest;
-import nagasawakenji.WalkFind.domain.statusenum.ContestStatus;
-import nagasawakenji.WalkFind.domain.model.UserPhoto;
-import nagasawakenji.WalkFind.domain.model.Vote;
-import nagasawakenji.WalkFind.domain.statusenum.VoteStatus;
-import nagasawakenji.WalkFind.exception.DatabaseOperationException;
+import nagasawakenji.walkfind.domain.dto.VoteRequest;
+import nagasawakenji.walkfind.domain.dto.VoteResult;
+import nagasawakenji.walkfind.domain.model.Contest;
+import nagasawakenji.walkfind.domain.statusenum.ContestStatus;
+import nagasawakenji.walkfind.domain.model.UserPhoto;
+import nagasawakenji.walkfind.domain.model.Vote;
+import nagasawakenji.walkfind.domain.statusenum.VoteStatus;
+import nagasawakenji.walkfind.exception.DatabaseOperationException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import nagasawakenji.WalkFind.infra.mybatis.mapper.ContestMapper;
-import nagasawakenji.WalkFind.infra.mybatis.mapper.PhotoMapper;
-import nagasawakenji.WalkFind.infra.mybatis.mapper.VoteMapper;
+import nagasawakenji.walkfind.infra.mybatis.mapper.ContestMapper;
+import nagasawakenji.walkfind.infra.mybatis.mapper.PhotoMapper;
+import nagasawakenji.walkfind.infra.mybatis.mapper.VoteMapper;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 

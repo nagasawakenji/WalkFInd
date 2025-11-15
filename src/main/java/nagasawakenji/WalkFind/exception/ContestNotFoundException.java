@@ -1,4 +1,4 @@
-package nagasawakenji.WalkFind.exception;
+package nagasawakenji.walkfind.exception;
 
 /**
  * 指定されたコンテストIDに該当するコンテストが存在しない場合にスローされる非チェック例外。

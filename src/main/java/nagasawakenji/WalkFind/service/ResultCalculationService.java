@@ -1,17 +1,16 @@
-package nagasawakenji.WalkFind.service;
+package nagasawakenji.walkfind.service;
 
-import nagasawakenji.WalkFind.domain.dto.CalculationResult;
-import nagasawakenji.WalkFind.domain.model.Contest;
-import nagasawakenji.WalkFind.domain.model.ContestResult;
-import nagasawakenji.WalkFind.domain.statusenum.ContestStatus;
-import nagasawakenji.WalkFind.domain.model.UserPhoto; // 順位決定に必要な情報を格納するDTO/Model
-import nagasawakenji.WalkFind.domain.statusenum.CalculationStatus;
-import nagasawakenji.WalkFind.exception.ContestNotFoundException;
-import nagasawakenji.WalkFind.infra.mybatis.mapper.ContestMapper;
-import nagasawakenji.WalkFind.infra.mybatis.mapper.ContestResultMapper;
-import nagasawakenji.WalkFind.infra.mybatis.mapper.PhotoMapper;
-import nagasawakenji.WalkFind.infra.mybatis.mapper.VoteMapper;
-import nagasawakenji.WalkFind.exception.DatabaseOperationException;
+import nagasawakenji.walkfind.domain.dto.CalculationResult;
+import nagasawakenji.walkfind.domain.model.Contest;
+import nagasawakenji.walkfind.domain.model.ContestResult;
+import nagasawakenji.walkfind.domain.statusenum.ContestStatus;
+import nagasawakenji.walkfind.domain.model.UserPhoto; // 順位決定に必要な情報を格納するDTO/Model
+import nagasawakenji.walkfind.domain.statusenum.CalculationStatus;
+import nagasawakenji.walkfind.infra.mybatis.mapper.ContestMapper;
+import nagasawakenji.walkfind.infra.mybatis.mapper.ContestResultMapper;
+import nagasawakenji.walkfind.infra.mybatis.mapper.PhotoMapper;
+import nagasawakenji.walkfind.infra.mybatis.mapper.VoteMapper;
+import nagasawakenji.walkfind.exception.DatabaseOperationException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;

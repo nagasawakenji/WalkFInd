@@ -1,4 +1,4 @@
-package nagasawakenji.WalkFind.exception;
+package nagasawakenji.walkfind.exception;
 
 public class ContestStatusException extends RuntimeException {
 

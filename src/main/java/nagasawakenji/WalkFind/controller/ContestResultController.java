@@ -1,11 +1,11 @@
-package nagasawakenji.WalkFind.controller;
+package nagasawakenji.walkfind.controller;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import nagasawakenji.WalkFind.domain.dto.ContestResultResponse;
-import nagasawakenji.WalkFind.exception.ContestNotFoundException;
-import nagasawakenji.WalkFind.exception.ContestStatusException;
-import nagasawakenji.WalkFind.service.ResultDisplayService;
+import nagasawakenji.walkfind.domain.dto.ContestResultResponse;
+import nagasawakenji.walkfind.exception.ContestNotFoundException;
+import nagasawakenji.walkfind.exception.ContestStatusException;
+import nagasawakenji.walkfind.service.ResultDisplayService;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;

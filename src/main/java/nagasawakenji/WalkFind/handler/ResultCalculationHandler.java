@@ -1,10 +1,10 @@
-package nagasawakenji.WalkFind.handler;
+package nagasawakenji.walkfind.handler;
 
 import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.lambda.runtime.RequestHandler;
-import nagasawakenji.WalkFind.WalkFindApplication;
-import nagasawakenji.WalkFind.domain.dto.CalculationResult;
-import nagasawakenji.WalkFind.service.ResultCalculationService;
+import nagasawakenji.walkfind.WalkFindApplication;
+import nagasawakenji.walkfind.domain.dto.CalculationResult;
+import nagasawakenji.walkfind.service.ResultCalculationService;
 import org.springframework.boot.SpringApplication;
 import org.springframework.context.ConfigurableApplicationContext;
 

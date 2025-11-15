@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
-<mapper namespace="nagasawakenji.WalkFind.infra.MyBatis.mapper.ContestResultMapper">
+<mapper namespace="nagasawakenji.walkfind.infra.MyBatis.mapper.ContestResultMapper">
 
-    <resultMap id="ContestResultMap" type="nagasawakenji.WalkFind.domain.model.ContestResult">
+    <resultMap id="ContestResultMap" type="nagasawakenji.walkfind.domain.model.ContestResult">
         <id property="id" column="id"/>
         <result property="contestId" column="contest_id"/>
         <result property="photoId" column="photo_id"/>
@@ -13,7 +13,7 @@
     </resultMap>
 
     <!-- ContestResultResponse.java に対応する結果マップ -->
-    <resultMap id="ContestResultResponseResultMap" type="nagasawakenji.WalkFind.domain.dto.ContestResultResponse">
+    <resultMap id="ContestResultResponseResultMap" type="nagasawakenji.walkfind.domain.dto.ContestResultResponse">
         <!-- R: contest_results, P: user_photos, U: users -->
         <result property="photoId" column="photo_id"/>
         <result property="contestId" column="contest_id"/>

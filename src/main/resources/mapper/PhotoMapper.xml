@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
-<mapper namespace="nagasawakenji.WalkFind.infra.MyBatis.mapper.PhotoMapper">
+<mapper namespace="nagasawakenji.walkfind.infra.MyBatis.mapper.PhotoMapper">
 
-    <resultMap id="UserPhotoResultMap" type="nagasawakenji.WalkFind.domain.model.UserPhoto">
+    <resultMap id="UserPhotoResultMap" type="nagasawakenji.walkfind.domain.model.UserPhoto">
         <id property="id" column="id"/>
         <result property="contestId" column="contest_id"/>
         <result property="userId" column="user_id"/>
@@ -12,7 +12,7 @@
         <result property="isApproved" column="is_approved"/>
     </resultMap>
 
-    <resultMap id="PhotoResponseResultMap" type="nagasawakenji.WalkFind.domain.dto.PhotoResponse">
+    <resultMap id="PhotoResponseResultMap" type="nagasawakenji.walkfind.domain.dto.PhotoResponse">
         <id property="photoId" column="photoId"/>
         <result property="title" column="title"/>
         <result property="username" column="username"/>
@@ -21,7 +21,7 @@
         <result property="submissionDate" column="submissionDate"/>
     </resultMap>
 
-    <resultMap id="UserPhotoResultMapForCalculation" type="nagasawakenji.WalkFind.domain.model.UserPhoto">
+    <resultMap id="UserPhotoResultMapForCalculation" type="nagasawakenji.walkfind.domain.model.UserPhoto">
         <!-- 集計処理に必要なフィールドのみ定義 -->
         <id property="id" column="id"/>
         <result property="totalVotes" column="total_votes"/>

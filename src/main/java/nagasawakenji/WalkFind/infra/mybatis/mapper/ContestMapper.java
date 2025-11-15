@@ -1,7 +1,7 @@
-package nagasawakenji.WalkFind.infra.mybatis.mapper;
+package nagasawakenji.walkfind.infra.mybatis.mapper;
 
-import nagasawakenji.WalkFind.domain.model.Contest;
-import nagasawakenji.WalkFind.domain.statusenum.ContestStatus;
+import nagasawakenji.walkfind.domain.model.Contest;
+import nagasawakenji.walkfind.domain.statusenum.ContestStatus;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 

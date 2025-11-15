@@ -1,8 +1,7 @@
-package nagasawakenji.WalkFind.infra.mybatis.mapper;
+package nagasawakenji.walkfind.infra.mybatis.mapper;
 
-import nagasawakenji.WalkFind.domain.dto.ContestResultDto;
-import nagasawakenji.WalkFind.domain.dto.PhotoDto;
-import nagasawakenji.WalkFind.domain.dto.UserHistoryResponse;
+import nagasawakenji.walkfind.domain.dto.ContestResultDto;
+import nagasawakenji.walkfind.domain.dto.PhotoDto;
 import org.apache.ibatis.annotations.Mapper;
 
 import java.util.List;

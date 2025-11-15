@@ -1,4 +1,4 @@
-package nagasawakenji.WalkFind.service;
+package nagasawakenji.walkfind.service;
 
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;

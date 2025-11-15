@@ -1,15 +1,15 @@
-package nagasawakenji.WalkFind.service;
+package nagasawakenji.walkfind.service;
 
-import nagasawakenji.WalkFind.domain.model.User;
-import nagasawakenji.WalkFind.domain.dto.UserProfileResponse;
-import nagasawakenji.WalkFind.domain.model.UserProfile;
-import nagasawakenji.WalkFind.domain.statusenum.UserRole;
-import nagasawakenji.WalkFind.infra.mybatis.mapper.UserMapper;
-import nagasawakenji.WalkFind.exception.UserStatusException;
-import nagasawakenji.WalkFind.exception.DatabaseOperationException; // ★ 追加
+import nagasawakenji.walkfind.domain.model.User;
+import nagasawakenji.walkfind.domain.dto.UserProfileResponse;
+import nagasawakenji.walkfind.domain.model.UserProfile;
+import nagasawakenji.walkfind.domain.statusenum.UserRole;
+import nagasawakenji.walkfind.infra.mybatis.mapper.UserMapper;
+import nagasawakenji.walkfind.exception.UserStatusException;
+import nagasawakenji.walkfind.exception.DatabaseOperationException; // ★ 追加
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import nagasawakenji.WalkFind.infra.mybatis.mapper.UserProfileMapper;
+import nagasawakenji.walkfind.infra.mybatis.mapper.UserProfileMapper;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 

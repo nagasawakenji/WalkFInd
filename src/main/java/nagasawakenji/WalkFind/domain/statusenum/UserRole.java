@@ -1,4 +1,4 @@
-package nagasawakenji.WalkFind.domain.statusenum;
+package nagasawakenji.walkfind.domain.statusenum;
 
 public enum UserRole {
     USER,

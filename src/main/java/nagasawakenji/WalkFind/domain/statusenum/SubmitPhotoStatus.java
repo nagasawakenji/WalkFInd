@@ -1,4 +1,4 @@
-package nagasawakenji.WalkFind.domain.statusenum;
+package nagasawakenji.walkfind.domain.statusenum;
 
 public enum SubmitPhotoStatus {
     // 投稿が正常に処理・保存された

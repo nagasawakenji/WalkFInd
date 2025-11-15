@@ -1,4 +1,4 @@
-package nagasawakenji.WalkFind.exception;
+package nagasawakenji.walkfind.exception;
 
 /**
  * データベース操作（INSERT, UPDATE, DELETEなど）が失敗した場合にスローされる非チェック例外。

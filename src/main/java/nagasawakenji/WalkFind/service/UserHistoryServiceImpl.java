@@ -1,15 +1,15 @@
-package nagasawakenji.WalkFind.service;
+package nagasawakenji.walkfind.service;
 
-import nagasawakenji.WalkFind.domain.dto.ContestResultDto;
-import nagasawakenji.WalkFind.domain.dto.PhotoDto;
-import nagasawakenji.WalkFind.domain.dto.UserPublicProfileResponse;
-import nagasawakenji.WalkFind.domain.dto.UserHistoryResponse;
-import nagasawakenji.WalkFind.domain.model.User;
-import nagasawakenji.WalkFind.domain.model.UserProfile;
-import nagasawakenji.WalkFind.infra.mybatis.mapper.UserMapper;         // ⭐ UserMapperをインポート
-import nagasawakenji.WalkFind.infra.mybatis.mapper.UserProfileMapper; // ⭐ UserProfileMapperをインポート
-import nagasawakenji.WalkFind.infra.mybatis.mapper.UserHistoryMapper; // ⭐ UserHistoryMapperをインポート
-import nagasawakenji.WalkFind.exception.UserStatusException;
+import nagasawakenji.walkfind.domain.dto.ContestResultDto;
+import nagasawakenji.walkfind.domain.dto.PhotoDto;
+import nagasawakenji.walkfind.domain.dto.UserPublicProfileResponse;
+import nagasawakenji.walkfind.domain.dto.UserHistoryResponse;
+import nagasawakenji.walkfind.domain.model.User;
+import nagasawakenji.walkfind.domain.model.UserProfile;
+import nagasawakenji.walkfind.infra.mybatis.mapper.UserMapper;         // ⭐ UserMapperをインポート
+import nagasawakenji.walkfind.infra.mybatis.mapper.UserProfileMapper; // ⭐ UserProfileMapperをインポート
+import nagasawakenji.walkfind.infra.mybatis.mapper.UserHistoryMapper; // ⭐ UserHistoryMapperをインポート
+import nagasawakenji.walkfind.exception.UserStatusException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;

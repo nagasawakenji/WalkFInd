@@ -1,4 +1,4 @@
-package nagasawakenji.WalkFind.domain.dto;
+package nagasawakenji.walkfind.domain.dto;
 
 import lombok.Value;
 import jakarta.validation.constraints.NotNull;

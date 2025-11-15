@@ -1,16 +1,16 @@
-package nagasawakenji.WalkFind.service;
+package nagasawakenji.walkfind.service;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import nagasawakenji.WalkFind.domain.dto.SubmitPhotoRequest;
-import nagasawakenji.WalkFind.domain.dto.SubmitPhotoResult;
-import nagasawakenji.WalkFind.domain.model.Contest;
-import nagasawakenji.WalkFind.domain.model.UserPhoto;
-import nagasawakenji.WalkFind.domain.statusenum.ContestStatus;
-import nagasawakenji.WalkFind.domain.statusenum.SubmitPhotoStatus;
-import nagasawakenji.WalkFind.exception.DatabaseOperationException;
-import nagasawakenji.WalkFind.infra.mybatis.mapper.ContestMapper;
-import nagasawakenji.WalkFind.infra.mybatis.mapper.PhotoMapper;
+import nagasawakenji.walkfind.domain.dto.SubmitPhotoRequest;
+import nagasawakenji.walkfind.domain.dto.SubmitPhotoResult;
+import nagasawakenji.walkfind.domain.model.Contest;
+import nagasawakenji.walkfind.domain.model.UserPhoto;
+import nagasawakenji.walkfind.domain.statusenum.ContestStatus;
+import nagasawakenji.walkfind.domain.statusenum.SubmitPhotoStatus;
+import nagasawakenji.walkfind.exception.DatabaseOperationException;
+import nagasawakenji.walkfind.infra.mybatis.mapper.ContestMapper;
+import nagasawakenji.walkfind.infra.mybatis.mapper.PhotoMapper;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 

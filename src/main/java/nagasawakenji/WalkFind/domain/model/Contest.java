@@ -1,7 +1,7 @@
-package nagasawakenji.WalkFind.domain.model;
+package nagasawakenji.walkfind.domain.model;
 
 import lombok.Data;
-import nagasawakenji.WalkFind.domain.statusenum.ContestStatus;
+import nagasawakenji.walkfind.domain.statusenum.ContestStatus;
 
 import java.time.OffsetDateTime;
 

@@ -1,4 +1,4 @@
-package nagasawakenji.WalkFind.domain.statusenum;
+package nagasawakenji.walkfind.domain.statusenum;
 
 /**
  * 結果集計処理（定期実行）の結果を示すEnum。

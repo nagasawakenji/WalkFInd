@@ -1,8 +1,8 @@
-package nagasawakenji.WalkFind.controller;
+package nagasawakenji.walkfind.controller;
 
-import nagasawakenji.WalkFind.domain.dto.PhotoResponse;
-import nagasawakenji.WalkFind.service.PhotoDisplayService;
-import nagasawakenji.WalkFind.exception.ContestNotFoundException;
+import nagasawakenji.walkfind.domain.dto.PhotoResponse;
+import nagasawakenji.walkfind.service.PhotoDisplayService;
+import nagasawakenji.walkfind.exception.ContestNotFoundException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;

@@ -1,4 +1,4 @@
-package nagasawakenji.WalkFind.domain.statusenum;
+package nagasawakenji.walkfind.domain.statusenum;
 
 /**
  * 投票処理のビジネスロジックの結果を示すEnum。

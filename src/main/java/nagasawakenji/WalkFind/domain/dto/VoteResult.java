@@ -1,8 +1,8 @@
-package nagasawakenji.WalkFind.domain.dto;
+package nagasawakenji.walkfind.domain.dto;
 
 import lombok.Builder;
 import lombok.Value;
-import nagasawakenji.WalkFind.domain.statusenum.VoteStatus;
+import nagasawakenji.walkfind.domain.statusenum.VoteStatus;
 
 /**
  * 投票処理の結果をクライアントに返すDTO。

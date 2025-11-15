@@ -1,4 +1,4 @@
-package nagasawakenji.WalkFind.domain.dto;
+package nagasawakenji.walkfind.domain.dto;
 
 import lombok.Builder;
 import lombok.Value;

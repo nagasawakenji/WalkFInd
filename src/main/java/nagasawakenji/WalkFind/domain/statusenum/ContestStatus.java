@@ -1,4 +1,4 @@
-package nagasawakenji.WalkFind.domain.statusenum;
+package nagasawakenji.walkfind.domain.statusenum;
 
 public enum ContestStatus {
     UPCOMING,       // 開催前（投稿受付開始前）

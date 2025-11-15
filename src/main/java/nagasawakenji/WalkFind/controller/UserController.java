@@ -1,13 +1,13 @@
-package nagasawakenji.WalkFind.controller;
+package nagasawakenji.walkfind.controller;
 
-import nagasawakenji.WalkFind.domain.dto.UserProfileResponse;
-import nagasawakenji.WalkFind.domain.dto.UserPublicProfileResponse;
-import nagasawakenji.WalkFind.domain.dto.UserHistoryResponse;
-import nagasawakenji.WalkFind.service.AuthService;
-import nagasawakenji.WalkFind.service.UserService;
-import nagasawakenji.WalkFind.service.UserHistoryService;
-import nagasawakenji.WalkFind.exception.UserStatusException;
-import nagasawakenji.WalkFind.exception.DatabaseOperationException;
+import nagasawakenji.walkfind.domain.dto.UserProfileResponse;
+import nagasawakenji.walkfind.domain.dto.UserPublicProfileResponse;
+import nagasawakenji.walkfind.domain.dto.UserHistoryResponse;
+import nagasawakenji.walkfind.service.AuthService;
+import nagasawakenji.walkfind.service.UserService;
+import nagasawakenji.walkfind.service.UserHistoryService;
+import nagasawakenji.walkfind.exception.UserStatusException;
+import nagasawakenji.walkfind.exception.DatabaseOperationException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;

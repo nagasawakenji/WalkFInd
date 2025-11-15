@@ -1,5 +1,5 @@
-package nagasawakenji.WalkFind.infra.mybatis.mapper;
-import nagasawakenji.WalkFind.domain.model.User;
+package nagasawakenji.walkfind.infra.mybatis.mapper;
+import nagasawakenji.walkfind.domain.model.User;
 import org.apache.ibatis.annotations.Mapper;
 import java.util.Optional;
 

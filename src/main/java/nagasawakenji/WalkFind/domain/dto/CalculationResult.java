@@ -1,8 +1,8 @@
-package nagasawakenji.WalkFind.domain.dto;
+package nagasawakenji.walkfind.domain.dto;
 
 import lombok.Builder;
 import lombok.Value;
-import nagasawakenji.WalkFind.domain.statusenum.CalculationStatus;
+import nagasawakenji.walkfind.domain.statusenum.CalculationStatus;
 
 /**
  * 結果集計処理（定期実行）の結果レポート用DTO。
