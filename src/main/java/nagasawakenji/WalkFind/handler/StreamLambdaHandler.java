@@ -10,6 +10,7 @@ import lombok.extern.slf4j.Slf4j;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import org.slf4j.MDC;
 
 /**
  * API Gatewayからのストリームリクエストを処理するLambdaハンドラ。
@@ -26,6 +27,7 @@ public class StreamLambdaHandler implements RequestStreamHandler {
             // getStreamHandlerは静的メソッドとして存在します。
             handler = SpringBootLambdaContainerHandler.getAwsProxyHandler(WalkFindApplication.class);
 
+
             log.info("SpringBootStreamHandler initialized successfully for Spring Boot 3.");
         } catch (Exception e) {
             log.error("Failed to initialize Spring Boot application context.", e);
@@ -39,7 +41,13 @@ public class StreamLambdaHandler implements RequestStreamHandler {
      */
     @Override
     public void handleRequest(InputStream inputStream, OutputStream outputStream, Context context) throws IOException {
+
+        String requestId = context != null ? context.getAwsRequestId() : "unknown";
+
+        MDC.put("requestId", requestId);
         // ハンドラーにリクエスト処理を委譲
         handler.proxyStream(inputStream, outputStream, context);
+        // Clear MDC to avoid leakage between Lambda invocations
+        MDC.clear();
     }
 }

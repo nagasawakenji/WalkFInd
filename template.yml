@@ -175,6 +175,49 @@ Resources:
             Auth:
               Authorizer: CognitoAuth
 
+        # -----------------------------------------
+        # 認証必要：upload（presigned URL）
+        # -----------------------------------------
+        UploadRoot:
+          Type: Api
+          Properties:
+            Path: /api/v1/upload
+            Method: ANY
+            RestApiId: !Ref WalkFindApi
+            Auth:
+              Authorizer: CognitoAuth
+
+        UploadProxy:
+          Type: Api
+          Properties:
+            Path: /api/v1/upload/{proxy+}
+            Method: ANY
+            RestApiId: !Ref WalkFindApi
+            Auth:
+              Authorizer: CognitoAuth
+
+
+        # -----------------------------------------
+        # 認証必要：model-photos（単独ルート）
+        # -----------------------------------------
+        ModelPhotosRoot:
+          Type: Api
+          Properties:
+            Path: /api/v1/model-photos
+            Method: ANY
+            RestApiId: !Ref WalkFindApi
+            Auth:
+              Authorizer: CognitoAuth
+
+        ModelPhotosProxy:
+          Type: Api
+          Properties:
+            Path: /api/v1/model-photos/{proxy+}
+            Method: ANY
+            RestApiId: !Ref WalkFindApi
+            Auth:
+              Authorizer: CognitoAuth
+
 # =======================================================
 # Outputs
 # =======================================================
