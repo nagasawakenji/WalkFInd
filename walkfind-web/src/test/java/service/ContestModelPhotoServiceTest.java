@@ -7,7 +7,6 @@ import nagasawakenji.walkfind.domain.statusenum.ModelPhotoStatus;
 import nagasawakenji.walkfind.infra.mybatis.mapper.ContestMapper;
 import nagasawakenji.walkfind.infra.mybatis.mapper.ContestModelPhotoMapper;
 import nagasawakenji.walkfind.service.ContestModelPhotoService;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
