@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<configuration>
+
+    <appender name="JSON" class="ch.qos.logback.core.ConsoleAppender">
+        <encoder class="net.logstash.logback.encoder.LoggingEventCompositeJsonEncoder">
+            <providers>
+
+                <timestamp/>
+
+                <!-- 基本ログ情報 -->
+                <logLevel/>
+                <loggerName/>
+                <threadName/>
+
+                <!-- MDC (requestId, userId, path など) -->
+                <mdc/>
+
+                <!-- メッセージ -->
+                <message/>
+
+                <!-- 例外（ERROR時） -->
+                <stackTrace/>
+
+            </providers>
+        </encoder>
+    </appender>
+
+    <root level="INFO">
+        <appender-ref ref="JSON"/>
+    </root>
+
+</configuration>
