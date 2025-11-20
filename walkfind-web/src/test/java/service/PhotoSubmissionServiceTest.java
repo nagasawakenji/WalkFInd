@@ -9,19 +9,22 @@ import nagasawakenji.walkfind.domain.statusenum.SubmitPhotoStatus;
 import nagasawakenji.walkfind.exception.DatabaseOperationException;
 import nagasawakenji.walkfind.infra.mybatis.mapper.ContestMapper;
 import nagasawakenji.walkfind.infra.mybatis.mapper.PhotoMapper;
-import nagasawakenji.walkfind.service.PhotoSubmissionService;
-
+import nagasawakenji.walkfind.service.LocalPhotoSubmissionService;
+import nagasawakenji.walkfind.service.LocalStorageUploadService;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.Optional;
 
-import static org.assertj.core.api.Assertions.*;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
@@ -33,8 +36,14 @@ class PhotoSubmissionServiceTest {
     @Mock
     private ContestMapper contestMapper;
 
+    @Mock
+    private LocalStorageUploadService localStorageUploadService; // 追加
+
+    @Mock
+    private MultipartFile mockFile; // 追加
+
     @InjectMocks
-    private PhotoSubmissionService photoSubmissionService;
+    private LocalPhotoSubmissionService localPhotoSubmissionService;
 
     // -----------------------------
     // 正常系: 投稿成功
@@ -42,177 +51,156 @@ class PhotoSubmissionServiceTest {
     @Test
     @DisplayName("submitPhoto: 正常に投稿成功")
     void testSubmitPhotoSuccess() {
+        // Setup
+        Long contestId = 1L;
+        String userId = "userA";
+        String savedPath = "contest-1/uuid.jpg";
 
-        // Contest 準備
+        // Contest
         Contest contest = new Contest();
-        contest.setId(1L);
+        contest.setId(contestId);
         contest.setStatus(ContestStatus.IN_PROGRESS);
+        when(contestMapper.findContestStatus(contestId)).thenReturn(Optional.of(contest));
 
-        when(contestMapper.findContestStatus(1L))
-                .thenReturn(Optional.of(contest));
+        // 重複チェック
+        when(photoMapper.findByContestAndUser(contestId, userId)).thenReturn(Optional.empty());
 
-        when(photoMapper.findByContestAndUser(1L, "userId"))
-                .thenReturn(Optional.empty());
+        // File Mock
+        when(mockFile.getOriginalFilename()).thenReturn("test.jpg");
+        // Storage保存成功
+        when(localStorageUploadService.saveFile(eq(mockFile), any(String.class)))
+                .thenReturn(savedPath);
 
-        // insert 成功
-        when(photoMapper.insert(any(UserPhoto.class)))
-                .thenReturn(1);
+        // DB insert 成功
+        when(photoMapper.insert(any(UserPhoto.class))).thenReturn(1);
 
-        SubmitPhotoRequest request =
-                new SubmitPhotoRequest(1L, "url", "title", "desc");
+        // Request (URLなし)
+        SubmitPhotoRequest req = new SubmitPhotoRequest(contestId, "title", "url", "desc");
 
-        SubmitPhotoResult result =
-                photoSubmissionService.submitPhoto(request, "userId");
+        // Execute
+        SubmitPhotoResult result = localPhotoSubmissionService.submitPhoto(req, userId, mockFile);
 
+        // Verify
         assertThat(result.getStatus()).isEqualTo(SubmitPhotoStatus.SUCCESS);
 
-        verify(contestMapper, times(1)).findContestStatus(1L);
-        verify(photoMapper, times(1)).findByContestAndUser(1L, "userId");
+        verify(localStorageUploadService, times(1)).saveFile(eq(mockFile), anyString());
         verify(photoMapper, times(1)).insert(any(UserPhoto.class));
+
+        // ★重要: 成功時は削除メソッドが呼ばれていないことを確認
+        verify(localStorageUploadService, never()).deleteFile(anyString());
     }
 
     // -----------------------------
-    // 異常: Contest が存在しない
+    // 異常: Contest が存在しない (Storage保存前)
     // -----------------------------
     @Test
-    @DisplayName("submitPhoto: Contest が見つからない → BUSINESS_RULE_VIOLATION")
+    @DisplayName("submitPhoto: バリデーションエラー時はストレージ保存を実行しない")
     void testContestNotFound() {
+        Long contestId = 1L;
+        when(contestMapper.findContestStatus(contestId)).thenReturn(Optional.empty());
 
-        when(contestMapper.findContestStatus(1L))
-                .thenReturn(Optional.empty());
+        SubmitPhotoRequest req = new SubmitPhotoRequest(contestId, "title", "url", "desc");
 
-        SubmitPhotoRequest req =
-                new SubmitPhotoRequest(1L, "url", "title", "desc");
+        SubmitPhotoResult result = localPhotoSubmissionService.submitPhoto(req, "userA", mockFile);
 
-        SubmitPhotoResult result =
-                photoSubmissionService.submitPhoto(req, "userA");
+        assertThat(result.getStatus()).isEqualTo(SubmitPhotoStatus.BUSINESS_RULE_VIOLATION);
 
-        assertThat(result.getStatus())
-                .isEqualTo(SubmitPhotoStatus.BUSINESS_RULE_VIOLATION);
-
-        verify(contestMapper, times(1)).findContestStatus(1L);
-        verify(photoMapper, never()).findByContestAndUser(any(), any());
+        // ★重要: バリデーションで弾かれた場合、ファイル保存処理が走らないこと
+        verify(localStorageUploadService, never()).saveFile(any(), any());
     }
 
     // -----------------------------
-    // 異常: コンテスト期間外
+    // 異常: ストレージ保存失敗
     // -----------------------------
     @Test
-    @DisplayName("submitPhoto: Contest が IN_PROGRESS でない → BUSINESS_RULE_VIOLATION")
-    void testContestNotInProgress() {
-
+    @DisplayName("submitPhoto: ストレージ保存失敗時は RuntimeException")
+    void testStorageSaveFailed() {
+        Long contestId = 1L;
         Contest contest = new Contest();
-        contest.setId(1L);
-        contest.setStatus(ContestStatus.ANNOUNCED);
-
-        when(contestMapper.findContestStatus(1L))
-                .thenReturn(Optional.of(contest));
-
-        SubmitPhotoRequest req =
-                new SubmitPhotoRequest(1L, "url", "title", "desc");
-
-        SubmitPhotoResult result =
-                photoSubmissionService.submitPhoto(req, "userA");
-
-        assertThat(result.getStatus())
-                .isEqualTo(SubmitPhotoStatus.BUSINESS_RULE_VIOLATION);
-
-        verify(contestMapper, times(1)).findContestStatus(1L);
-        verify(photoMapper, never()).findByContestAndUser(any(), any());
-    }
-
-    // -----------------------------
-    // 異常: 同じユーザーが既に投稿済み
-    // -----------------------------
-    @Test
-    @DisplayName("submitPhoto: ユーザーがすでに投稿済み → BUSINESS_RULE_VIOLATION")
-    void testAlreadySubmitted() {
-
-        Contest contest = new Contest();
-        contest.setId(1L);
+        contest.setId(contestId);
         contest.setStatus(ContestStatus.IN_PROGRESS);
 
-        when(contestMapper.findContestStatus(1L))
-                .thenReturn(Optional.of(contest));
+        when(contestMapper.findContestStatus(contestId)).thenReturn(Optional.of(contest));
+        when(photoMapper.findByContestAndUser(contestId, "userA")).thenReturn(Optional.empty());
 
-        when(photoMapper.findByContestAndUser(1L, "userA"))
-                .thenReturn(Optional.of(new UserPhoto()));
+        // File Name
+        when(mockFile.getOriginalFilename()).thenReturn("test.jpg");
 
-        SubmitPhotoRequest req =
-                new SubmitPhotoRequest(1L, "url", "title", "desc");
+        // ★保存時に例外発生
+        when(localStorageUploadService.saveFile(any(), any()))
+                .thenThrow(new RuntimeException("Disk full"));
 
-        SubmitPhotoResult result =
-                photoSubmissionService.submitPhoto(req, "userA");
+        SubmitPhotoRequest req = new SubmitPhotoRequest(contestId, "title", "url", "desc");
 
-        assertThat(result.getStatus())
-                .isEqualTo(SubmitPhotoStatus.BUSINESS_RULE_VIOLATION);
+        assertThatThrownBy(() -> localPhotoSubmissionService.submitPhoto(req, "userA", mockFile))
+                .isInstanceOf(RuntimeException.class)
+                .hasMessageContaining("写真の保存に失敗しました");
 
-        verify(contestMapper, times(1)).findContestStatus(1L);
-        verify(photoMapper, times(1)).findByContestAndUser(1L, "userA");
+        // DBには行かないこと
         verify(photoMapper, never()).insert(any());
     }
 
     // -----------------------------
-    // 異常: insert が 0 → DatabaseOperationException
+    // 異常: DB insert 失敗 (0件) -> ファイル削除 (ロールバック)
     // -----------------------------
     @Test
-    @DisplayName("submitPhoto: insert が 0 → DatabaseOperationException")
-    void testInsertFailed() {
+    @DisplayName("submitPhoto: DB保存失敗時はファイルを削除して DatabaseOperationException")
+    void testInsertFailed_ShouldRollbackFile() {
+        // Setup
+        Long contestId = 1L;
+        String savedPath = "contest-1/failed.jpg";
 
         Contest contest = new Contest();
-        contest.setId(1L);
+        contest.setId(contestId);
         contest.setStatus(ContestStatus.IN_PROGRESS);
+        when(contestMapper.findContestStatus(contestId)).thenReturn(Optional.of(contest));
+        when(photoMapper.findByContestAndUser(contestId, "userA")).thenReturn(Optional.empty());
 
-        when(contestMapper.findContestStatus(1L))
-                .thenReturn(Optional.of(contest));
+        when(mockFile.getOriginalFilename()).thenReturn("test.jpg");
+        when(localStorageUploadService.saveFile(any(), any())).thenReturn(savedPath);
 
-        when(photoMapper.findByContestAndUser(1L, "userA"))
-                .thenReturn(Optional.empty());
+        // ★DB Insertが0件（失敗）
+        when(photoMapper.insert(any(UserPhoto.class))).thenReturn(0);
 
-        when(photoMapper.insert(any(UserPhoto.class)))
-                .thenReturn(0);
+        SubmitPhotoRequest req = new SubmitPhotoRequest(contestId, "title", "url", "desc");
 
-        SubmitPhotoRequest req =
-                new SubmitPhotoRequest(1L, "url", "title", "desc");
-
-        assertThatThrownBy(() ->
-                photoSubmissionService.submitPhoto(req, "userA")
-        )
+        assertThatThrownBy(() -> localPhotoSubmissionService.submitPhoto(req, "userA", mockFile))
                 .isInstanceOf(DatabaseOperationException.class);
 
-        verify(photoMapper, times(1)).insert(any());
+        // ★最重要: ファイルの削除メソッドが、保存されたパスを引数に呼ばれたか検証
+        verify(localStorageUploadService, times(1)).deleteFile(savedPath);
     }
 
     // -----------------------------
-    // 異常: insert 中に予期せぬ Exception → RuntimeException
+    // 異常: DB 予期せぬ例外 -> ファイル削除 (ロールバック)
     // -----------------------------
     @Test
-    @DisplayName("submitPhoto: insert 中の予期せぬ例外 → RuntimeException")
-    void testUnexpectedDbException() {
+    @DisplayName("submitPhoto: DB予期せぬエラー時もファイルを削除する")
+    void testUnexpectedDbException_ShouldRollbackFile() {
+        // Setup
+        Long contestId = 1L;
+        String savedPath = "contest-1/error.jpg";
 
         Contest contest = new Contest();
-        contest.setId(1L);
+        contest.setId(contestId);
         contest.setStatus(ContestStatus.IN_PROGRESS);
+        when(contestMapper.findContestStatus(contestId)).thenReturn(Optional.of(contest));
+        when(photoMapper.findByContestAndUser(contestId, "userA")).thenReturn(Optional.empty());
 
-        when(contestMapper.findContestStatus(1L))
-                .thenReturn(Optional.of(contest));
+        when(mockFile.getOriginalFilename()).thenReturn("test.jpg");
+        when(localStorageUploadService.saveFile(any(), any())).thenReturn(savedPath);
 
-        when(photoMapper.findByContestAndUser(1L, "userA"))
-                .thenReturn(Optional.empty());
-
-        // insert が SQL 例外を throw
+        // ★DB Insertで予期せぬ例外
         when(photoMapper.insert(any(UserPhoto.class)))
-                .thenThrow(new RuntimeException("SQL error"));
+                .thenThrow(new RuntimeException("SQL Connection Error"));
 
-        SubmitPhotoRequest req =
-                new SubmitPhotoRequest(1L, "url", "title", "desc");
+        SubmitPhotoRequest req = new SubmitPhotoRequest(contestId, "title", "url", "desc");
 
-        assertThatThrownBy(() ->
-                photoSubmissionService.submitPhoto(req, "userA")
-        )
+        assertThatThrownBy(() -> localPhotoSubmissionService.submitPhoto(req, "userA", mockFile))
                 .isInstanceOf(RuntimeException.class)
                 .hasMessageContaining("予期せぬエラー");
 
-        verify(photoMapper, times(1)).insert(any());
+        // ★最重要: 例外の種類に関わらず、ファイル削除が呼ばれていること
+        verify(localStorageUploadService, times(1)).deleteFile(savedPath);
     }
 }

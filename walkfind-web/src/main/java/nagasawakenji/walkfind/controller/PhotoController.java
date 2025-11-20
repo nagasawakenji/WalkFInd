@@ -10,8 +10,10 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 @RestController
 @RequestMapping("/api/v1/photos")
@@ -27,9 +29,11 @@ public class PhotoController {
      * @param request 投稿リクエストDTO
      * @return 処理結果DTOとHTTPステータス
      */
-    @PostMapping
+    @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<SubmitPhotoResult> submitPhoto(
-            @Valid @RequestBody SubmitPhotoRequest request) {
+            @Valid @RequestPart SubmitPhotoRequest request,
+            @RequestPart MultipartFile file
+            ) {
 
         // 1. 認証情報（ユーザーID）の取得 (Controllerの責務)
         // Spring SecurityのContextから取得することを想定
