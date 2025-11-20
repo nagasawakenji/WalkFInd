@@ -1,5 +1,6 @@
 package nagasawakenji.walkfind.service;
 
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 import org.springframework.web.multipart.MultipartFile;
@@ -8,6 +9,7 @@ import java.io.File;
 import java.io.IOException;
 
 @Service
+@Slf4j
 public class LocalStorageUploadService {
 
     private final String storageRoot = "local-storage";  // プロジェクト直下に保存
@@ -15,8 +17,8 @@ public class LocalStorageUploadService {
     /**
      * ローカル用のファイルアップロード処理
      * @param file MultipartFile（フロントから送られる）
-     * @param key 保存するキー（例: "contest-model/123/photo.jpg"）
-     * @return 保存後のローカルパス
+     * @param key 保存するキー（例: "contest-1/uuid.jpg"）
+     * @return 保存後のローカルパス（キー）
      */
     public String saveFile(MultipartFile file, String key) {
 
@@ -41,6 +43,35 @@ public class LocalStorageUploadService {
             throw new RuntimeException("Failed to save file: " + destination.getAbsolutePath(), ex);
         }
 
-        return destination.getAbsolutePath();
+        return cleanKey;
+    }
+
+    /**
+     * ファイル削除処理
+     * DB保存失敗時のロールバック（補償トランザクション）として使用します。
+     * @param key saveFileが返したキー（相対パス）
+     */
+    public void deleteFile(String key) {
+        if (!StringUtils.hasText(key)) {
+            return;
+        }
+
+        try {
+            String cleanKey = StringUtils.cleanPath(key);
+            File target = new File(storageRoot + File.separator + cleanKey);
+
+            if (target.exists()) {
+                if (target.delete()) {
+                    log.info("File deleted successfully: {}", cleanKey);
+                } else {
+                    log.warn("Failed to delete file (file system error): {}", target.getAbsolutePath());
+                }
+            } else {
+                log.warn("File not found for deletion: {}", target.getAbsolutePath());
+            }
+        } catch (Exception e) {
+            // ロールバック処理中のエラーは、元のDBエラーを隠さないためにログ出力にとどめる
+            log.error("Exception occurred while deleting file: " + key, e);
+        }
     }
 }
