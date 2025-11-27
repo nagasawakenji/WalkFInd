@@ -5,7 +5,8 @@ import nagasawakenji.walkfind.domain.dto.SubmitPhotoResult;
 import nagasawakenji.walkfind.domain.statusenum.SubmitPhotoStatus;
 import nagasawakenji.walkfind.exception.DatabaseOperationException;
 import nagasawakenji.walkfind.service.AuthService;
-import nagasawakenji.walkfind.service.PhotoSubmissionService;
+import nagasawakenji.walkfind.service.LocalPhotoSubmissionService;
+
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -21,7 +22,7 @@ import org.springframework.web.multipart.MultipartFile;
 @Slf4j
 public class PhotoController {
 
-    private final PhotoSubmissionService photoService;
+    private final LocalPhotoSubmissionService photoService;
     private final AuthService authService;
 
     /**
@@ -40,7 +41,7 @@ public class PhotoController {
         String userId = authService.getAuthenticatedUserId();
 
         // 2. Service層の呼び出し
-        SubmitPhotoResult result = photoService.submitPhoto(request, userId);
+        SubmitPhotoResult result = photoService.submitPhoto(request, userId, file);
 
         // 3. 結果ステータスに基づいたHTTPステータスコードの返却
         return handleSubmissionResult(result);
