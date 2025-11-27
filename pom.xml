@@ -12,6 +12,8 @@
 
         <aws.serverless.java.container.version>2.0.1</aws.serverless.java.container.version>
         <aws.sdk.version>2.24.4</aws.sdk.version>
+        <!-- Lombokのバージョンを一箇所で管理 -->
+        <lombok.version>1.18.30</lombok.version>
     </properties>
 
     <groupId>nagasawakenji.walkfind</groupId>
@@ -43,5 +45,27 @@
             </dependency>
         </dependencies>
     </dependencyManagement>
+
+    <!-- ★追加: ここでコンパイラ設定を一元管理します -->
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <version>3.11.0</version>
+                <configuration>
+                    <source>${maven.compiler.source}</source>
+                    <target>${maven.compiler.target}</target>
+                    <annotationProcessorPaths>
+                        <path>
+                            <groupId>org.projectlombok</groupId>
+                            <artifactId>lombok</artifactId>
+                            <version>${lombok.version}</version>
+                        </path>
+                    </annotationProcessorPaths>
+                </configuration>
+            </plugin>
+        </plugins>
+    </build>
 
 </project>

@@ -19,9 +19,6 @@ public class SecurityConfigLocal {
                 .sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .csrf(csrf -> csrf.disable())
                 .cors(Customizer.withDefaults())
-                .oauth2ResourceServer(oauth2 -> oauth2.jwt(jwt -> {
-                    jwt.jwkSetUri("http://localhost/dummy/jwks.json");
-                }))
 
                 .authorizeHttpRequests(auth -> auth
                         // ローカルは全部許可して良い

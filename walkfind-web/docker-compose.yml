@@ -1,0 +1,16 @@
+services:
+  db:
+    image: postgres:15-alpine
+    container_name: walkfind-db
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_DB: walkfind       # application-local.properties と一致
+      POSTGRES_USER: walkfind     # application-local.properties と一致
+      POSTGRES_PASSWORD: walkfind # application-local.properties と一致
+      TZ: "Asia/Tokyo"
+    volumes:
+      - db-data:/var/lib/postgresql/data
+
+volumes:
+  db-data:

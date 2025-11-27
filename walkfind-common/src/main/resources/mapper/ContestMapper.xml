@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
-<mapper namespace="nagasawakenji.walkfind.infra.MyBatis.mapper.ContestMapper">
+<mapper namespace="nagasawakenji.walkfind.infra.mybatis.mapper.ContestMapper">
 
     <resultMap id="ContestResultMap" type="nagasawakenji.walkfind.domain.model.Contest">
         <id property="id" column="id"/>

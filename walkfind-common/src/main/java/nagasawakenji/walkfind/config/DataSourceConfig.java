@@ -27,8 +27,8 @@ public class DataSourceConfig {
             log.warn("ローカル環境 -> Docker PostgreSQL を利用します。");
             return DataSourceBuilder.create()
                     .driverClassName("org.postgresql.Driver")
-                    .url("jdbc:postgresql://localhost:5432/postgres")
-                    .username("postgres")
+                    .url("jdbc:postgresql://localhost:5432/walkfind")
+                    .username("walkfind")
                     .password("walkfind")
                     .build();
         }

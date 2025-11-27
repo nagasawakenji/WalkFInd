@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
-<mapper namespace="nagasawakenji.walkfind.infra.MyBatis.mapper.VoteMapper">
+<mapper namespace="nagasawakenji.walkfind.infra.mybatis.mapper.VoteMapper">
 
     <resultMap id="VoteResultMap" type="nagasawakenji.walkfind.domain.model.Vote">
         <id property="id" column="id"/>
