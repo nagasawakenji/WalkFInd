@@ -23,9 +23,13 @@ public class PhotoSubmissionService {
 
     private final PhotoMapper photoMapper;
     private final ContestMapper contestMapper;
+    private final S3DeleteService s3DeleteService;
 
+    // ロールバックされる際は、必ずS3へ保存した写真を削除するようにする
     @Transactional
     public SubmitPhotoResult submitPhoto(SubmitPhotoRequest request, String userId) {
+        // s3Keyを取得する
+        String s3Key = request.getPhotoUrl();
 
         // DTOのバリデーションはController層で完了している前提
         Long contestId = request.getContestId();
@@ -33,6 +37,7 @@ public class PhotoSubmissionService {
         // コンテスト期間チェック (ビジネスルール)
         Optional<Contest> contestOpt = contestMapper.findContestStatus(contestId);
 
+        // WARNING: ビジネスロジック違反でS3は触らない。
         if (contestOpt.isEmpty()) {
             log.warn("Contest ID {} not found.", contestId);
             return buildResult(null, SubmitPhotoStatus.BUSINESS_RULE_VIOLATION, "指定されたコンテストは存在しません。");
@@ -73,13 +78,35 @@ public class PhotoSubmissionService {
             return buildResult(newPhoto.getId(), SubmitPhotoStatus.SUCCESS, "写真の投稿が完了しました。");
 
         } catch (DatabaseOperationException e) {
+            safeDeleteFromS3(s3Key);
             // 自らスローした例外。再スローしてトランザクションをロールバックさせる。
             throw e;
         } catch (Exception e) {
+            safeDeleteFromS3(s3Key);
             // SQL/接続エラーなど予期せぬエラー。RuntimeExceptionにラップしてスロー。
             log.error("Database error during photo submission.", e);
             throw new RuntimeException("DB処理中に予期せぬエラーが発生しました。", e); // ★ RuntimeExceptionを再スロー
         }
+    }
+
+    /**
+     * DB例外をS3例外が上書きしないようにするための関数
+     * @param key
+     */
+    private void safeDeleteFromS3(String key) {
+        if (key == null || key.isBlank()) {
+            log.warn("S3 rollback skipped because key is null or blank");
+            return;
+        }
+
+        try {
+            s3DeleteService.delete(key);
+        } catch (Exception e) {
+            // DB例外を上書きしないよう、ここでのエラーは投げない
+            log.error("S3 rollback failed. key={}", key, e);
+        }
+
+
     }
 
     /**
