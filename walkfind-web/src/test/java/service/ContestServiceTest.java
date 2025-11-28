@@ -67,6 +67,38 @@ class ContestServiceTest {
     }
 
     // ----------------------------------------
+    // getAnnouncedContests()
+    // ----------------------------------------
+    @Test
+    @DisplayName("getAnnouncedContests: 発表済みコンテストをページングで取得できる")
+    void testGetAnnouncedContests() {
+
+        int page = 0;
+        int size = 20;
+
+        // 発表済みステータスに変更
+        contest.setStatus(ContestStatus.ANNOUNCED);
+
+        when(contestMapper.findAnnouncedContest(page, size))
+                .thenReturn(List.of(contest));
+
+        List<ContestResponse> responses =
+                contestService.getAnnouncedContests(page, size);
+
+        // 件数検証
+        assertThat(responses).hasSize(1);
+
+        ContestResponse res = responses.get(0);
+        assertThat(res.getContestId()).isEqualTo(1L);
+        assertThat(res.getName()).isEqualTo("Test Contest");
+        assertThat(res.getTheme()).isEqualTo("Nature");
+        assertThat(res.getStatus()).isEqualTo(ContestStatus.ANNOUNCED);
+
+        verify(contestMapper, times(1))
+                .findAnnouncedContest(page, size);
+    }
+
+    // ----------------------------------------
     // getContestDetail()
     // ----------------------------------------
     @Test

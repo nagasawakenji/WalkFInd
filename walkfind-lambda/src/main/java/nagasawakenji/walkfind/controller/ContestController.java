@@ -32,6 +32,19 @@ public class ContestController {
     }
 
     /**
+     * GET /api/v1/contests/announced : 結果発表済みのコンテストを一覧表示 (認証不要)
+     */
+    @GetMapping("/announced")
+    public ResponseEntity<List<ContestResponse>> getAnnouncedContests(
+            @RequestParam(value = "page", defaultValue = "0") int page,
+            @RequestParam(value = "size", defaultValue = "20") int size
+    ) {
+        List<ContestResponse> contests = contestService.getAnnouncedContests(page, size);
+
+        return ResponseEntity.ok(contests);
+    }
+
+    /**
      * GET /api/v1/contests/{contestId} : 特定のコンテストの詳細を表示（認証不要）
      */
     @GetMapping("/{contestId}")

@@ -37,6 +37,19 @@ public class ContestService {
     }
 
     /**
+     * 結果発表済みのコンテストを取得します
+     */
+    @Transactional(readOnly = true)
+    public List<ContestResponse> getAnnouncedContests(int page, int size) {
+        List<Contest> contests = contestMapper.findAnnouncedContest(page, size);
+
+        // Modelから一覧表示用DTOへの変換
+        return contests.stream()
+                .map(this::mapToContestResponse)
+                .collect(Collectors.toList());
+    }
+
+    /**
      * 特定のコンテスト詳細を取得します。
      */
     @Transactional(readOnly = true)
