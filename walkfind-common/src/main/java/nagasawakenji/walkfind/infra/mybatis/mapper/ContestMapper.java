@@ -3,6 +3,7 @@ package nagasawakenji.walkfind.infra.mybatis.mapper;
 import nagasawakenji.walkfind.domain.model.Contest;
 import nagasawakenji.walkfind.domain.statusenum.ContestStatus;
 import org.apache.ibatis.annotations.Mapper;
+import org.apache.ibatis.annotations.Param;
 
 import java.util.List;
 import java.util.Optional;
@@ -12,6 +13,9 @@ public interface ContestMapper {
 
     // 現在開催中または結果発表前のコンテストをリストで取得
     List<Contest> findAllActiveContests();
+
+    // 結果発表済みのコンテストをリストで取得
+    List<Contest> findAnnouncedContest(@Param("page") int page, @Param("size") int size);
 
     // 指定されたIDのコンテスト詳細を取得 (データがない場合はOptional.empty())
     Optional<Contest> findById(Long contestId);

@@ -15,6 +15,15 @@
         ORDER BY start_date ASC
     </select>
 
+    <select id="findAnnouncedContest" resultMap="ContestResultMap">
+        SELECT id, name, theme, start_date, end_date, status, created_at, updated_at
+        FROM contests
+        WHERE status = 'ANNOUNCED'
+        ORDER BY end_date DESC
+        LIMIT #{size}
+        OFFSET #{size} * #{page}
+    </select>
+
     <select id="findById" resultMap="ContestResultMap">
         SELECT *
         FROM contests
