@@ -1,9 +1,9 @@
 'use client';
 
-import { useState } from "react";
-import { useRouter } from "next/navigation";
-import axios from "axios";
-import { fetchAuthSession } from "aws-amplify/auth";
+import { useState } from 'react';
+import { useRouter } from 'next/navigation';
+import axios from 'axios';
+import { fetchAuthSession } from 'aws-amplify/auth';
 
 // 型定義
 interface CreatingContestRequest {
@@ -93,7 +93,7 @@ export default function CreatingContestPage() {
 
             // APIリクエスト
             const res = await axios.post<CreatingContestResponse>(
-                '${API_BASE_URL}/creating',
+                `${API_BASE_URL}/contests`,
                 requestBody,
                 {
                     headers: {
@@ -108,7 +108,7 @@ export default function CreatingContestPage() {
             if (resData.status === 'SUCCESS' && resData.contestId) {
                 alert('コンテストを作成しました!');
                 // コンテストページへ遷移
-                router.push('/contests/${resData.contestId}');
+                router.push(`/contests/${resData.contestId}`);
             } else {
                 handleBackendError(resData.status, resData.message);
             }
@@ -185,7 +185,7 @@ export default function CreatingContestPage() {
                 value={formData.name}
                 onChange={handleChange}
                 placeholder="例: 第1回 下北沢お散歩フォトコンテスト"
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition"
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition text-black"
               />
             </div>
 
@@ -202,7 +202,7 @@ export default function CreatingContestPage() {
                 value={formData.theme}
                 onChange={handleChange}
                 placeholder="どのような写真を募集するか、詳細なルールなどを入力してください"
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition resize-none"
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition resize-none text-black"
               />
             </div>
 
@@ -219,7 +219,7 @@ export default function CreatingContestPage() {
                   required
                   value={formData.startDate}
                   onChange={handleChange}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition"
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition text-black"
                 />
               </div>
 
@@ -234,7 +234,7 @@ export default function CreatingContestPage() {
                   required
                   value={formData.endDate}
                   onChange={handleChange}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition"
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition text-black"
                 />
               </div>
             </div>

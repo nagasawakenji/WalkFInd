@@ -24,7 +24,7 @@ public class ContestResultController {
      * GET /api/v1/results/{contestId} : 終了したコンテストの結果を順位順で表示（認証不要）
      */
     @GetMapping("/{contestId}")
-    public ResponseEntity<List<ContestResultResponse>> getContestResults(@PathVariable Long contestId) {
+    public ResponseEntity<List<ContestResultResponse>> getContestResults(@PathVariable("contestId") Long contestId) {
 
         List<ContestResultResponse> results = resultDisplayService.getFinalResults(contestId);
 

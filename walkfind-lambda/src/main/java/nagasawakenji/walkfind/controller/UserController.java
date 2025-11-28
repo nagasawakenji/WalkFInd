@@ -48,7 +48,7 @@ public class UserController {
      * 認証は不要
      */
     @GetMapping("/{userId}")
-    public ResponseEntity<UserPublicProfileResponse> getUserPublicProfile(@PathVariable String userId) {
+    public ResponseEntity<UserPublicProfileResponse> getUserPublicProfile(@PathVariable("userId") String userId) {
         log.info("Request for public profile summary: {}", userId);
         // UserHistoryServiceを呼び出し、公開プロフィールサマリーを取得
         UserPublicProfileResponse publicProfile = userHistoryService.getPublicProfileSummary(userId);

@@ -1,6 +1,8 @@
 package nagasawakenji.walkfind.domain.dto;
 
 
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.Value;
 
 import java.time.OffsetDateTime;
@@ -11,4 +13,17 @@ public class CreatingContestRequest {
     private final String theme;
     private final OffsetDateTime startDate;
     private final OffsetDateTime endDate;
+
+    @JsonCreator  // ✅ Jackson に「このコンストラクタで復元せよ」と指示
+    public CreatingContestRequest(
+            @JsonProperty("name") String name,
+            @JsonProperty("theme") String theme,
+            @JsonProperty("startDate") OffsetDateTime startDate,
+            @JsonProperty("endDate") OffsetDateTime endDate
+    ) {
+        this.name = name;
+        this.theme = theme;
+        this.startDate = startDate;
+        this.endDate = endDate;
+    }
 }

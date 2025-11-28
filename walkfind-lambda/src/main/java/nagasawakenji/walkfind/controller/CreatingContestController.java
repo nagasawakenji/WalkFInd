@@ -14,7 +14,7 @@ import org.springframework.web.bind.annotation.*;
 
 
 @RestController
-@RequestMapping("/api/v1/creating")
+@RequestMapping("/api/v1/contests")
 @Slf4j
 @RequiredArgsConstructor
 public class CreatingContestController {

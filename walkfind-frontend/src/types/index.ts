@@ -8,7 +8,7 @@ export interface ContestResponse {
   startDate: string;
   endDate: string;
   thumbnailUrl?: string; // あれば
-  status: 'UPCOMING' | 'IN_PROGRESS' | 'ENDED' | 'TALLYING';
+  status: ContestStatus;
 }
 
 // コンテスト詳細用
@@ -32,3 +32,9 @@ export interface PhotoDisplayResponse {
   presignedUrl: string; // S3の署名付きURL
   submissionDate: string;
 }
+
+export type ContestStatus =
+| 'UPCOMING'
+| 'IN_PROGRESS'
+| 'CLOSED_VOTING'
+| 'ANNOUNCED'

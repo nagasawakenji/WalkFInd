@@ -10,17 +10,27 @@ interface PageProps {
   };
 }
 
-// 詳細データの取得
+
 async function getContestDetail(id: string): Promise<ContestDetailResponse | null> {
+
   try {
-    return await apiClient.get(`/contests/${id}`);
-  } catch (error) {
+    const res = await fetch(
+      `${process.env.NEXT_PUBLIC_API_BASE_URL}/contests/${id}`,
+      { cache: "no-store" }
+    );
+
+    if (!res.ok) return null;
+    return await res.json();
+  } catch {
     return null;
   }
 }
 
 export default async function ContestDetailPage({ params }: PageProps) {
-  const contest = await getContestDetail(params.id);
+  const resolvedParams = await params;  
+
+  const contest = await getContestDetail(resolvedParams.id);
+
 
   if (!contest) {
     notFound(); // 404ページを表示

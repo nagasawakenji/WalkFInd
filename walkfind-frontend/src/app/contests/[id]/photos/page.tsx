@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import Image from 'next/image';
+import { use } from 'react';
 import axios, { AxiosError } from 'axios'; // ★修正: AxiosError をインポート
 import { fetchAuthSession } from 'aws-amplify/auth';
 
@@ -16,13 +17,14 @@ interface PhotoDisplayResponse {
 }
 
 interface PageProps {
-  params: { id: string };
+  params: Promise<{ id: string }>;
 }
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8080/api/v1';
 
 export default function PhotoListPage({ params }: PageProps) {
-  const contestId = params.id;
+  const resolvedParams = use(params);
+  const contestId = resolvedParams.id;
   const [photos, setPhotos] = useState<PhotoDisplayResponse[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [votingId, setVotingId] = useState<number | null>(null); // 投票中の写真ID
