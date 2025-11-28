@@ -1,4 +1,5 @@
 // src/app/page.tsx
+export const dynamic = "force-dynamic";
 import Link from 'next/link';
 import { apiClient } from '@/lib/axios';
 import { ContestResponse } from '@/types';

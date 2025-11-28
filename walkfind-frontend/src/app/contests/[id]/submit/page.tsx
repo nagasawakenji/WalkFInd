@@ -2,17 +2,19 @@
 
 import { useState, ChangeEvent, FormEvent } from 'react';
 import { useRouter } from 'next/navigation';
+import { use } from 'react';
 import Image from 'next/image';
 import axios, { AxiosError } from 'axios'; // ★修正: AxiosError をインポート
 import { fetchAuthSession } from 'aws-amplify/auth';
 import { uploadImage } from '@/lib/upload';
 
 interface PageProps {
-  params: { id: string };
+  params: Promise<{ id: string }>;
 }
 
 export default function SubmitPhotoPage({ params }: PageProps) {
-  const contestId = params.id;
+  const resolvedParams = use(params);  
+  const contestId = resolvedParams.id; 
   const router = useRouter();
 
   // フォームの状態管理

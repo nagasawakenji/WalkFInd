@@ -31,7 +31,7 @@ public class PhotoListController {
      * @return 写真リスト（投票数順）
      */
     @GetMapping("/{contestId}/photos")
-    public ResponseEntity<List<PhotoDisplayResponse>> getPhotos(@PathVariable Long contestId) {
+    public ResponseEntity<List<PhotoDisplayResponse>> getPhotos(@PathVariable("contestId") Long contestId) {
 
         List<PhotoResponse> photos = photoDisplayService.getPhotosByContest(contestId);
 

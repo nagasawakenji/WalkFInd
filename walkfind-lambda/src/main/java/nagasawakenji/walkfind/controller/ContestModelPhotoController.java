@@ -30,7 +30,7 @@ public class ContestModelPhotoController {
     @PreAuthorize("hasRole('admin')")
     @PostMapping("/contests/{contestId}/model-photos")
     public ResponseEntity<ModelPhotoCreateResponse> addModelPhoto(
-            @PathVariable Long contestId,
+            @PathVariable("contestId") Long contestId,
             @RequestBody ModelPhotoCreateRequest request
     ) {
         ModelPhotoCreateResponse response = modelPhotoService.addModelPhoto(contestId, request);
@@ -46,7 +46,7 @@ public class ContestModelPhotoController {
      */
     @GetMapping("/contests/{contestId}/model-photos")
     public ResponseEntity<List<ModelPhotoResponse>> getModelPhotos(
-            @PathVariable Long contestId
+            @PathVariable("contestId") Long contestId
     ) {
         return ResponseEntity.ok(modelPhotoService.getModelPhotos(contestId));
     }
@@ -56,7 +56,7 @@ public class ContestModelPhotoController {
      */
     @PreAuthorize("hasRole('admin')")
     @DeleteMapping("/model-photos/{id}")
-    public ResponseEntity<ModelPhotoDeleteResponse> deleteModelPhoto(@PathVariable Long id) {
+    public ResponseEntity<ModelPhotoDeleteResponse> deleteModelPhoto(@PathVariable("id") Long id) {
 
         ModelPhotoDeleteResponse response = modelPhotoService.deleteModelPhoto(id);
 

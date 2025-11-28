@@ -35,7 +35,7 @@ public class ContestController {
      * GET /api/v1/contests/{contestId} : 特定のコンテストの詳細を表示（認証不要）
      */
     @GetMapping("/{contestId}")
-    public ResponseEntity<ContestDetailResponse> getContestDetail(@PathVariable Long contestId) {
+    public ResponseEntity<ContestDetailResponse> getContestDetail(@PathVariable("contestId") Long contestId) {
 
         ContestDetailResponse detail = contestService.getContestDetail(contestId);
 
