@@ -20,7 +20,6 @@ import org.slf4j.MDC;
 @Slf4j
 public class StreamLambdaHandler implements RequestStreamHandler {
 
-    // Spring Boot 3向けに提供されているハンドラーを使用
     private static SpringBootLambdaContainerHandler<AwsProxyRequest, AwsProxyResponse> handler;
 
     static {
