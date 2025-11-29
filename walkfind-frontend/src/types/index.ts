@@ -23,6 +23,22 @@ export interface ContestDetailResponse {
   // その他、Java側のDTOにあるフィールドを追加
 }
 
+// 優勝作品表示用
+export interface ContestWinnerDto {
+  photoId: number;
+  contestId: number;
+  finalScore: number;
+  title: string;
+  photoUrl: string;
+  username: string;
+  submissionDate: string;
+}
+
+export interface ContestWinnerListResponse {
+  winners: ContestWinnerDto[];
+  totalWinnerCount: number;
+}
+
 // 写真表示用
 export interface PhotoDisplayResponse {
   photoId: number;
@@ -38,3 +54,16 @@ export type ContestStatus =
 | 'IN_PROGRESS'
 | 'CLOSED_VOTING'
 | 'ANNOUNCED'
+
+// 結果表示用
+export interface ContestResultResponse {
+  photoId: number;
+  contestId: number;
+  finalRank: number;
+  finalScore: number;
+  isWinner: boolean;
+  title: string;
+  photoUrl: string;
+  username: string;
+  submissionDate: string;
+}

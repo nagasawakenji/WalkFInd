@@ -2,15 +2,16 @@ package nagasawakenji.walkfind.controller;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import nagasawakenji.walkfind.domain.dto.ContestResultListResponse;
 import nagasawakenji.walkfind.domain.dto.ContestResultResponse;
+import nagasawakenji.walkfind.domain.dto.ContestWinnerDto;
+import nagasawakenji.walkfind.domain.dto.ContestWinnerListResponse;
 import nagasawakenji.walkfind.exception.ContestNotFoundException;
 import nagasawakenji.walkfind.exception.ContestStatusException;
 import nagasawakenji.walkfind.service.ResultDisplayService;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-
-import java.util.List;
 
 @RestController
 @Slf4j
@@ -24,12 +25,25 @@ public class ContestResultController {
      * GET /api/v1/results/{contestId} : 終了したコンテストの結果を順位順で表示（認証不要）
      */
     @GetMapping("/{contestId}")
-    public ResponseEntity<List<ContestResultResponse>> getContestResults(@PathVariable("contestId") Long contestId) {
+    public ResponseEntity<ContestResultListResponse> getContestResults(@PathVariable("contestId") Long contestId,
+                                                                         @RequestParam(value = "page", defaultValue = "0") int page,
+                                                                         @RequestParam(value = "size", defaultValue = "20") int size) {
 
-        List<ContestResultResponse> results = resultDisplayService.getFinalResults(contestId);
+        ContestResultListResponse response = resultDisplayService.getFinalResults(contestId, page, size);
 
         // 結果が空の場合でも 200 OK と空リストを返す (コンテストは存在するが投稿がなかった場合など)
-        return ResponseEntity.ok(results);
+        return ResponseEntity.ok(response);
+    }
+
+    /**
+     * GET /api/v1/results/{contestId}/winner : 終了したコンテストの優勝作品を表示(認証不要)
+     */
+    @GetMapping("/{contestId}/winner")
+    public ResponseEntity<ContestWinnerListResponse> getContestWinner(@PathVariable("contestId") Long contestId) {
+
+       ContestWinnerListResponse response = resultDisplayService.getFinalWinners(contestId);
+
+       return ResponseEntity.ok(response);
     }
 
     /**

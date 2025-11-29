@@ -1,6 +1,9 @@
 package service;
 
 import nagasawakenji.walkfind.domain.dto.ContestResultResponse;
+import nagasawakenji.walkfind.domain.dto.ContestResultListResponse;
+import nagasawakenji.walkfind.domain.dto.ContestWinnerDto;
+import nagasawakenji.walkfind.domain.dto.ContestWinnerListResponse;
 import nagasawakenji.walkfind.domain.model.Contest;
 import nagasawakenji.walkfind.domain.statusenum.ContestStatus;
 import nagasawakenji.walkfind.exception.ContestNotFoundException;
@@ -44,7 +47,7 @@ class ResultDisplayServiceTest {
                 .thenReturn(Optional.empty());
 
         assertThatThrownBy(() ->
-                resultDisplayService.getFinalResults(1L)
+                resultDisplayService.getFinalResults(1L, 0, 20)
         ).isInstanceOf(ContestNotFoundException.class);
     }
 
@@ -61,11 +64,11 @@ class ResultDisplayServiceTest {
                 .thenReturn(Optional.of(testContest));
 
         assertThatThrownBy(() ->
-                resultDisplayService.getFinalResults(1L)
+                resultDisplayService.getFinalResults(1L, 0, 20)
         ).isInstanceOf(ContestStatusException.class);
 
         verify(contestResultMapper, never())
-                .findDetailedResultsByContestId(anyLong());
+                .findDetailedResultsByContestId(anyLong(), anyInt(), anyInt());
     }
 
     // ---------------------------------------------------------------
@@ -91,17 +94,19 @@ class ResultDisplayServiceTest {
                 .title("testPhoto")
                 .build();
 
-        when(contestResultMapper.findDetailedResultsByContestId(1L))
+        when(contestResultMapper.findDetailedResultsByContestId(1L, 0, 20))
                 .thenReturn(List.of(r1));
+        when(contestResultMapper.countResultsByContestId(1L)).thenReturn(1L);
 
-        List<ContestResultResponse> results = resultDisplayService.getFinalResults(1L);
+        ContestResultListResponse response = resultDisplayService.getFinalResults(1L, 0, 20);
 
-        assertThat(results).hasSize(1);
-        assertThat(results.get(0).getFinalRank()).isEqualTo(1);
-        assertThat(results.get(0).getIsWinner()).isTrue();
+        assertThat(response.getContestResultResponses()).hasSize(1);
+        assertThat(response.getContestResultResponses().get(0).getFinalRank()).isEqualTo(1);
+        assertThat(response.getContestResultResponses().get(0).getIsWinner()).isTrue();
+        assertThat(response.getTotalCount()).isEqualTo(1);
 
         verify(contestResultMapper, times(1))
-                .findDetailedResultsByContestId(1L);
+                .findDetailedResultsByContestId(1L, 0, 20);
     }
 
     // ---------------------------------------------------------------
@@ -127,16 +132,18 @@ class ResultDisplayServiceTest {
                 .title("testPhoto")
                 .build();
 
-        when(contestResultMapper.findDetailedResultsByContestId(1L))
+        when(contestResultMapper.findDetailedResultsByContestId(1L, 0, 20))
                 .thenReturn(List.of(r1));
+        when(contestResultMapper.countResultsByContestId(1L)).thenReturn(1L);
 
-        List<ContestResultResponse> results = resultDisplayService.getFinalResults(1L);
+        ContestResultListResponse response = resultDisplayService.getFinalResults(1L, 0, 20);
 
-        assertThat(results).hasSize(1);
-        assertThat(results.get(0).getFinalScore()).isEqualTo(15);
+        assertThat(response.getContestResultResponses()).hasSize(1);
+        assertThat(response.getContestResultResponses().get(0).getFinalScore()).isEqualTo(15);
+        assertThat(response.getTotalCount()).isEqualTo(1);
 
         verify(contestResultMapper, times(1))
-                .findDetailedResultsByContestId(1L);
+                .findDetailedResultsByContestId(1L, 0, 20);
     }
 
     // ---------------------------------------------------------------
@@ -152,11 +159,87 @@ class ResultDisplayServiceTest {
         when(contestMapper.findContestStatus(1L))
                 .thenReturn(Optional.of(testContest));
 
-        when(contestResultMapper.findDetailedResultsByContestId(1L))
+        when(contestResultMapper.findDetailedResultsByContestId(1L, 0, 20))
                 .thenReturn(List.of());
+        when(contestResultMapper.countResultsByContestId(1L)).thenReturn(0L);
 
-        List<ContestResultResponse> results = resultDisplayService.getFinalResults(1L);
+        ContestResultListResponse response = resultDisplayService.getFinalResults(1L, 0, 20);
 
-        assertThat(results).isEmpty();
+        assertThat(response.getContestResultResponses()).isEmpty();
+        assertThat(response.getTotalCount()).isEqualTo(0);
+    }
+
+    // ---------------------------------------------------------------
+    // 6. Winner取得：CLOSED_VOTING → Winner返却
+    // ---------------------------------------------------------------
+    @Test
+    @DisplayName("CLOSED_VOTING → Winner取得成功")
+    void testGetFinalWinnersClosedVoting() {
+
+        Contest testContest = new Contest();
+        testContest.setStatus(ContestStatus.CLOSED_VOTING);
+
+        when(contestMapper.findContestStatus(1L))
+                .thenReturn(Optional.of(testContest));
+
+        ContestWinnerDto winner = ContestWinnerDto.builder()
+                .photoId(100L)
+                .contestId(1L)
+                .finalScore(50)
+                .title("winner-photo")
+                .photoUrl("winner-url")
+                .username("winner-user")
+                .build();
+
+        when(contestResultMapper.findWinnerPhotosByContestId(1L))
+                .thenReturn(List.of(winner));
+
+        ContestWinnerListResponse response = resultDisplayService.getFinalWinners(1L);
+
+        assertThat(response.getWinners()).hasSize(1);
+        assertThat(response.getWinners().get(0).getUsername()).isEqualTo("winner-user");
+        assertThat(response.getTotalWinnerCount()).isEqualTo(1);
+
+        verify(contestResultMapper, times(1))
+                .findWinnerPhotosByContestId(1L);
+    }
+
+    // ---------------------------------------------------------------
+    // 7. Winner取得：ステータス不正 → ContestStatusException
+    // ---------------------------------------------------------------
+    @Test
+    @DisplayName("IN_PROGRESS → Winner取得不可")
+    void testGetFinalWinnersNotReady() {
+
+        Contest testContest = new Contest();
+        testContest.setStatus(ContestStatus.IN_PROGRESS);
+
+        when(contestMapper.findContestStatus(1L))
+                .thenReturn(Optional.of(testContest));
+
+        assertThatThrownBy(() ->
+                resultDisplayService.getFinalWinners(1L)
+        ).isInstanceOf(ContestStatusException.class);
+
+        verify(contestResultMapper, never())
+                .findWinnerPhotosByContestId(anyLong());
+    }
+
+    // ---------------------------------------------------------------
+    // 8. Winner取得：コンテスト不存在 → ContestNotFoundException
+    // ---------------------------------------------------------------
+    @Test
+    @DisplayName("Winner取得：コンテスト不存在 → ContestNotFoundException")
+    void testGetFinalWinnersContestNotFound() {
+
+        when(contestMapper.findContestStatus(1L))
+                .thenReturn(Optional.empty());
+
+        assertThatThrownBy(() ->
+                resultDisplayService.getFinalWinners(1L)
+        ).isInstanceOf(ContestNotFoundException.class);
+
+        verify(contestResultMapper, never())
+                .findWinnerPhotosByContestId(anyLong());
     }
 }
