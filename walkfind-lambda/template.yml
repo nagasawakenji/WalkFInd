@@ -218,6 +218,56 @@ Resources:
             Auth:
               Authorizer: CognitoAuth
 
+  ResultCalculationFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: WalkFindResultCalculation
+      CodeUri: .
+      Handler: nagasawakenji.walkfind.handler.ResultCalculationHandler::handleRequest
+      Runtime: java17
+      Timeout: 120
+      MemorySize: 2048
+      Environment:
+        Variables:
+          DB_SECRET_ARN: !Ref DbSecretArn
+      Policies:
+        - Statement:
+            Effect: Allow
+            Action:
+              - secretsmanager:GetSecretValue
+            Resource: !Sub "arn:aws:secretsmanager:${AWS::Region}:${AWS::AccountId}:secret:/walkfind/database-*"
+      Events:
+        ResultCalculationSchedule:
+          Type: Schedule
+          Properties:
+            Schedule: rate(60 minutes)
+            Enabled: true
+
+  ContestStatusBatchHandler:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: WalkFindContestStatusBatch
+      CodeUri: .
+      Handler: nagasawakenji.walkfind.handler.ContestStatusBatchHandler::handleRequest
+      Runtime: java17
+      Timeout: 60
+      MemorySize: 1024
+      Environment:
+        Variables:
+          DB_SECRET_ARN: !Ref DbSecretArn
+      Policies:
+        - Statement:
+            Effect: Allow
+            Action:
+              - secretsmanager:GetSecretValue
+            Resource: !Sub "arn:aws:secretsmanager:${AWS::Region}:${AWS::AccountId}:secret:/walkfind/database-*"
+      Events:
+        ContestStatusSchedule:
+          Type: Schedule
+          Properties:
+            Schedule: rate(60 minutes)
+            Enabled: true
+
 # =======================================================
 # Outputs
 # =======================================================

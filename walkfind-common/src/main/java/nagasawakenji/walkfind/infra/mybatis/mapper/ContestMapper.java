@@ -5,6 +5,7 @@ import nagasawakenji.walkfind.domain.statusenum.ContestStatus;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 
+import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.Optional;
 
@@ -34,4 +35,13 @@ public interface ContestMapper {
 
     // 名前からコンテストの存在確認を行う
     boolean isExistContestByName(String name);
+
+    // コンテストのステータス更新(UPCOMING → IN_PROGRESS)
+    int updateToInProgress(OffsetDateTime now);
+
+    // コンテストのステータス更新(IN_PROGRESS → CLOSED_VOTING)
+    int updateToClosedVoting(OffsetDateTime now);
+
+    // コンテストのステータス更新(CLOSED_VOTING → ANNOUNCED)
+    int updateToAnnouncedIfCalculated();
 }

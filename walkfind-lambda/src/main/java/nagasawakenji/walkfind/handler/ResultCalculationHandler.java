@@ -2,6 +2,7 @@ package nagasawakenji.walkfind.handler;
 
 import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.lambda.runtime.RequestHandler;
+import lombok.extern.slf4j.Slf4j;
 import nagasawakenji.walkfind.WalkFindLambdaApplication;
 import nagasawakenji.walkfind.domain.dto.CalculationResult;
 import nagasawakenji.walkfind.service.ResultCalculationService;
@@ -14,6 +15,7 @@ import java.util.List;
  * 結果集計処理のためのLambdaハンドラ。
  * EventBridgeからのイベントを受け取り、ResultCalculationServiceを呼び出す。
  */
+@Slf4j
 public class ResultCalculationHandler implements RequestHandler<Object, List<CalculationResult>> {
 
     // Springコンテキストを再利用するための静的変数
@@ -23,6 +25,7 @@ public class ResultCalculationHandler implements RequestHandler<Object, List<Cal
     // 初期化ブロック (Lambdaのコールドスタート時に一度だけ実行される)
     static {
         // Spring Bootアプリケーションを起動
+        log.info("CalculateAllClosedContests Spring Context initialized.");
         applicationContext = SpringApplication.run(WalkFindLambdaApplication.class);
     }
 
