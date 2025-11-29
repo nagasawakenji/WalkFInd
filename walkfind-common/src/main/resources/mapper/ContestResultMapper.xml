@@ -30,6 +30,23 @@
         <result property="username" column="username"/>
     </resultMap>
 
+    <!-- ContestWinnerDto.javaに対応する優勝作品マップ -->
+    <resultMap id="ContestWinnerDtoMap" type="nagasawakenji.walkfind.domain.dto.ContestWinnerDto">
+        <!-- R: contest_results, P: user_photos, U: users -->
+        <result property="photoId" column="photo_id"/>
+        <result property="contestId" column="contest_id"/>
+        <result property="finalRank" column="final_rank"/>
+        <result property="finalScore" column="final_score"/>
+
+        <!-- user_photos から取得する情報 -->
+        <result property="title" column="title"/>
+        <result property="photoUrl" column="photo_url"/>
+        <result property="submissionDate" column="submission_date"/>
+
+        <!-- users から取得する情報 -->
+        <result property="username" column="username"/>
+    </resultMap>
+
     <!-- ★ 結果集計機能：集計済みのレコードを一括で登録する ★ -->
     <insert id="insertAll">
         INSERT INTO contest_results (contest_id, photo_id, final_rank, final_score, is_winner)
@@ -81,6 +98,33 @@
         JOIN users U ON P.user_id = U.id
         WHERE R.contest_id = #{contestId}
         ORDER BY R.final_rank ASC, R.final_score DESC
+        LIMIT #{size}
+        OFFSET #{page} * #{size}
+    </select>
+
+    <select id="countResultsByContestId" resultType="int">
+        SELECT COUNT(*)
+        FROM contest_results
+        WHERE contest_id = #{contestId}
+    </select>
+
+    <select id="findWinnerPhotosByContestId" resultMap="ContestWinnerDtoMap">
+        SELECT
+        R.photo_id,
+        R.contest_id,
+        R.final_score,
+        P.title,
+        P.photo_url,
+        P.submission_date,
+        U.username
+        FROM contest_results R
+        -- 写真情報と投稿日時を取得
+        JOIN user_photos P ON R.photo_id = P.id
+        -- 投稿者名を取得
+        JOIN users U ON P.user_id = U.id
+        WHERE R.contest_id = #{contestId}
+        AND R.is_winner = true
+        ORDER BY P.submission_date
     </select>
 
 
