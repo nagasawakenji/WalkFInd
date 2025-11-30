@@ -32,8 +32,8 @@ public class PhotoController {
      */
     @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<SubmitPhotoResult> submitPhoto(
-            @Valid @RequestPart SubmitPhotoRequest request,
-            @RequestPart MultipartFile file
+            @Valid @RequestPart("request") SubmitPhotoRequest request,
+            @RequestPart("file") MultipartFile file
             ) {
 
         // 1. 認証情報（ユーザーID）の取得 (Controllerの責務)

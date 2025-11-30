@@ -37,3 +37,7 @@ build/
 .env.*
 .envrc
 
+
+### local storage (uploaded files) ###
+/walkfind-web/local-storage/
+

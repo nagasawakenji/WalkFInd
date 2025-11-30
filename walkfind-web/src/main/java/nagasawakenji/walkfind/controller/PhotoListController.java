@@ -1,6 +1,8 @@
 package nagasawakenji.walkfind.controller;
 
 import nagasawakenji.walkfind.domain.dto.PhotoResponse;
+import nagasawakenji.walkfind.domain.dto.PhotoDisplayResponse;
+import nagasawakenji.walkfind.service.LocalStorageDownloadService;
 import nagasawakenji.walkfind.service.PhotoDisplayService;
 import nagasawakenji.walkfind.exception.ContestNotFoundException;
 import lombok.RequiredArgsConstructor;
@@ -10,6 +12,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.net.URL;
 
 @RestController
 @RequestMapping("/api/v1/contests")
@@ -18,7 +21,7 @@ import java.util.List;
 public class PhotoListController {
 
     private final PhotoDisplayService photoDisplayService;
-
+    private final LocalStorageDownloadService localStorageDownloadService;
     /**
      * GET /api/v1/contests/{contestId}/photos : 特定コンテストの投稿写真リストを取得
      * このエンドポイントは公開（認証不要）です。
@@ -27,12 +30,15 @@ public class PhotoListController {
      * @return 写真リスト（投票数順）
      */
     @GetMapping("/{contestId}/photos")
-    public ResponseEntity<List<PhotoResponse>> getPhotos(@PathVariable("contestId") Long contestId) {
+    public ResponseEntity<List<PhotoDisplayResponse>> getPhotos(@PathVariable("contestId") Long contestId) {
 
         List<PhotoResponse> photos = photoDisplayService.getPhotosByContest(contestId);
 
-        // 写真が0枚でも、コンテストが存在していれば 200 OK と空のリストを返す
-        return ResponseEntity.ok(photos);
+        List<PhotoDisplayResponse> responses = photos.stream()
+                .map(this::mapToPhotoDisplayResponse)
+                .toList();
+
+        return ResponseEntity.ok(responses);
     }
 
     /**
@@ -45,4 +51,18 @@ public class PhotoListController {
     }
 
     // 他の汎用的な例外ハンドリング（500エラーなど）は、他のControllerのものと共通化します。
+
+    private PhotoDisplayResponse mapToPhotoDisplayResponse(PhotoResponse p) {
+        URL url = localStorageDownloadService.generatedDownloadUrl(p.getPhotoUrl());
+
+        PhotoDisplayResponse res = new PhotoDisplayResponse();
+        res.setPhotoId(p.getPhotoId());
+        res.setTitle(p.getTitle());
+        res.setUsername(p.getUsername());
+        res.setTotalVotes(p.getTotalVotes());
+        res.setPresignedUrl(url);
+        res.setSubmissionDate(p.getSubmissionDate());
+
+        return res;
+    }
 }
