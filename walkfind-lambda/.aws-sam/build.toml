@@ -7,6 +7,6 @@ architecture = "x86_64"
 handler = "nagasawakenji.walkfind.handler.StreamLambdaHandler::handleRequest"
 manifest_hash = ""
 packagetype = "Zip"
-functions = ["UserApiFunction"]
+functions = ["UserApiFunction", "ResultCalculationFunction", "ContestStatusBatchHandler"]
 
 [layer_build_definitions]
