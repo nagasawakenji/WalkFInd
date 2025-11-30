@@ -40,4 +40,5 @@ build/
 
 ### local storage (uploaded files) ###
 /walkfind-web/local-storage/
+**/local-storage/
 
