@@ -1,18 +1,21 @@
 package nagasawakenji.walkfind.service;
 
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.File;
 import java.io.IOException;
+import java.nio.file.Paths;
 
 @Service
 @Slf4j
 public class LocalStorageUploadService {
 
-    private final String storageRoot = "local-storage";  // プロジェクト直下に保存
+    @Value("${app.local-storage-dir}")
+    private String storageRoot;
 
     /**
      * ローカル用のファイルアップロード処理

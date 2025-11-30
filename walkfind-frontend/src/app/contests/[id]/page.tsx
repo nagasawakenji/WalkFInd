@@ -63,27 +63,33 @@ export default async function ContestDetailPage({ params }: PageProps) {
       </div>
 
       {/* アクションボタンエリア */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {/* 投票・閲覧へ */}
-        <Link 
-          href={`/contests/${contest.contestId}/photos`}
-          className="flex flex-col items-center justify-center p-8 bg-blue-50 border-2 border-blue-200 rounded-xl hover:bg-blue-100 transition cursor-pointer"
-        >
-          <span className="text-3xl mb-2">👀</span>
-          <h3 className="text-2xl font-bold text-blue-700">みんなの写真を見る</h3>
-          <p className="text-blue-600 mt-2">投稿された作品を閲覧して投票しよう</p>
-        </Link>
+      {contest.status === "IN_PROGRESS" ? (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          {/* 投票・閲覧へ */}
+          <Link 
+            href={`/contests/${contest.contestId}/photos`}
+            className="flex flex-col items-center justify-center p-8 bg-blue-50 border-2 border-blue-200 rounded-xl hover:bg-blue-100 transition cursor-pointer"
+          >
+            <span className="text-3xl mb-2">👀</span>
+            <h3 className="text-2xl font-bold text-blue-700">みんなの写真を見る</h3>
+            <p className="text-blue-600 mt-2">投稿された作品を閲覧して投票しよう</p>
+          </Link>
 
-        {/* 投稿へ */}
-        <Link 
-          href={`/contests/${contest.contestId}/submit`}
-          className="flex flex-col items-center justify-center p-8 bg-orange-50 border-2 border-orange-200 rounded-xl hover:bg-orange-100 transition cursor-pointer"
-        >
-          <span className="text-3xl mb-2">📸</span>
-          <h3 className="text-2xl font-bold text-orange-700">写真を投稿する</h3>
-          <p className="text-orange-600 mt-2">あなたの自慢の1枚で参加しよう</p>
-        </Link>
-      </div>
+          {/* 投稿へ */}
+          <Link 
+            href={`/contests/${contest.contestId}/submit`}
+            className="flex flex-col items-center justify-center p-8 bg-orange-50 border-2 border-orange-200 rounded-xl hover:bg-orange-100 transition cursor-pointer"
+          >
+            <span className="text-3xl mb-2">📸</span>
+            <h3 className="text-2xl font-bold text-orange-700">写真を投稿する</h3>
+            <p className="text-orange-600 mt-2">あなたの自慢の1枚で参加しよう</p>
+          </Link>
+        </div>
+      ) : (
+        <div className="mt-6 p-4 text-center bg-gray-100 rounded-lg text-gray-500">
+          このコンテストは現在 <span className="font-semibold">{contest.status}</span> のため、投稿・投票はできません。
+        </div>
+      )}
 
       {/* ここに後で「モデル写真（ContestModelPhotoController）」の表示エリアを追加すると良いでしょう */}
     </main>

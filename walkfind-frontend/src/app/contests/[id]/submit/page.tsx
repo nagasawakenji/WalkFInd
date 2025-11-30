@@ -6,7 +6,7 @@ import { use } from 'react';
 import Image from 'next/image';
 import axios, { AxiosError } from 'axios'; // ★修正: AxiosError をインポート
 import { fetchAuthSession } from 'aws-amplify/auth';
-import { uploadImage } from '@/lib/upload';
+import { uploadImage } from '@/lib/upload'; // 本番用（S3）
 
 interface PageProps {
   params: Promise<{ id: string }>;
@@ -58,27 +58,60 @@ export default function SubmitPhotoPage({ params }: PageProps) {
     setErrorMessage('');
 
     try {
-      // 1. 画像をアップロード (ローカル or S3)
-      const photoKey = await uploadImage(file, contestId);
-
-      // 2. 認証トークンの取得
+      // 1. 認証トークンの取得
       const session = await fetchAuthSession();
       const token = session.tokens?.accessToken?.toString();
       const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8080/api/v1';
+      const IS_LOCAL = process.env.NEXT_PUBLIC_IS_LOCAL === 'true';
 
-      // 3. DBに投稿データを登録
-      await axios.post(
-        `${API_BASE_URL}/photos`,
-        {
+      // 2. ローカル or 本番で分岐
+      if (IS_LOCAL) {
+        // ✅ ローカル環境：DTO + ファイルを multipart で送信
+        const formData = new FormData();
+
+        // DTO を JSON として Blob 化して request パートに詰める
+        const requestDto = {
           contestId: Number(contestId),
+          // ローカルでは一時的にダミーURLを入れる（バックエンド側で実URLに上書き）
+          photoUrl: "local",
           title: title,
           description: description,
-          photoUrl: photoKey,
-        },
-        {
-          headers: { Authorization: `Bearer ${token}` },
-        }
-      );
+        };
+
+        formData.append(
+          "request",
+          new Blob([JSON.stringify(requestDto)], {
+            type: "application/json",
+          })
+        );
+
+        // ファイル本体
+        formData.append("file", file);
+
+        await axios.post(`${API_BASE_URL}/photos`, formData, {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            // ❗ multipart/form-data の Content-Type は axios に自動設定させる
+          },
+        });
+
+      } else {
+        // ✅ 本番環境：S3 Presigned Upload
+        const photoKey = await uploadImage(file, contestId);
+
+        await axios.post(
+          `${API_BASE_URL}/photos`,
+          {
+            contestId: Number(contestId),
+            title: title,
+            description: description,
+            photoUrl: photoKey,
+          },
+          {
+            headers: { Authorization: `Bearer ${token}` },
+          }
+        );
+      }
 
       alert('投稿が完了しました！');
       router.push(`/contests/${contestId}/photos`);

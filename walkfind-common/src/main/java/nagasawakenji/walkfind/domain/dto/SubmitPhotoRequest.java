@@ -1,5 +1,7 @@
 package nagasawakenji.walkfind.domain.dto;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
@@ -24,4 +26,17 @@ public class SubmitPhotoRequest {
     // 任意: 作品の説明文
     @Size(max = 500, message = "説明文は500文字以内で入力してください。")
     private final String description;
+
+    @JsonCreator
+    public SubmitPhotoRequest(
+            @JsonProperty("contestId") Long contestId,
+            @JsonProperty("photoUrl") String photoUrl,
+            @JsonProperty("title") String title,
+            @JsonProperty("description") String description
+    ) {
+        this.contestId = contestId;
+        this.photoUrl = photoUrl;
+        this.title = title;
+        this.description = description;
+    }
 }
