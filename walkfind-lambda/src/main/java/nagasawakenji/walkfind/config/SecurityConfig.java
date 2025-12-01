@@ -48,7 +48,7 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth
                         // 公開エンドポイント（認証不要）
                         // コンテストリスト、結果表示、ヘルステスト
-                        .requestMatchers("/api/v1/contests/**", "/api/v1/results/**", "/v1/auth/**").permitAll()
+                        .requestMatchers("/api/v1/contests/**", "/api/v1/results/**", "/api/auth/**").permitAll()
 
                         // 保護されたエンドポイント（認証必須）
                         // 投稿、投票、ユーザー情報更新など
