@@ -36,6 +36,9 @@ build/
 /.env
 .env.*
 .envrc
+walkfind-lambda/.env
+walkfind-web/src/main/resources/application-local.properties
+walkfind-frontend/.env.local
 
 
 ### local storage (uploaded files) ###
