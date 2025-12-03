@@ -52,12 +52,16 @@ export default function PhotoListPage({ params }: PageProps) {
     setVotingId(photoId);
 
     try {
-      // 1. 認証トークン取得
-      const session = await fetchAuthSession();
-      const token = session.tokens?.accessToken?.toString();
-
+      const token = localStorage.getItem("access_token");
       if (!token) {
-        alert('投票するにはログインが必要です。');
+        const loginUrl = process.env.NEXT_PUBLIC_COGNITO_LOGIN_URL;
+        if (loginUrl) {
+          // ログイン後に元のページへ戻すためURLを保存
+          const currentPath = window.location.pathname + window.location.search;
+          localStorage.setItem("redirect_after_login", currentPath);
+
+          window.location.href = loginUrl;
+        }
         return;
       }
 
