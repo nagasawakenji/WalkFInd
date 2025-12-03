@@ -4,8 +4,7 @@ import { useState, ChangeEvent, FormEvent } from 'react';
 import { useRouter } from 'next/navigation';
 import { use } from 'react';
 import Image from 'next/image';
-import axios, { AxiosError } from 'axios'; // ★修正: AxiosError をインポート
-import { fetchAuthSession } from 'aws-amplify/auth';
+import axios, { AxiosError } from 'axios'; // AxiosError をインポート
 import { uploadImage } from '@/lib/upload'; // 本番用（S3）
 
 interface PageProps {
@@ -58,9 +57,22 @@ export default function SubmitPhotoPage({ params }: PageProps) {
     setErrorMessage('');
 
     try {
-      // 1. 認証トークンの取得
-      const session = await fetchAuthSession();
-      const token = session.tokens?.accessToken?.toString();
+      // 認証トークンの取得（Spring Boot APIレスポンス由来）
+      const token = localStorage.getItem("access_token");
+
+      if (!token) {
+        // ログイン後に元のページへ戻すためのURLを保存
+        const currentPath = window.location.pathname;
+        localStorage.setItem("redirect_after_login", currentPath);
+
+        const loginUrl = process.env.NEXT_PUBLIC_COGNITO_LOGIN_URL;
+        if (loginUrl) {
+          window.location.href = loginUrl;
+        } else {
+          router.push('/login');
+        }
+        return;
+      }
       const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8080/api/v1';
       const IS_LOCAL = process.env.NEXT_PUBLIC_IS_LOCAL === 'true';
 

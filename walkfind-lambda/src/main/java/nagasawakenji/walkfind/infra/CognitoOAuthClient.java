@@ -2,9 +2,11 @@ package nagasawakenji.walkfind.infra;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import jakarta.annotation.PostConstruct;
 import lombok.extern.slf4j.Slf4j;
+import nagasawakenji.walkfind.domain.dto.CognitoSecret;
 import nagasawakenji.walkfind.domain.dto.CognitoTokenResponse;
-import org.springframework.beans.factory.annotation.Value;
+import nagasawakenji.walkfind.service.CognitoSecretLoader;
 import org.springframework.http.*;
 import org.springframework.stereotype.Service;
 import org.springframework.util.LinkedMultiValueMap;
@@ -18,20 +20,31 @@ import java.util.Base64;
 @Slf4j
 public class CognitoOAuthClient {
 
-    @Value("${cognito.domain}")
+    private final CognitoSecretLoader secretLoader;
+
     private String domain;
-
-    @Value("${cognito.client-id}")
     private String clientId;
-
-    @Value("${cognito.client-secret}")
     private String clientSecret;
-
-    @Value("${cognito.redirect-uri}")
     private String redirectUri;
 
     private final ObjectMapper objectMapper = new ObjectMapper();
     private final RestTemplate restTemplate = new RestTemplate();
+
+    public CognitoOAuthClient(CognitoSecretLoader secretLoader) {
+        this.secretLoader = secretLoader;
+    }
+
+    @PostConstruct
+    public void init() {
+        CognitoSecret secret = secretLoader.load();
+
+        this.clientId = secret.clientId();
+        this.clientSecret = secret.clientSecret();
+        this.domain = secret.domain();
+        this.redirectUri = secret.redirectUri();
+
+        log.info("Cognito secrets loaded successfully");
+    }
 
     public CognitoTokenResponse fetchToken(String code) {
 

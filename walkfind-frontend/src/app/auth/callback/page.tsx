@@ -25,8 +25,13 @@ export default function AuthCallbackPage() {
         // ローカル保存（本番では HttpOnly Cookie 推奨）
         localStorage.setItem("access_token", accessToken);
 
-        // ログイン後の遷移
-        router.replace("/");
+        // ✅ ログイン前に保存していた遷移先へ復帰
+        const redirectPath =
+          localStorage.getItem("redirect_after_login") || "/";
+
+        localStorage.removeItem("redirect_after_login");
+
+        router.replace(redirectPath);
       } catch (err) {
         console.error("ログイン失敗", err);
         router.replace("/login");

@@ -5,6 +5,9 @@ import lombok.RequiredArgsConstructor;
 import nagasawakenji.walkfind.domain.dto.CognitoTokenRequest;
 import nagasawakenji.walkfind.domain.dto.CognitoTokenResponse;
 import nagasawakenji.walkfind.service.AuthApplicationService;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.ResponseCookie;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -26,6 +29,26 @@ public class CognitoAuthController {
         CognitoTokenResponse token =
                 authApplicationService.loginWithCognito(request.getCode());
 
-        return ResponseEntity.ok(token);
+        // refreshToken を HttpOnly Cookie にセット
+        ResponseCookie refreshCookie = ResponseCookie.from("refresh_token", token.getRefreshToken())
+                .httpOnly(true)
+                .secure(true)
+                .path("/")
+                .sameSite("Lax")
+                .maxAge(token.getExpiresIn())
+                .build();
+
+        // レスポンスボディには refreshToken を含めない
+        CognitoTokenResponse safeResponse = CognitoTokenResponse.builder()
+                .idToken(token.getIdToken())
+                .accessToken(token.getAccessToken())
+                .expiresIn(token.getExpiresIn())
+                .refreshToken(null)
+                .build();
+
+        return ResponseEntity
+                .status(HttpStatus.OK)
+                .header(HttpHeaders.SET_COOKIE, refreshCookie.toString())
+                .body(safeResponse);
     }
 }
