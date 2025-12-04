@@ -24,8 +24,7 @@ export default function MyPage() {
   useEffect(() => {
     const getProfile = async () => {
       try {
-        const session = await fetchAuthSession();
-        const token = session.tokens?.accessToken?.toString();
+        const token = localStorage.getItem("access_token");
 
         if (!token) {
           // 未ログインならトップへ（あるいはログイン画面へ）

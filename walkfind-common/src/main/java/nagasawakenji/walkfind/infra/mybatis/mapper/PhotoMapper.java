@@ -17,7 +17,10 @@ public interface PhotoMapper {
     Optional<UserPhoto> findByContestAndUser(@Param("contestId") Long contestId, @Param("userId") String userId);
 
     // 指定コンテストの投稿写真リストと投稿者情報を取得 (DTOへのマッピングを想定)
-    List<PhotoResponse> findAllPhotosByContest(Long contestId);
+    List<PhotoResponse> findAllPhotosByContest(@Param("contestId")Long contestId, @Param("page") int page, @Param("size") int size, @Param("offset") int offset);
+
+    // 指定コンテストの総投稿数を取得
+    long countTotalPhotos(@Param("contestId") Long contestId);
 
     // 特定の投稿の詳細情報を取得
     Optional<UserPhoto> findPhotoDetail(Long photoId);

@@ -48,7 +48,7 @@ public class UserService {
                     newProfile.setUserId(cognitoId);
 
                     try {
-                        int insertedUser = userMapper.insert(newUser);
+                        int insertedUser = userMapper.insert(cognitoId, username, email);
                         int insertedProfile = userProfileMapper.insert(newProfile);
                         if (insertedUser == 0 || insertedProfile == 0) {
                             // 更新行数0の場合はDB操作失敗とみなす

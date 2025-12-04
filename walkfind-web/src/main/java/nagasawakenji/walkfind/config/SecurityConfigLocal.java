@@ -11,6 +11,9 @@ import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
+import org.springframework.security.oauth2.jwt.JwtDecoder;
+import org.springframework.security.oauth2.jwt.NimbusJwtDecoder;
+
 import java.util.List;
 
 @Configuration
@@ -25,9 +28,29 @@ public class SecurityConfigLocal {
                 .csrf(csrf -> csrf.disable())
                 .cors(Customizer.withDefaults())
 
+                // ★ JWT 認証を有効化（これが無いと必ず anonymousUser になる）
+                .oauth2ResourceServer(oauth2 -> oauth2.jwt(Customizer.withDefaults()))
+
                 .authorizeHttpRequests(auth -> auth
-                        // ローカルは全部許可して良い
+                        // 認証系は誰でもOK
+                        .requestMatchers("/api/auth/**").permitAll()
+
+                        // GET系の公開APIは許可
+                        .requestMatchers("/api/v1/users/**").permitAll()
+                        .requestMatchers("/api/v1/photos/**").permitAll()
+                        .requestMatchers("/api/v1/contests/**").permitAll()
+                        .requestMatchers("/api/v1/local-storage/**").permitAll()
+
+
+                        // 投稿・更新系は認証必須
+                        .requestMatchers("POST", "/api/v1/**").authenticated()
+                        .requestMatchers("PUT", "/api/v1/**").authenticated()
+                        .requestMatchers("DELETE", "/api/v1/**").authenticated()
+
+
+                        // その他
                         .anyRequest().permitAll()
+
                 );
 
         return http.build();
@@ -44,5 +67,13 @@ public class SecurityConfigLocal {
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/**", config);
         return source;
+    }
+
+    @Bean
+    public JwtDecoder jwtDecoder() {
+        // ローカル開発用: 署名検証をする場合は Cognito の jwk-set-uri を指定してください
+        // 例: https://cognito-idp.ap-northeast-1.amazonaws.com/<POOL_ID>/.well-known/jwks.json
+        String jwkSetUri = "https://cognito-idp.ap-northeast-1.amazonaws.com/ap-northeast-1_EEmnkKMbG/.well-known/jwks.json";
+        return NimbusJwtDecoder.withJwkSetUri(jwkSetUri).build();
     }
 }

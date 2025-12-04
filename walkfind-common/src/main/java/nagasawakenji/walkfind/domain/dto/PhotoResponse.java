@@ -9,6 +9,7 @@ public class PhotoResponse {
     private Long photoId;
     private String title;
     private String username; // 投稿ユーザーの表示名
+    private String userId;
     private String photoUrl;
     private Integer totalVotes;
     private OffsetDateTime submissionDate;

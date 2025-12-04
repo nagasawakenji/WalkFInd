@@ -4,15 +4,15 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import nagasawakenji.walkfind.domain.dto.CognitoTokenRequest;
 import nagasawakenji.walkfind.domain.dto.CognitoTokenResponse;
+import nagasawakenji.walkfind.exception.AuthenticationProcessingException;
 import nagasawakenji.walkfind.service.AuthApplicationService;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.ResponseCookie;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
+
+import java.util.Map;
 
 
 @RestController
@@ -50,5 +50,15 @@ public class CognitoAuthController {
                 .status(HttpStatus.OK)
                 .header(HttpHeaders.SET_COOKIE, refreshCookie.toString())
                 .body(safeResponse);
+    }
+
+    @ExceptionHandler(AuthenticationProcessingException.class)
+    public ResponseEntity<?> handleAuthenticationProcessingException(AuthenticationProcessingException ex) {
+        return ResponseEntity
+                .status(HttpStatus.UNAUTHORIZED)
+                .body(Map.of(
+                        "error", ex.getErrorCode(),
+                        "message", ex.getMessage()
+                ));
     }
 }
