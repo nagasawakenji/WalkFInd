@@ -15,15 +15,16 @@ WalkFind は複数モジュールに分割された構成をしています。
 walkfind/
 ├── walkfind-common     ← 共通ドメインモデル & MyBatis Mapper
 ├── walkfind-web        ← ローカル開発用 Spring Boot Web アプリ
-└── walkfind-lambda     ← AWS Lambda(SAM) 用 Spring Boot アプリ
+|── walkfind-lambda     ← AWS Lambda(SAM) 用 Spring Boot アプリ
+└── walkfind-web        ← フロントエンド
 ```
 ### ✔ walkfind-common
 
-アプリケーション全体で共通利用する ドメインモデル / DTO / MyBatis Mapper / 例外クラス を保持。
-•	Contest, User, UserPhoto などの Model
-•	DTO（ContestResponse, SubmitPhotoRequest など）
-•	MyBatis mapper interface
-•	Validation・ビジネス例外
+アプリケーション全体で共通利用する ドメインモデル / DTO / MyBatis Mapper / 例外クラス を保持。  
+•	Contest, User, UserPhoto などの Model  
+•	DTO（ContestResponse, SubmitPhotoRequest など）  
+•	MyBatis mapper interface  
+•	Validation・ビジネス例外  
 
 Lambda と Web の両方で使うデータモデルを共通化し、重複を防ぐためのモジュールです。
 
@@ -31,27 +32,33 @@ Lambda と Web の両方で使うデータモデルを共通化し、重複を�
 
 ### ✔ walkfind-web
 
-ローカル開発用の Spring Boot Web アプリ。
-•	SecurityConfigLocal により認証なしで動作
-•	開発時の動作確認（S3 Presign, 投稿、条件チェック等）
-•	統合テスト（Service 層のテスト）
+ローカル開発用の Spring Boot Web アプリ。  
+•	cognitoの認証を最低限で実装  
+•	開発時の動作確認（S3 Presign, 投稿、条件チェック等)  
+•	統合テスト（Service 層のテスト）  
 
-AWS を使わずローカルで高速開発できる Web 実行モードです。
+最低限のawsを使用したローカルで高速開発できる Web 実行モードです。
 
 ⸻
 
 ### ✔ walkfind-lambda
 
-AWS で動作する サーバーレス（Lambda）版の Spring Boot アプリ
-•	StreamLambdaHandler による Lambda 起動
-•	Cognito Authorizer を利用した API Gateway 認証
-•	Presigned URL (GET/PUT)
-•	Supabase(PostgreSQL) への DB 接続
-•	Secrets Manager による DB 情報取得
+AWS で動作する サーバーレス（Lambda）版の Spring Boot アプリ  
+•	StreamLambdaHandler による Lambda 起動  
+•	Cognito Authorizer を利用した API Gateway 認証  
+•	Presigned URL (GET/PUT)  
+•	Supabase(PostgreSQL) への DB 接続  
+•	Secrets Manager による DB 情報取得  
+•   S3 による写真保存
 
 本番環境・ステージングで動作する Lambda 用アプリです。
 
 ⸻
+
+### ✔ walkfind-frontend
+
+アプリのuiやフロント側のロジックを実装  
+•   react による fetching
 
 ## 🧱 Architecture Overview
 
@@ -81,6 +88,8 @@ AWS Lambda（Spring Boot）
 •	MyBatis  
 •	Hibernate Validator (Bean Validation)  
 •	Lombok  
+•   TypeScript
+•   React
 
 ___
 
@@ -108,6 +117,7 @@ src/main/resources/db/migration/
 ├── V2__Create_Table_contest_results.sql
 ├── V3__Create_Table_user_profiles.sql
 └── V4__Create_Table_contest_model_photos.sql
+...
 ```
 
 ### ✔ AWS / Serverless
@@ -128,6 +138,7 @@ GET /api/v1/contests
 GET /api/v1/contests/{id}
 GET /api/v1/results/{id}
 GET /api/v1/users/{id}
+POST /api/auth/cognito/login    ← Cognitoによるログイン
 ```
 
 認証必要（Cognito）
@@ -155,7 +166,7 @@ UserPhoto（投稿写真）
 
 Vote  
 •	ユーザーID  
-•	PhotoID（本人には投票不可）  
+•	PhotoID
 
 ContestResult  
 •	順位  
@@ -179,6 +190,8 @@ Download（GET）
 
 Lambda (S3DownloadPresignService) が生成：  
 •	公開バケットでなくても 安全に GET 可能
+
+ローカル (walkfind-web) でも同じ手順でローカルストレージへ写真を保存
 
 ___
 
