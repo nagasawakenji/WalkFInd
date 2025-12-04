@@ -1,11 +1,11 @@
 'use client';
 
-import { useState, ChangeEvent, FormEvent } from 'react';
+import { useState, ChangeEvent, FormEvent, use } from 'react';
 import { useRouter } from 'next/navigation';
-import { use } from 'react';
 import Image from 'next/image';
-import axios, { AxiosError } from 'axios'; // AxiosError をインポート
-import { uploadImage } from '@/lib/upload'; // 本番用（S3）
+import Link from 'next/link';
+import axios, { AxiosError } from 'axios'; 
+import { uploadImage } from '@/lib/upload'; 
 
 interface PageProps {
   params: Promise<{ id: string }>;
@@ -57,11 +57,9 @@ export default function SubmitPhotoPage({ params }: PageProps) {
     setErrorMessage('');
 
     try {
-      // 認証トークンの取得（Spring Boot APIレスポンス由来）
       const token = localStorage.getItem("access_token");
 
       if (!token) {
-        // ログイン後に元のページへ戻すためのURLを保存
         const currentPath = window.location.pathname;
         localStorage.setItem("redirect_after_login", currentPath);
 
@@ -76,15 +74,10 @@ export default function SubmitPhotoPage({ params }: PageProps) {
       const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8080/api/v1';
       const IS_LOCAL = process.env.NEXT_PUBLIC_IS_LOCAL === 'true';
 
-      // 2. ローカル or 本番で分岐
       if (IS_LOCAL) {
-        // ✅ ローカル環境：DTO + ファイルを multipart で送信
         const formData = new FormData();
-
-        // DTO を JSON として Blob 化して request パートに詰める
         const requestDto = {
           contestId: Number(contestId),
-          // ローカルでは一時的にダミーURLを入れる（バックエンド側で実URLに上書き）
           photoUrl: "local",
           title: title,
           description: description,
@@ -96,19 +89,15 @@ export default function SubmitPhotoPage({ params }: PageProps) {
             type: "application/json",
           })
         );
-
-        // ファイル本体
         formData.append("file", file);
 
         await axios.post(`${API_BASE_URL}/photos`, formData, {
           headers: {
             Authorization: `Bearer ${token}`,
-            // ❗ multipart/form-data の Content-Type は axios に自動設定させる
           },
         });
 
       } else {
-        // ✅ 本番環境：S3 Presigned Upload
         const photoKey = await uploadImage(file, contestId);
 
         await axios.post(
@@ -129,16 +118,12 @@ export default function SubmitPhotoPage({ params }: PageProps) {
       router.push(`/contests/${contestId}/photos`);
 
     } catch (error) {
-      // ★修正: any を使わず、AxiosErrorかどうかをチェックする
       console.error('Submission failed:', error);
       
       let msg = '投稿に失敗しました。再度お試しください。';
-
-      // axiosのエラーかどうか判定し、安全にレスポンスデータにアクセスする
       if (axios.isAxiosError(error) && error.response?.data?.message) {
         msg = error.response.data.message;
       }
-      
       setErrorMessage(msg);
     } finally {
       setIsSubmitting(false);
@@ -146,103 +131,141 @@ export default function SubmitPhotoPage({ params }: PageProps) {
   };
 
   return (
-    <main className="container mx-auto px-4 py-8 max-w-2xl">
-      <h1 className="text-3xl font-bold mb-8 text-center">写真を投稿する</h1>
+    <main className="min-h-screen bg-[#F5F5F5] font-sans text-[#333]">
+      {/* 共通ナビゲーションバー（ブレッドクラム） */}
+      <nav className="bg-black text-white h-12 flex items-center px-4 lg:px-8 mb-8 shadow-sm">
+        <Link href="/" className="font-bold text-lg tracking-tight hover:text-gray-300">
+          WalkFind
+        </Link>
+        <span className="mx-2 text-gray-500">/</span>
+        <Link href={`/contests/${contestId}`} className="text-sm text-gray-300 hover:text-white">
+          Contest Details
+        </Link>
+        <span className="mx-2 text-gray-500">/</span>
+        <span className="text-sm text-white">Submission</span>
+      </nav>
 
-      <form onSubmit={handleSubmit} className="bg-white p-6 rounded-lg shadow-md space-y-6">
-        
-        {/* 画像アップロードエリア */}
-        <div className="space-y-2">
-          <label className="block text-sm font-medium text-gray-700">
-            作品画像 <span className="text-red-500">*</span>
-          </label>
-          
-          <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:bg-gray-50 transition">
-            {previewUrl ? (
-              <div className="relative w-full h-64">
-                <Image 
-                  src={previewUrl} 
-                  alt="Preview" 
-                  fill 
-                  className="object-contain"
-                />
-                <button
-                  type="button"
-                  onClick={() => { setFile(null); setPreviewUrl(null); }}
-                  className="absolute top-2 right-2 bg-red-500 text-white rounded-full p-1 text-xs"
-                >
-                  ✕ 削除
-                </button>
+      <div className="max-w-3xl mx-auto px-4 pb-12">
+        <div className="bg-white border border-gray-300 rounded-sm p-6 md:p-8">
+          <h1 className="text-2xl font-bold mb-6 border-b border-gray-200 pb-4 flex items-center gap-2">
+            <span className="text-2xl">📤</span> Submit Photo
+          </h1>
+
+          <form onSubmit={handleSubmit} className="space-y-8">
+            
+            {/* 画像アップロードエリア */}
+            <div className="space-y-2">
+              <label className="block text-sm font-bold text-gray-700">
+                Image File <span className="text-red-600 ml-1 text-xs">[Required]</span>
+              </label>
+              
+              <div className={`border-2 border-dashed rounded-sm p-4 text-center transition-colors ${previewUrl ? 'border-gray-300 bg-white' : 'border-gray-400 bg-gray-50 hover:bg-gray-100'}`}>
+                {previewUrl ? (
+                  <div className="relative w-full max-w-md mx-auto aspect-[4/3] bg-gray-100 border border-gray-200">
+                    <Image 
+                      src={previewUrl} 
+                      alt="Preview" 
+                      fill 
+                      className="object-contain"
+                    />
+                    <div className="absolute top-0 right-0 p-2">
+                      <button
+                        type="button"
+                        onClick={() => { setFile(null); setPreviewUrl(null); }}
+                        className="bg-black text-white text-xs px-3 py-1 rounded-sm hover:bg-gray-800 shadow-sm"
+                      >
+                        Remove
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="py-12">
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={handleFileChange}
+                      className="hidden"
+                      id="file-upload"
+                    />
+                    <label
+                      htmlFor="file-upload"
+                      className="cursor-pointer inline-flex flex-col items-center"
+                    >
+                      <span className="text-4xl text-gray-400 mb-2">📂</span>
+                      <span className="text-blue-700 font-bold hover:underline">Select a file</span>
+                      <span className="text-xs text-gray-500 mt-2 font-mono">JPG, PNG, GIF (Max 10MB)</span>
+                    </label>
+                  </div>
+                )}
               </div>
-            ) : (
-              <div className="text-center">
-                <input
-                  type="file"
-                  accept="image/*"
-                  onChange={handleFileChange}
-                  className="hidden"
-                  id="file-upload"
-                />
-                <label
-                  htmlFor="file-upload"
-                  className="cursor-pointer inline-block px-4 py-2 bg-blue-50 text-blue-600 rounded-md font-medium hover:bg-blue-100"
-                >
-                  ファイルを選択
+            </div>
+
+            <div className="grid grid-cols-1 gap-6">
+              {/* タイトル */}
+              <div className="space-y-2">
+                <label className="block text-sm font-bold text-gray-700">
+                  Title <span className="text-red-600 ml-1 text-xs">[Required]</span>
                 </label>
-                <p className="text-xs text-gray-500 mt-2">JPG, PNG, GIF (10MB以下)</p>
+                <input
+                  type="text"
+                  value={title}
+                  onChange={(e) => setTitle(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none transition-colors"
+                  placeholder="Enter title"
+                  maxLength={100}
+                  required
+                />
+              </div>
+
+              {/* 説明文 */}
+              <div className="space-y-2">
+                <label className="block text-sm font-bold text-gray-700">
+                  Description
+                </label>
+                <textarea
+                  value={description}
+                  onChange={(e) => setDescription(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none h-32 transition-colors font-mono text-sm"
+                  placeholder="Enter description (optional)"
+                  maxLength={500}
+                />
+              </div>
+            </div>
+
+            {/* エラーメッセージ */}
+            {errorMessage && (
+              <div className="p-4 bg-red-50 border border-red-200 text-red-700 rounded-sm text-sm font-medium flex items-center gap-2">
+                <span>⚠️</span> {errorMessage}
               </div>
             )}
-          </div>
+
+            {/* 送信ボタンエリア */}
+            <div className="pt-4 border-t border-gray-200 flex justify-end">
+              <button
+                type="submit"
+                disabled={isSubmitting}
+                className={`
+                  px-8 py-3 rounded-sm font-bold text-white transition-all duration-200
+                  ${isSubmitting 
+                    ? 'bg-gray-400 cursor-not-allowed' 
+                    : 'bg-blue-600 hover:bg-blue-700 shadow-sm hover:shadow'
+                  }
+                `}
+              >
+                {isSubmitting ? (
+                  <span className="flex items-center gap-2">
+                    <span className="animate-spin h-4 w-4 border-2 border-white border-t-transparent rounded-full"></span>
+                    Submitting...
+                  </span>
+                ) : (
+                  'Submit Entry'
+                )}
+              </button>
+            </div>
+
+          </form>
         </div>
-
-        {/* タイトル */}
-        <div className="space-y-2">
-          <label className="block text-sm font-medium text-gray-700">
-            タイトル <span className="text-red-500">*</span>
-          </label>
-          <input
-            type="text"
-            value={title}
-            onChange={(e) => setTitle(e.target.value)}
-            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 outline-none"
-            placeholder="作品のタイトルを入力"
-            maxLength={100}
-            required
-          />
-        </div>
-
-        {/* 説明文 */}
-        <div className="space-y-2">
-          <label className="block text-sm font-medium text-gray-700">
-            説明文 (任意)
-          </label>
-          <textarea
-            value={description}
-            onChange={(e) => setDescription(e.target.value)}
-            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 outline-none h-32"
-            placeholder="撮影の意図やコメントなど"
-            maxLength={500}
-          />
-        </div>
-
-        {/* エラーメッセージ */}
-        {errorMessage && (
-          <div className="p-3 bg-red-50 text-red-700 rounded-md text-sm">
-            {errorMessage}
-          </div>
-        )}
-
-        {/* 送信ボタン */}
-        <button
-          type="submit"
-          disabled={isSubmitting}
-          className={`w-full py-3 px-4 rounded-md text-white font-bold text-lg transition duration-200
-            ${isSubmitting ? 'bg-gray-400 cursor-not-allowed' : 'bg-blue-600 hover:bg-blue-700 shadow-lg'}
-          `}
-        >
-          {isSubmitting ? '送信中...' : '投稿する'}
-        </button>
-      </form>
+      </div>
     </main>
   );
 }

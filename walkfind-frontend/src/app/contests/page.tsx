@@ -19,45 +19,77 @@ export default async function HomePage() {
   const contests = await getContests();
 
   return (
-    <main className="container mx-auto px-4 py-8">
-      <h1 className="text-3xl font-bold mb-8 text-center">開催中のフォトコンテスト</h1>
+    <main className="min-h-screen bg-[#F5F5F5] font-sans text-[#333]">
+      {/* AtCoder風 黒いナビゲーションバー（共通パーツとして想定） */}
+      <nav className="bg-black text-white h-12 flex items-center px-4 lg:px-8 mb-6 shadow-sm">
+        <Link href="/" className="font-bold text-lg tracking-tight hover:text-gray-300 transition">
+          WalkFind
+        </Link>
+      </nav>
 
-      {contests.length === 0 ? (
-        <p className="text-center text-gray-500">現在開催中のコンテストはありません。</p>
-      ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {contests.map((contest) => (
-            <Link 
-              href={`/contests/${contest.contestId}`} 
-              key={contest.contestId}
-              className="block group"
-            >
-              <div className="border rounded-lg overflow-hidden shadow-md hover:shadow-lg transition duration-300 bg-white">
-                <div className="h-48 bg-gray-200 flex items-center justify-center">
-                  {/* サムネイルがあれば画像を表示、なければプレースホルダー */}
-                  <span className="text-4xl">📷</span>
-                </div>
-                <div className="p-4">
-                  <div className="flex justify-between items-center mb-2">
-                    <span className="text-sm font-semibold text-blue-600 bg-blue-100 px-2 py-1 rounded">
-                      {contest.status}
-                    </span>
-                    <span className="text-xs text-gray-500">
-                      ~ {new Date(contest.endDate).toLocaleDateString()}
-                    </span>
+      <div className="container mx-auto px-4 pb-12">
+        {/* メインコンテンツエリア：白背景のパネル風 */}
+        <div className="bg-white rounded-sm border border-gray-300 p-6 md:p-8 shadow-sm">
+          
+          {/* 見出し：下線付きで区切りを明確に */}
+          <div className="border-b border-gray-200 mb-6 pb-2">
+            <h1 className="text-2xl font-bold text-black">
+              開催中のフォトコンテスト
+            </h1>
+          </div>
+
+          {contests.length === 0 ? (
+            <div className="text-center py-10 bg-gray-50 border border-gray-200 rounded-sm text-gray-500">
+              現在開催中のコンテストはありません。
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {contests.map((contest) => (
+                <Link 
+                  href={`/contests/${contest.contestId}`} 
+                  key={contest.contestId}
+                  className="block group"
+                >
+                  {/* カード：フラットなデザイン、ホバーで枠線色変化 */}
+                  <div className="h-full bg-white border border-gray-300 rounded-sm transition duration-200 hover:border-blue-400 hover:bg-blue-50/10 flex flex-col">
+                    
+                    {/* サムネイルエリア */}
+                    <div className="h-40 bg-gray-100 border-b border-gray-200 flex items-center justify-center group-hover:opacity-90">
+                      {/* サムネイルがあれば画像を表示、なければプレースホルダー */}
+                      <span className="text-4xl opacity-50">📷</span>
+                    </div>
+
+                    <div className="p-4 flex flex-col flex-grow">
+                      <div className="flex justify-between items-start mb-2">
+                        {/* ステータスバッジ：Bootstrap風の角ばったデザイン */}
+                        <span className="text-xs font-bold text-white bg-green-600 px-2 py-0.5 rounded-sm">
+                          {contest.status}
+                        </span>
+                        <span className="text-xs text-gray-500 font-mono mt-0.5">
+                          End: {new Date(contest.endDate).toLocaleDateString()}
+                        </span>
+                      </div>
+
+                      {/* タイトル：リンクカラー（青）を使用 */}
+                      <h2 className="text-lg font-bold mb-2 text-blue-600 group-hover:underline decoration-blue-600 underline-offset-2 line-clamp-2">
+                        {contest.name}
+                      </h2>
+                      
+                      {/* テーマ：説明文 */}
+                      <div className="mt-auto pt-2 border-t border-dashed border-gray-200">
+                        <p className="text-gray-600 text-sm line-clamp-2">
+                          <span className="font-bold text-gray-400 text-xs mr-1">THEME:</span>
+                          {contest.theme}
+                        </p>
+                      </div>
+                    </div>
                   </div>
-                  <h2 className="text-xl font-bold mb-2 group-hover:text-blue-600">
-                    {contest.name}
-                  </h2>
-                  <p className="text-gray-600 text-sm line-clamp-2">
-                    テーマ: {contest.theme}
-                  </p>
-                </div>
-              </div>
-            </Link>
-          ))}
+                </Link>
+              ))}
+            </div>
+          )}
         </div>
-      )}
+      </div>
     </main>
   );
 }

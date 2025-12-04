@@ -1,4 +1,3 @@
-// src/app/contests/announced/[id]/page.tsx
 export const dynamic = "force-dynamic";
 
 import Image from "next/image";
@@ -68,141 +67,191 @@ export default async function AnnouncedContestDetailPage({ params, searchParams 
   const totalSubmissions = totalCount;
 
   return (
-    <main className="container mx-auto px-4 py-10 space-y-12">
+    <main className="min-h-screen bg-[#F5F5F5] font-sans text-[#333]">
+      {/* 共通ナビゲーションバー */}
+      <nav className="bg-black text-white h-12 flex items-center px-4 lg:px-8 mb-8 shadow-sm">
+        <Link href="/" className="font-bold text-lg tracking-tight hover:text-gray-300">
+          WalkFind
+        </Link>
+        <span className="mx-2 text-gray-500">/</span>
+        <Link href="/contests/announced" className="text-sm text-gray-300 hover:text-white">
+          Announced Contests
+        </Link>
+        <span className="mx-2 text-gray-500">/</span>
+        <span className="text-sm text-white font-medium">{contest.name} Results</span>
+      </nav>
 
-      {/* ---------------- コンテスト概要 ---------------- */}
-      <section className="bg-white rounded-lg shadow-lg p-8 space-y-4">
-        <h1 className="text-4xl font-bold">{contest.name}</h1>
+      <div className="max-w-6xl mx-auto px-4 pb-12 space-y-8">
 
-        <p className="text-gray-600">
-          テーマ：<span className="font-semibold">{contest.theme}</span>
-        </p>
+        {/* ---------------- コンテスト概要パネル ---------------- */}
+        <div className="bg-white rounded-sm border border-gray-300 p-6 shadow-sm">
+          <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-4 border-b border-gray-200 pb-4">
+            <div className="flex items-center gap-4">
+              <h1 className="text-2xl font-bold text-black flex items-center gap-2">
+                <span className="text-3xl">🏁</span> {contest.name}
+                <span className="text-sm font-normal text-gray-500 ml-2">- Results</span>
+              </h1>
 
-        <p className="text-sm text-gray-500">
-          開催期間：
-          {new Date(contest.startDate).toLocaleDateString()} 〜{" "}
-          {new Date(contest.endDate).toLocaleDateString()}
-        </p>
+              <Link
+                href={`/results/${contestId}`}
+                className="inline-block px-4 py-2 bg-black text-white text-xs font-bold rounded-sm hover:bg-gray-800 transition-colors"
+              >
+                結果詳細へ
+              </Link>
+            </div>
+            <div className="mt-2 md:mt-0 px-3 py-1 bg-gray-100 border border-gray-200 text-xs font-bold text-gray-600 rounded-sm">
+              Total Submissions: {totalSubmissions}
+            </div>
+          </div>
 
-        <p className="text-sm text-gray-500">
-          投稿数：{totalSubmissions} 作品
-        </p>
-      </section>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8 text-sm">
+            <div>
+              <h2 className="font-bold text-gray-500 uppercase text-xs mb-1">Theme</h2>
+              <p className="text-lg font-bold text-gray-800">{contest.theme}</p>
+            </div>
+            <div>
+               <h2 className="font-bold text-gray-500 uppercase text-xs mb-1">Period</h2>
+               <p className="font-mono text-gray-700">
+                {new Date(contest.startDate).toLocaleDateString()} 〜 {new Date(contest.endDate).toLocaleDateString()}
+               </p>
+            </div>
+          </div>
+        </div>
 
-      {/* ---------------- 優勝作品 ---------------- */}
-      {winners.length > 0 && (
-        <section className="bg-gradient-to-r from-yellow-50 to-yellow-100 border-2 border-yellow-300 rounded-xl p-10 space-y-8 shadow-xl">
-          <h2 className="text-3xl font-bold text-yellow-700">
-            🏆 優勝作品（{winners.length}作品）
+        {/* ---------------- 優勝作品エリア ---------------- */}
+        {winners.length > 0 && (
+          <div className="bg-white border-l-4 border-yellow-500 border-y border-r border-gray-300 rounded-r-sm shadow-sm p-6 md:p-8">
+            <h2 className="text-2xl font-bold text-black mb-6 flex items-center gap-2">
+              <span className="text-3xl">🏆</span> 優勝作品
+              <span className="text-sm font-normal text-gray-500 ml-2">Winner Selection</span>
+            </h2>
+
+            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
+              {winners.map((winner) => (
+                <div key={winner.photoId} className="group">
+                   {/* 写真枠: 金色のボーダーで強調 */}
+                  <div className="relative aspect-[4/3] w-full bg-gray-100 border-2 border-yellow-400 rounded-sm overflow-hidden mb-3 shadow-md">
+                    <Image
+                      src={winner.photoUrl}
+                      alt={winner.title}
+                      fill
+                      unoptimized
+                      className="object-cover group-hover:scale-105 transition-transform duration-500"
+                    />
+                     <div className="absolute top-0 left-0 bg-yellow-500 text-white text-xs font-bold px-3 py-1 shadow-sm">
+                       WINNER
+                     </div>
+                  </div>
+
+                  <div className="space-y-1 px-1">
+                    <p className="text-lg font-bold text-gray-900 leading-tight group-hover:text-yellow-600 transition-colors">
+                        {winner.title}
+                    </p>
+                    <div className="flex justify-between items-end border-t border-dashed border-gray-200 pt-2 mt-2">
+                        <div>
+                            <p className="text-xs text-gray-500 mb-0.5">Photographer</p>
+                            {winner.userId ? (
+                            <Link
+                                href={`/users/${winner.userId}`}
+                                className="text-sm font-bold text-blue-600 hover:underline"
+                            >
+                                {winner.username}
+                            </Link>
+                            ) : (
+                            <span className="text-sm font-bold text-gray-400">{winner.username}</span>
+                            )}
+                        </div>
+                        <div className="text-right">
+                             <p className="text-xs text-gray-500 mb-0.5">Score</p>
+                             <p className="text-lg font-bold text-black font-mono">{winner.finalScore}</p>
+                        </div>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* ---------------- 最終ランキング一覧 ---------------- */}
+        <div>
+          <h2 className="text-xl font-bold text-gray-800 mb-4 flex items-center gap-2 border-b border-gray-300 pb-2">
+            <span className="text-gray-400">📊</span> 最終ランキング
           </h2>
 
-          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
-            {winners.map((winner) => (
-              <div key={winner.photoId} className="space-y-3">
-                <div className="relative w-full h-64 bg-gray-200 rounded-lg overflow-hidden">
-                  <Image
-                    src={winner.photoUrl}
-                    alt={winner.title}
-                    fill
-                    unoptimized
-                    className="object-cover"
-                  />
-                </div>
+          {safeResults.length === 0 ? (
+             <div className="bg-white border border-gray-300 p-8 text-center text-gray-500 rounded-sm">
+                投稿がありませんでした。
+             </div>
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+              {safeResults
+                .filter(result => !winners.some(w => w.photoId === result.photoId))
+                .map(result => (
+                <div
+                  key={result.photoId}
+                  className="bg-white border border-gray-300 rounded-sm hover:shadow-md transition-all duration-200 flex flex-col"
+                >
+                  <div className="relative aspect-[4/3] w-full bg-gray-200 border-b border-gray-200">
+                    <Image
+                      src={result.photoUrl}
+                      alt={result.title}
+                      fill
+                      unoptimized
+                      className="object-cover"
+                    />
+                    <div className="absolute top-2 left-2 bg-black/70 text-white px-2 py-1 text-sm font-bold font-mono rounded-sm backdrop-blur-sm">
+                       #{result.finalRank}
+                    </div>
+                  </div>
 
-                <div className="space-y-1">
-                  <p className="text-xl font-bold">{winner.title}</p>
-                  <p className="text-gray-600">
-                    投稿者：
-                    {winner.userId ? (
-                      <Link
-                        href={`/users/${winner.userId}`}
-                        className="text-blue-600 hover:underline"
-                      >
-                        {winner.username}
-                      </Link>
-                    ) : (
-                      <span className="text-gray-400">{winner.username}</span>
-                    )}
-                  </p>
-                  <p className="text-gray-600">得票数：{winner.finalScore} 票</p>
-                  <p className="text-gray-500 text-sm">
-                    投稿日：{new Date(winner.submissionDate).toLocaleString()}
-                  </p>
+                  <div className="p-4 flex flex-col flex-grow">
+                    <p className="text-base font-bold text-gray-900 mb-1 line-clamp-1">{result.title}</p>
+                    
+                    <div className="mt-auto pt-3 border-t border-gray-100 flex justify-between items-center">
+                        <div className="flex items-center gap-1 text-xs text-gray-600">
+                            by 
+                            {result.userId ? (
+                            <Link
+                                href={`/users/${result.userId}`}
+                                className="font-bold hover:underline hover:text-black"
+                            >
+                                {result.username}
+                            </Link>
+                            ) : (
+                            <span className="text-gray-400">{result.username}</span>
+                            )}
+                        </div>
+                        <div className="text-sm font-mono">
+                            <span className="font-bold text-black">{result.finalScore}</span> <span className="text-xs text-gray-400">pts</span>
+                        </div>
+                    </div>
+                  </div>
                 </div>
-              </div>
-            ))}
-          </div>
-        </section>
-      )}
+              ))}
+            </div>
+          )}
 
-      {/* ---------------- 最終ランキング ---------------- */}
-      <section className="space-y-6">
-        <h2 className="text-3xl font-bold">📊 最終ランキング</h2>
-
-        {safeResults.length === 0 ? (
-          <p className="text-gray-500">投稿がありませんでした。</p>
-        ) : (
-          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {safeResults
-              .filter(result => !winners.some(w => w.photoId === result.photoId))
-              .map(result => (
-              <div
-                key={result.photoId}
-                className={`border rounded-lg shadow-sm overflow-hidden ${
-                  result.isWinner ? "border-yellow-400" : ""
-                }`}
-              >
-                <div className="relative h-56 w-full bg-gray-200">
-                  <Image
-                    src={result.photoUrl}
-                    alt={result.title}
-                    fill
-                    unoptimized
-                    className="object-cover"
-                  />
-                </div>
-
-                <div className="p-4 space-y-1">
-                  <p className="text-lg font-bold">
-                    {result.finalRank} 位：{result.title}
-                  </p>
-                  <p className="text-sm text-gray-600">
-                    投稿者：
-                    {result.userId ? (
-                      <Link
-                        href={`/users/${result.userId}`}
-                        className="text-blue-600 hover:underline"
-                      >
-                        {result.username}
-                      </Link>
-                    ) : (
-                      <span className="text-gray-400">{result.username}</span>
-                    )}
-                  </p>
-                  <p className="text-sm text-gray-600">
-                    得票数：{result.finalScore} 票
-                  </p>
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
-        {totalPages > 1 && (
-          <div className="flex justify-center gap-4 pt-8">
-            {Array.from({ length: totalPages }).map((_, i) => (
-              <a
-                key={i}
-                href={`/contests/announced/${contestId}?page=${i}&size=${size}`}
-                className={`px-4 py-2 border rounded ${
-                  i === page ? "bg-blue-600 text-white" : "bg-white"
-                }`}
-              >
-                {i + 1}
-              </a>
-            ))}
-          </div>
-        )}
-      </section>
+          {/* ページネーション */}
+          {totalPages > 1 && (
+            <div className="flex justify-center gap-2 pt-12">
+              {Array.from({ length: totalPages }).map((_, i) => (
+                <a
+                  key={i}
+                  href={`/contests/announced/${contestId}?page=${i}&size=${size}`}
+                  className={`px-4 py-2 border rounded-sm text-sm font-mono transition-colors ${
+                    i === page 
+                      ? "bg-black text-white border-black" 
+                      : "bg-white border-gray-300 hover:bg-gray-50 text-gray-700"
+                  }`}
+                >
+                  {i + 1}
+                </a>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
     </main>
   );
 }
