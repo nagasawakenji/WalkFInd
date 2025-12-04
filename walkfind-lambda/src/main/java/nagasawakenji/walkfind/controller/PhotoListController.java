@@ -1,6 +1,7 @@
 package nagasawakenji.walkfind.controller;
 
 import nagasawakenji.walkfind.domain.dto.PhotoDisplayResponse;
+import nagasawakenji.walkfind.domain.dto.PhotoListResponse;
 import nagasawakenji.walkfind.domain.dto.PhotoResponse;
 import nagasawakenji.walkfind.service.PhotoDisplayService;
 import nagasawakenji.walkfind.exception.ContestNotFoundException;
@@ -31,17 +32,15 @@ public class PhotoListController {
      * @return 写真リスト（投票数順）
      */
     @GetMapping("/{contestId}/photos")
-    public ResponseEntity<List<PhotoDisplayResponse>> getPhotos(@PathVariable("contestId") Long contestId) {
+    public ResponseEntity<PhotoListResponse> getPhotos(@PathVariable("contestId") Long contestId,
+                                                       @RequestParam(value = "page", defaultValue = "0") int page,
+                                                       @RequestParam(value = "size", defaultValue = "20") int size) {
 
-        List<PhotoResponse> photos = photoDisplayService.getPhotosByContest(contestId);
-
-        List<PhotoDisplayResponse> responses = photos.stream()
-                .map(p -> {
-                        return mapToPhotoDisplayResponse(p);
-                }).toList();
-
-        return ResponseEntity.ok(responses);
+        PhotoListResponse response = photoDisplayService.getPhotosByContest(contestId, page, size);
+        handlePhotoUrl(response);
+        return ResponseEntity.ok(response);
     }
+
 
     /**
      * コンテストが見つからない例外を捕捉し、404 Not Foundを返す
@@ -52,16 +51,12 @@ public class PhotoListController {
         return new ResponseEntity<>(ex.getMessage(), HttpStatus.NOT_FOUND);
     }
 
-    private PhotoDisplayResponse mapToPhotoDisplayResponse(PhotoResponse p) {
-        URL url = s3DownloadPresignService.generatedDownloadUrl(p.getPhotoUrl());
-        PhotoDisplayResponse res = new PhotoDisplayResponse();
-        res.setPhotoId(p.getPhotoId());
-        res.setTitle(p.getTitle());
-        res.setUsername(p.getUsername());
-        res.setTotalVotes(p.getTotalVotes());
-        res.setPresignedUrl(url);
-        res.setSubmissionDate(p.getSubmissionDate());
-
-        return res;
+    private void handlePhotoUrl(PhotoListResponse response) {
+        response.getPhotoResponses().forEach(photo -> {
+            if (photo.getPhotoUrl() != null && !photo.getPhotoUrl().isBlank()) {
+                URL url = s3DownloadPresignService.generatedDownloadUrl(photo.getPhotoUrl());
+                photo.setPhotoUrl(url.toString());
+            }
+        });
     }
 }

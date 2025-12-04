@@ -3,7 +3,13 @@
 <mapper namespace="nagasawakenji.walkfind.infra.mybatis.mapper.UserMapper">
 
     <resultMap id="UserResultMap" type="nagasawakenji.walkfind.domain.model.User">
-        <id property="id" column="id"/>
+        <id property="userId" column="id"/>
+        <result property="userName" column="username"/>
+        <result property="email" column="email"/>
+        <result property="role" column="role"/>
+        <result property="active" column="is_active"/>
+        <result property="createdAt" column="created_at"/>
+        <result property="updatedAt" column="updated_at"/>
     </resultMap>
 
     <select id="findById" resultMap="UserResultMap">
@@ -13,8 +19,8 @@
     </select>
 
     <insert id="insert">
-        INSERT INTO users (id, username, email, role)
-        VALUES (#{id}, #{username}, #{email}, #{role})
+        INSERT INTO users (id, username, email)
+        VALUES (#{userId}, #{username}, #{email})
     </insert>
 
     <update id="updateUsername">

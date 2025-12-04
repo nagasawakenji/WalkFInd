@@ -1,5 +1,6 @@
 package nagasawakenji.walkfind.service;
 
+import nagasawakenji.walkfind.domain.dto.PhotoListResponse;
 import nagasawakenji.walkfind.domain.dto.PhotoResponse;
 import nagasawakenji.walkfind.infra.mybatis.mapper.ContestMapper;
 import nagasawakenji.walkfind.infra.mybatis.mapper.PhotoMapper;
@@ -27,7 +28,7 @@ public class PhotoDisplayService {
      * @return 投稿写真のリスト (PhotoResponse DTO)
      */
     @Transactional(readOnly = true)
-    public List<PhotoResponse> getPhotosByContest(Long contestId) {
+    public PhotoListResponse getPhotosByContest(Long contestId, int page, int size) {
 
         // コンテストの存在確認
         if (contestMapper.findById(contestId).isEmpty()) {
@@ -36,10 +37,17 @@ public class PhotoDisplayService {
 
         // DBからデータを取得
         // PhotoMapper.xml内で user_photos と users をJOINし、投票数順でソートするクエリが実行される
-        List<PhotoResponse> photos = photoMapper.findAllPhotosByContest(contestId);
+        List<PhotoResponse> photos = photoMapper.findAllPhotosByContest(contestId, page, size, page * size);
+
+        long totalCount = photoMapper.countTotalPhotos(contestId);
+
+        PhotoListResponse response = PhotoListResponse.builder()
+                .photoResponses(photos)
+                .totalCount(totalCount)
+                .build();
 
         log.info("Found {} photos for contest ID {}.", photos.size(), contestId);
 
-        return photos;
+        return response;
     }
 }

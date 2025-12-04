@@ -62,7 +62,7 @@ public class UserController {
      * 認証は不要
      */
     @GetMapping("/{userId}/history")
-    public ResponseEntity<UserHistoryResponse> getUserActivityHistory(@PathVariable String userId) {
+    public ResponseEntity<UserHistoryResponse> getUserActivityHistory(@PathVariable("userId") String userId) {
         log.info("Request for user activity history: {}", userId);
         // UserHistoryServiceを呼び出し、活動履歴詳細を取得
         UserHistoryResponse history = userHistoryService.getUserActivityHistory(userId);

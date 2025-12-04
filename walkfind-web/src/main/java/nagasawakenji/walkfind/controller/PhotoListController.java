@@ -1,5 +1,6 @@
 package nagasawakenji.walkfind.controller;
 
+import nagasawakenji.walkfind.domain.dto.PhotoListResponse;
 import nagasawakenji.walkfind.domain.dto.PhotoResponse;
 import nagasawakenji.walkfind.domain.dto.PhotoDisplayResponse;
 import nagasawakenji.walkfind.service.LocalStorageDownloadService;
@@ -10,8 +11,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-
-import java.util.List;
 import java.net.URL;
 
 @RestController
@@ -30,15 +29,13 @@ public class PhotoListController {
      * @return 写真リスト（投票数順）
      */
     @GetMapping("/{contestId}/photos")
-    public ResponseEntity<List<PhotoDisplayResponse>> getPhotos(@PathVariable("contestId") Long contestId) {
+    public ResponseEntity<PhotoListResponse> getPhotos(@PathVariable("contestId") Long contestId,
+                                                       @RequestParam(value = "page", defaultValue = "0") int page,
+                                                       @RequestParam(value = "size", defaultValue = "20") int size) {
 
-        List<PhotoResponse> photos = photoDisplayService.getPhotosByContest(contestId);
-
-        List<PhotoDisplayResponse> responses = photos.stream()
-                .map(this::mapToPhotoDisplayResponse)
-                .toList();
-
-        return ResponseEntity.ok(responses);
+        PhotoListResponse response = photoDisplayService.getPhotosByContest(contestId, page, size);
+        handlePhotoUrl(response);
+        return ResponseEntity.ok(response);
     }
 
     /**
@@ -50,19 +47,16 @@ public class PhotoListController {
         return new ResponseEntity<>(ex.getMessage(), HttpStatus.NOT_FOUND);
     }
 
-    // 他の汎用的な例外ハンドリング（500エラーなど）は、他のControllerのものと共通化します。
-
-    private PhotoDisplayResponse mapToPhotoDisplayResponse(PhotoResponse p) {
-        URL url = localStorageDownloadService.generatedDownloadUrl(p.getPhotoUrl());
-
-        PhotoDisplayResponse res = new PhotoDisplayResponse();
-        res.setPhotoId(p.getPhotoId());
-        res.setTitle(p.getTitle());
-        res.setUsername(p.getUsername());
-        res.setTotalVotes(p.getTotalVotes());
-        res.setPresignedUrl(url);
-        res.setSubmissionDate(p.getSubmissionDate());
-
-        return res;
+    /**
+     * photoUrlをローカルストレージへのurlに変換するハンドラ
+     */
+    private void handlePhotoUrl(PhotoListResponse response) {
+        response.getPhotoResponses().forEach(photo -> {
+            if (photo.getPhotoUrl() != null && !photo.getPhotoUrl().isBlank()) {
+                URL url = localStorageDownloadService.generatedDownloadUrl(photo.getPhotoUrl());
+                photo.setPhotoUrl(url.toString());
+            }
+        });
     }
+
 }
