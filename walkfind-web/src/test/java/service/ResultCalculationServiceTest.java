@@ -83,7 +83,7 @@ class ResultCalculationServiceTest {
         assertThat(results.get(0).getPhotosProcessed()).isEqualTo(0);
 
         verify(contestMapper, times(1))
-                .updateContestStatus(1L, ContestStatus.CLOSED_VOTING);
+                .updateContestStatus(1L, ContestStatus.ANNOUNCED);
         verify(contestResultMapper, never()).insertAll(any());
     }
 
@@ -96,7 +96,7 @@ class ResultCalculationServiceTest {
 
         Contest contest = new Contest();
         contest.setId(1L);
-        contest.setStatus(ContestStatus.IN_PROGRESS);
+        contest.setStatus(ContestStatus.CLOSED_VOTING);
 
         when(contestMapper.findContestsNeedingCalculation())
                 .thenReturn(List.of(contest));
@@ -128,7 +128,7 @@ class ResultCalculationServiceTest {
 
         verify(contestResultMapper, times(1)).insertAll(any());
         verify(contestMapper, times(1))
-                .updateContestStatus(1L, ContestStatus.CLOSED_VOTING);
+                .updateContestStatus(1L, ContestStatus.ANNOUNCED);
     }
 
     // ----------------------------------------------------------
@@ -140,7 +140,7 @@ class ResultCalculationServiceTest {
 
         Contest contest = new Contest();
         contest.setId(1L);
-        contest.setStatus(ContestStatus.CLOSED_VOTING);
+        contest.setStatus(ContestStatus.ANNOUNCED);
 
         when(contestMapper.findContestsNeedingCalculation())
                 .thenReturn(List.of(contest));

@@ -31,6 +31,7 @@ export interface ContestWinnerDto {
   title: string;
   photoUrl: string;
   username: string;
+  userId: string;
   submissionDate: string;
 }
 
@@ -65,5 +66,6 @@ export interface ContestResultResponse {
   title: string;
   photoUrl: string;
   username: string;
+  userId: string;
   submissionDate: string;
 }

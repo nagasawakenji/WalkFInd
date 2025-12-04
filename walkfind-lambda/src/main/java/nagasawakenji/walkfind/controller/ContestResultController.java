@@ -8,10 +8,12 @@ import nagasawakenji.walkfind.domain.dto.ContestWinnerListResponse;
 import nagasawakenji.walkfind.exception.ContestNotFoundException;
 import nagasawakenji.walkfind.exception.ContestStatusException;
 import nagasawakenji.walkfind.service.ResultDisplayService;
+import nagasawakenji.walkfind.service.S3DownloadPresignService;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.net.URL;
 import java.util.List;
 
 @RestController
@@ -21,6 +23,7 @@ import java.util.List;
 public class ContestResultController {
 
     private final ResultDisplayService resultDisplayService;
+    private final S3DownloadPresignService s3DownloadPresignService;
 
     /**
      * GET /api/v1/results/{contestId} : 終了したコンテストの結果を順位順で表示（認証不要）
@@ -76,5 +79,29 @@ public class ContestResultController {
         // 念のため、上記以外の RuntimeException は 500 を返す (本来はグローバルハンドラーで処理)
         log.error("Unexpected runtime exception in result controller.", ex);
         return new ResponseEntity<>("Internal Server Error.", HttpStatus.INTERNAL_SERVER_ERROR);
+    }
+
+    /**
+     * photoUrl をローカルストレージのダウンロードURLに変換
+     */
+    private void handlePhotoUrl(ContestResultListResponse response) {
+        response.getContestResultResponses().forEach(result -> {
+            if (result.getPhotoUrl() != null && !result.getPhotoUrl().isBlank()) {
+                URL url = s3DownloadPresignService.generatedDownloadUrl(result.getPhotoUrl());
+                result.setPhotoUrl(url.toString());
+            }
+        });
+    }
+
+    /**
+     * 優勝作品一覧の photoUrl をローカルストレージのダウンロードURLに変換
+     */
+    private void handleWinnerPhotoUrl(ContestWinnerListResponse response) {
+        response.getWinners().forEach(winner -> {
+            if (winner.getPhotoUrl() != null && !winner.getPhotoUrl().isBlank()) {
+                URL url = s3DownloadPresignService.generatedDownloadUrl(winner.getPhotoUrl());
+                winner.setPhotoUrl(url.toString());
+            }
+        });
     }
 }

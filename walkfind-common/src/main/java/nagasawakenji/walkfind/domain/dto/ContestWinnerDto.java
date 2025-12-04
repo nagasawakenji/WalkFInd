@@ -1,18 +1,21 @@
 package nagasawakenji.walkfind.domain.dto;
 
-import lombok.Builder;
-import lombok.Value;
+import lombok.*;
 
 import java.time.OffsetDateTime;
 
-@Value
+@Getter
+@Setter
+@NoArgsConstructor
+@AllArgsConstructor
 @Builder
 public class ContestWinnerDto {
-    private final Long photoId;
-    private final Long contestId;
-    private final Integer finalScore;    // 確定投票数
-    private final String title;          // 作品名
-    private final String photoUrl;       // 写真URL
-    private final String username;       // 投稿者名
-    private final OffsetDateTime submissionDate; // 投稿日時
+    private Long photoId;
+    private Long contestId;
+    private Integer finalScore;    // 確定投票数
+    private String title;          // 作品名
+    private String photoUrl;       // 写真URL
+    private String username;       // 投稿者名
+    private String userId;         // 投稿者id
+    private OffsetDateTime submissionDate; // 投稿日時
 }

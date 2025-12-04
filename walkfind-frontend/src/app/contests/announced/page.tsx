@@ -1,5 +1,3 @@
-
-
 // src/app/contests/announced/page.tsx
 export const dynamic = "force-dynamic";
 
@@ -40,7 +38,7 @@ export default async function AnnouncedContestPage({ searchParams }: PageProps) 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {contests.map((contest) => (
               <Link
-                href={`/contests/${contest.contestId}`}
+                href={`/contests/announced/${contest.contestId}`}
                 key={contest.contestId}
                 className="block group"
               >

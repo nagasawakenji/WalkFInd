@@ -96,7 +96,7 @@ class ResultDisplayServiceTest {
 
         when(contestResultMapper.findDetailedResultsByContestId(1L, 0, 20))
                 .thenReturn(List.of(r1));
-        when(contestResultMapper.countResultsByContestId(1L)).thenReturn(1L);
+        when(contestResultMapper.countResultsByContestId(1L)).thenReturn(1);
 
         ContestResultListResponse response = resultDisplayService.getFinalResults(1L, 0, 20);
 
@@ -134,7 +134,7 @@ class ResultDisplayServiceTest {
 
         when(contestResultMapper.findDetailedResultsByContestId(1L, 0, 20))
                 .thenReturn(List.of(r1));
-        when(contestResultMapper.countResultsByContestId(1L)).thenReturn(1L);
+        when(contestResultMapper.countResultsByContestId(1L)).thenReturn(1);
 
         ContestResultListResponse response = resultDisplayService.getFinalResults(1L, 0, 20);
 
@@ -161,7 +161,7 @@ class ResultDisplayServiceTest {
 
         when(contestResultMapper.findDetailedResultsByContestId(1L, 0, 20))
                 .thenReturn(List.of());
-        when(contestResultMapper.countResultsByContestId(1L)).thenReturn(0L);
+        when(contestResultMapper.countResultsByContestId(1L)).thenReturn(0);
 
         ContestResultListResponse response = resultDisplayService.getFinalResults(1L, 0, 20);
 

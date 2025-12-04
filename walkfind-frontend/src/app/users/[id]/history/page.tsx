@@ -12,15 +12,15 @@ type ContestResultDto = {
 type PhotoDto = {
   photoId: string;
   photoUrl: string;
+  description: string;
+  postDate: string;
+  likesCount: number;
+  private: boolean;
 };
 
 type UserHistoryResponse = {
   contestResults: ContestResultDto[];
   recentPublicPosts: PhotoDto[];
-  page: number;
-  size: number;
-  totalElements: number;
-  totalPages: number;
 };
 
 async function fetchUserHistory(
@@ -28,12 +28,29 @@ async function fetchUserHistory(
   page: number,
   size: number
 ): Promise<UserHistoryResponse> {
+  const rawBaseUrl = process.env.NEXT_PUBLIC_API_BASE_URL;
+  const baseUrl = rawBaseUrl
+    ? rawBaseUrl.replace(/\/api\/v1\/?$/, "").replace(/\/$/, "")
+    : "http://localhost:8080";
+  console.log("[fetchUserHistory] baseUrl =", baseUrl);
+
   const res = await fetch(
-    `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/v1/users/${userId}/history?page=${page}&size=${size}`,
-    { cache: "no-store" }
+    `${baseUrl}/api/v1/users/${encodeURIComponent(userId)}/history?page=${page}&size=${size}`,
+    {
+      cache: "no-store",
+      headers: {
+        "Content-Type": "application/json",
+      },
+    }
   );
 
-  if (!res.ok) notFound();
+  if (!res.ok) {
+    console.error("Failed to fetch user history:", res.status);
+    return {
+      contestResults: [],
+      recentPublicPosts: [],
+    } as UserHistoryResponse;
+  }
   return res.json();
 }
 
@@ -41,11 +58,12 @@ export default async function UserHistoryPage({
   params,
   searchParams,
 }: {
-  params: { id: string };
-  searchParams: { page?: string };
+  params: Promise<{ id: string }>;
+  searchParams: Promise<{ page?: string }>;
 }) {
-  const userId = params.id;
-  const page = Number(searchParams.page ?? 0);
+  const { id: userId } = await params;
+  const { page: pageParam } = await searchParams;
+  const page = Number(pageParam ?? 0);
   const size = 10;
 
   const history = await fetchUserHistory(userId, page, size);
@@ -94,40 +112,24 @@ export default async function UserHistoryPage({
         ) : (
           <div className="grid grid-cols-4 gap-4">
             {history.recentPublicPosts.map((photo) => (
-              <img
-                key={photo.photoId}
-                src={photo.photoUrl}
-                className="aspect-square object-cover rounded"
-              />
+              <div key={photo.photoId} className="rounded border overflow-hidden">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={photo.photoUrl}
+                  alt={photo.description}
+                  className="aspect-square w-full object-cover"
+                />
+                <div className="p-2 text-xs text-gray-600">
+                  <div className="truncate">{photo.description}</div>
+                  <div>{new Date(photo.postDate).toLocaleString("ja-JP")}</div>
+                  <div>いいね: {photo.likesCount}</div>
+                </div>
+              </div>
             ))}
           </div>
         )}
       </section>
 
-      {/* ===== Pagination ===== */}
-      <div className="flex justify-center gap-4">
-        {page > 0 && (
-          <a
-            href={`/users/${userId}/history?page=${page - 1}`}
-            className="px-4 py-2 border rounded"
-          >
-            ← 前へ
-          </a>
-        )}
-
-        <span className="px-4 py-2 text-sm">
-          {page + 1} / {history.totalPages}
-        </span>
-
-        {page + 1 < history.totalPages && (
-          <a
-            href={`/users/${userId}/history?page=${page + 1}`}
-            className="px-4 py-2 border rounded"
-          >
-            次へ →
-          </a>
-        )}
-      </div>
     </div>
   );
 }

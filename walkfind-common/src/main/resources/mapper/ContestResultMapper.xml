@@ -28,6 +28,7 @@
 
         <!-- users から取得する情報 -->
         <result property="username" column="username"/>
+        <result property="userId" column="id"/>
     </resultMap>
 
     <!-- ContestWinnerDto.javaに対応する優勝作品マップ -->
@@ -45,6 +46,7 @@
 
         <!-- users から取得する情報 -->
         <result property="username" column="username"/>
+        <result property="userId" column="id"/>
     </resultMap>
 
     <!-- ★ 結果集計機能：集計済みのレコードを一括で登録する ★ -->
@@ -90,7 +92,8 @@
         P.title,
         P.photo_url,
         P.submission_date,
-        U.username
+        U.username,
+        U.id
         FROM contest_results R
         -- 写真情報と投稿日時を取得
         JOIN user_photos P ON R.photo_id = P.id
@@ -116,7 +119,8 @@
         P.title,
         P.photo_url,
         P.submission_date,
-        U.username
+        U.username,
+        U.id
         FROM contest_results R
         -- 写真情報と投稿日時を取得
         JOIN user_photos P ON R.photo_id = P.id

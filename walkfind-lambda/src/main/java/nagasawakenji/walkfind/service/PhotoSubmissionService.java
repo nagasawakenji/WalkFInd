@@ -11,6 +11,7 @@ import nagasawakenji.walkfind.domain.statusenum.SubmitPhotoStatus;
 import nagasawakenji.walkfind.exception.DatabaseOperationException;
 import nagasawakenji.walkfind.infra.mybatis.mapper.ContestMapper;
 import nagasawakenji.walkfind.infra.mybatis.mapper.PhotoMapper;
+import nagasawakenji.walkfind.infra.mybatis.mapper.UserProfileMapper;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -24,6 +25,8 @@ public class PhotoSubmissionService {
     private final PhotoMapper photoMapper;
     private final ContestMapper contestMapper;
     private final S3DeleteService s3DeleteService;
+    private final UserProfileMapper userProfileMapper;
+    private final UserProfileContestEntryService userProfileContestEntryService;
 
     // ロールバックされる際は、必ずS3へ保存した写真を削除するようにする
     @Transactional
@@ -72,6 +75,16 @@ public class PhotoSubmissionService {
                 log.error("DB insertion failed for unknown reason. Rows affected: 0");
                 // データベース操作失敗は非チェック例外としてスローし、ロールバックさせる
                 throw new DatabaseOperationException("投稿データの保存に失敗しました。");
+            }
+
+            userProfileContestEntryService
+                    .incrementIfFirstEntry(userId, contest.getId());
+
+            // DB登録が成功した後にのみ投稿数をインクリメントする
+            int updated = userProfileMapper.incrementTotalPosts(userId);
+            if (updated == 0) {
+                log.error("Failed to increment total_posts for userId={}", userId);
+                throw new DatabaseOperationException("プロフィールの投稿数更新に失敗しました。");
             }
 
             // 成功結果の返却

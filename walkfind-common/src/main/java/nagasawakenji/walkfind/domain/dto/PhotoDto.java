@@ -1,19 +1,23 @@
 package nagasawakenji.walkfind.domain.dto;
 
-import lombok.Builder;
-import lombok.Getter;
+import lombok.*;
+
 import java.time.LocalDateTime;
+import java.time.OffsetDateTime;
 
 /**
  * ユーザーの投稿写真の詳細を表すDTO。
  */
 @Getter
+@Setter
+@NoArgsConstructor
+@AllArgsConstructor
 @Builder
 public class PhotoDto {
-    private final String photoId;
-    private final String photoUrl;
-    private final String description;
-    private final LocalDateTime postDate;
-    private final int likesCount;
-    private final boolean isPrivate; // 公開/非公開フラグ (公開APIなので常にfalseのものを返す想定ですが、データ構造として保持)
+    private String photoId;
+    private String photoUrl;
+    private String description;
+    private OffsetDateTime postDate;
+    private int likesCount;
+    private boolean isPrivate; // 公開/非公開フラグ (公開APIなので常にfalseのものを返す想定ですが、データ構造として保持)
 }

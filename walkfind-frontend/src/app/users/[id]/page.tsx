@@ -30,7 +30,7 @@ type PhotoDto = {
   title: string;
   submissionDate: string; // LocalDateTime -> string
   totalVotes: number;
-  // 必要なら contestId / contestName も追加
+  photoUrl: string;
 };
 
 type UserHistoryResponse = {
@@ -199,8 +199,17 @@ export default async function UserPage({ params }: PageProps) {
             {history.recentPublicPosts.map((photo) => (
               <article
                 key={photo.photoId}
-                className="rounded-lg border overflow-hidden"
+                className="rounded-lg border overflow-hidden bg-white"
               >
+                {photo.photoUrl && (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={photo.photoUrl}
+                    alt={photo.title}
+                    className="w-full h-48 object-cover"
+                  />
+                )}
+
                 <div className="p-3">
                   <h3 className="font-medium">{photo.title}</h3>
                   <p className="mt-1 text-xs text-gray-500">

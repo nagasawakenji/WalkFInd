@@ -6,6 +6,7 @@ import lombok.extern.slf4j.Slf4j;
 import nagasawakenji.walkfind.WalkFindLambdaApplication;
 import nagasawakenji.walkfind.domain.dto.CalculationResult;
 import nagasawakenji.walkfind.service.ResultCalculationService;
+import nagasawakenji.walkfind.service.UserProfileRankUpdateService;
 import org.springframework.boot.SpringApplication;
 import org.springframework.context.ConfigurableApplicationContext;
 
@@ -30,16 +31,26 @@ public class ResultCalculationHandler implements RequestHandler<Object, List<Cal
     }
 
     private final ResultCalculationService calculationService;
+    private final UserProfileRankUpdateService userProfileRankUpdateService;
 
     public ResultCalculationHandler() {
         // 起動済みのSpringコンテキストからServiceを取得
         this.calculationService = applicationContext.getBean(ResultCalculationService.class);
+        this.userProfileRankUpdateService = applicationContext.getBean(UserProfileRankUpdateService.class);
     }
 
     @Override
     public List<CalculationResult> handleRequest(Object event, Context context) {
 
-        // Serviceのメインロジックを呼び出す
-        return calculationService.calculateAllClosedContests();
+        // 結果集計を実行
+        List<CalculationResult> results = calculationService.calculateAllClosedContests();
+
+        // 集計済みコンテストごとに best_rank を更新
+        results.stream()
+                .map(CalculationResult::getContestId)
+                .distinct()
+                .forEach(userProfileRankUpdateService::updateBestRanksForContest);
+
+        return results;
     }
 }
