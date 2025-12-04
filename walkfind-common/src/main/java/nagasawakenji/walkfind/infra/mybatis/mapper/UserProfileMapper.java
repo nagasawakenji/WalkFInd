@@ -29,4 +29,33 @@ public interface UserProfileMapper {
      * @return 更新された行数
      */
     int updateStatistics(UserProfile userProfile);
+
+    /**
+     * 投稿数をインクリメントします
+     */
+    int incrementTotalPosts(@Param("userId") String userId);
+
+    /**
+     * 投稿数をデクりめんとします
+     */
+    int decrementTotalPosts(@Param("userId") String userId);
+
+    /**
+     * best_rankを更新します
+     */
+    int updateBestRankByContestId(@Param("contestId") Long contestId);
+
+    /**
+     * total_contests_enteredを更新します
+     * @param userId
+     * @param contestId
+     * @return
+     */
+    int incrementTotalContestsEnteredIfFirstTime(
+            @Param("userId") String userId,
+            @Param("contestId") Long contestId
+    );
+
+
+
 }

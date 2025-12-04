@@ -13,6 +13,7 @@ import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
 import org.springframework.security.oauth2.jwt.JwtDecoder;
 import org.springframework.security.oauth2.jwt.NimbusJwtDecoder;
+import org.springframework.http.HttpMethod;
 
 import java.util.List;
 
@@ -35,18 +36,17 @@ public class SecurityConfigLocal {
                         // 認証系は誰でもOK
                         .requestMatchers("/api/auth/**").permitAll()
 
-                        // GET系の公開APIは許可
-                        .requestMatchers("/api/v1/users/**").permitAll()
-                        .requestMatchers("/api/v1/photos/**").permitAll()
-                        .requestMatchers("/api/v1/contests/**").permitAll()
-                        .requestMatchers("/api/v1/local-storage/**").permitAll()
+                        // ===== 公開 GET API =====
+                        .requestMatchers(HttpMethod.GET, "/api/v1/users/**").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/v1/photos/**").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/v1/contests/**").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/v1/results/**").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/v1/local-storage/**").permitAll()
 
-
-                        // 投稿・更新系は認証必須
-                        .requestMatchers("POST", "/api/v1/**").authenticated()
-                        .requestMatchers("PUT", "/api/v1/**").authenticated()
-                        .requestMatchers("DELETE", "/api/v1/**").authenticated()
-
+                        // ===== 認証必須 API =====
+                        .requestMatchers(HttpMethod.POST, "/api/v1/**").authenticated()
+                        .requestMatchers(HttpMethod.PUT, "/api/v1/**").authenticated()
+                        .requestMatchers(HttpMethod.DELETE, "/api/v1/**").authenticated()
 
                         // その他
                         .anyRequest().permitAll()

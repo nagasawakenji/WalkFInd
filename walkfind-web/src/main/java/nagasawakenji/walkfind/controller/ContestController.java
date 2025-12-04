@@ -6,6 +6,7 @@ import nagasawakenji.walkfind.service.ContestService;
 import nagasawakenji.walkfind.exception.ContestNotFoundException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import nagasawakenji.walkfind.service.LocalStorageDownloadService;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -19,6 +20,7 @@ import java.util.List;
 public class ContestController {
 
     private final ContestService contestService;
+    private final LocalStorageDownloadService localStorageDownloadService;
 
     /**
      * GET /api/v1/contests : 全てのアクティブなコンテストを一覧表示（認証不要）

@@ -9,6 +9,8 @@ import nagasawakenji.walkfind.domain.statusenum.SubmitPhotoStatus;
 import nagasawakenji.walkfind.exception.DatabaseOperationException;
 import nagasawakenji.walkfind.infra.mybatis.mapper.ContestMapper;
 import nagasawakenji.walkfind.infra.mybatis.mapper.PhotoMapper;
+import nagasawakenji.walkfind.infra.mybatis.mapper.UserProfileMapper;
+import nagasawakenji.walkfind.service.UserProfileContestEntryService;
 import nagasawakenji.walkfind.service.LocalPhotoSubmissionService;
 import nagasawakenji.walkfind.service.LocalStorageUploadService;
 import org.junit.jupiter.api.DisplayName;
@@ -24,6 +26,7 @@ import java.util.Optional;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
 
@@ -41,6 +44,12 @@ class PhotoSubmissionServiceTest {
 
     @Mock
     private MultipartFile mockFile; // 追加
+
+    @Mock
+    private UserProfileMapper userProfileMapper;
+
+    @Mock
+    private UserProfileContestEntryService userProfileContestEntryService;
 
     @InjectMocks
     private LocalPhotoSubmissionService localPhotoSubmissionService;
@@ -73,6 +82,7 @@ class PhotoSubmissionServiceTest {
 
         // DB insert 成功
         when(photoMapper.insert(any(UserPhoto.class))).thenReturn(1);
+        when(userProfileMapper.incrementTotalPosts(userId)).thenReturn(1);
 
         // Request (URLなし)
         SubmitPhotoRequest req = new SubmitPhotoRequest(contestId, "title", "url", "desc");
@@ -85,6 +95,10 @@ class PhotoSubmissionServiceTest {
 
         verify(localStorageUploadService, times(1)).saveFile(eq(mockFile), anyString());
         verify(photoMapper, times(1)).insert(any(UserPhoto.class));
+        verify(userProfileMapper, times(1)).incrementTotalPosts(userId);
+        verify(userProfileContestEntryService, times(1))
+                .incrementIfFirstEntry(userId, contestId);
+        verify(userProfileMapper, times(1)).incrementTotalPosts(userId);
 
         // ★重要: 成功時は削除メソッドが呼ばれていないことを確認
         verify(localStorageUploadService, never()).deleteFile(anyString());
@@ -138,6 +152,9 @@ class PhotoSubmissionServiceTest {
 
         // DBには行かないこと
         verify(photoMapper, never()).insert(any());
+        verify(userProfileMapper, never()).incrementTotalPosts(anyString());
+        verify(userProfileContestEntryService, never())
+                .incrementIfFirstEntry(anyString(), anyLong());
     }
 
     // -----------------------------
@@ -169,6 +186,9 @@ class PhotoSubmissionServiceTest {
 
         // ★最重要: ファイルの削除メソッドが、保存されたパスを引数に呼ばれたか検証
         verify(localStorageUploadService, times(1)).deleteFile(savedPath);
+        verify(userProfileMapper, never()).incrementTotalPosts(anyString());
+        verify(userProfileContestEntryService, never())
+                .incrementIfFirstEntry(anyString(), anyLong());
     }
 
     // -----------------------------
@@ -202,5 +222,8 @@ class PhotoSubmissionServiceTest {
 
         // ★最重要: 例外の種類に関わらず、ファイル削除が呼ばれていること
         verify(localStorageUploadService, times(1)).deleteFile(savedPath);
+        verify(userProfileMapper, never()).incrementTotalPosts(anyString());
+        verify(userProfileContestEntryService, never())
+                .incrementIfFirstEntry(anyString(), anyLong());
     }
 }

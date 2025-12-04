@@ -39,7 +39,7 @@ public class ResultCalculationService {
     public List<CalculationResult> calculateAllClosedContests() {
 
         // 1. 集計対象のコンテストリストを取得
-        // Mapper側で end_date < CURRENT_TIMESTAMP AND status = 'IN_PROGRESS' をチェック
+        // Mapper側で end_date < CURRENT_TIMESTAMP AND status = 'CLOSED_VOTING' をチェック
         List<Contest> targetContests = contestMapper.findContestsNeedingCalculation();
 
         if (targetContests.isEmpty()) {
@@ -61,7 +61,7 @@ public class ResultCalculationService {
         Long contestId = contest.getId();
         try {
             // 既に集計結果があるかチェック (冪等性担保のため)
-            if (contest.getStatus().equals(ContestStatus.CLOSED_VOTING) || contest.getStatus().equals(ContestStatus.ANNOUNCED)) {
+            if (contest.getStatus().equals(ContestStatus.ANNOUNCED)) {
                 return buildResult(contestId, CalculationStatus.ALREADY_CALCULATED, "Results already calculated.", 0);
             }
 
@@ -70,8 +70,8 @@ public class ResultCalculationService {
 
             if (submissions.isEmpty()) {
                 // コンテストはあったが投稿がゼロの場合
-                // statusをCLOSED_VOTINGに更新するのみ
-                contestMapper.updateContestStatus(contestId, ContestStatus.CLOSED_VOTING);
+                // statusをANNOUNCEDに更新するのみ
+                contestMapper.updateContestStatus(contestId, ContestStatus.ANNOUNCED);
                 return buildResult(contestId, CalculationStatus.SUCCESS, "Contest closed, no submissions found.", 0);
             }
 
@@ -85,9 +85,9 @@ public class ResultCalculationService {
                 throw new DatabaseOperationException("Failed to insert all results.");
             }
 
-            // コンテストステータス更新 (IN_PROGRESS -> CLOSED_VOTING)
+            // コンテストステータス更新 (CLOSED_VOTING -> ANNOUNCED)
             // この更新も同じトランザクション内で行う
-            contestMapper.updateContestStatus(contestId, ContestStatus.CLOSED_VOTING);
+            contestMapper.updateContestStatus(contestId, ContestStatus.ANNOUNCED);
 
             log.info("Successfully calculated results for Contest ID {}. Inserted {} records.", contestId, insertedCount);
 

@@ -31,7 +31,7 @@ public interface ContestMapper {
     List<Contest> findContestsNeedingCalculation();
 
     // コンテストのstatusを変更する
-    int updateContestStatus(Long contestId, ContestStatus status);
+    int updateContestStatus(@Param("contestId") Long contestId, @Param("status") ContestStatus status);
 
     // 名前からコンテストの存在確認を行う
     boolean isExistContestByName(String name);

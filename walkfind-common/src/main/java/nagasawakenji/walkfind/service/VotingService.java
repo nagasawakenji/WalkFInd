@@ -24,6 +24,7 @@ public class VotingService {
     private final VoteMapper voteMapper;
     private final PhotoMapper photoMapper;
     private final ContestMapper contestMapper;
+    private final UserProfileContestEntryService userProfileContestEntryService;
 
     /**
      * 投票のビジネスロジックを実行する。
@@ -67,7 +68,10 @@ public class VotingService {
             int photoUpdateCount = photoMapper.incrementTotalVotes(photoId);
 
             if (voteInsertCount == 1 && photoUpdateCount == 1) {
+                userProfileContestEntryService
+                        .incrementIfFirstEntry(userId, contest.getId());
                 log.info("Vote successful for photo {}. User {}", photoId, userId);
+
                 return buildResult(photoId, VoteStatus.SUCCESS, "投票が完了しました。");
             } else {
                 // データベース操作に不整合が発生した場合

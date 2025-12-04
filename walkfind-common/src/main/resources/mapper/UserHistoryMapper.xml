@@ -60,7 +60,6 @@
         ON p.id = v_count.photo_id
         WHERE
         p.user_id = #{userId}
-        AND p.is_approved = TRUE
         ORDER BY
         p.submission_date DESC
         LIMIT

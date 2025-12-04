@@ -25,7 +25,7 @@ public interface ContestResultMapper {
     List<ContestResultResponse> findDetailedResultsByContestId(@Param("contestId") Long contestId, @Param("page") int page, @Param("size") int size);
 
     // 終了済みのコンテストの投稿件数を取得する
-    long countResultsByContestId(@Param("contestId") Long contestId);
+    int countResultsByContestId(@Param("contestId") Long contestId);
 
     // 終了済みのコンテストの優勝作品を取得する
     List<ContestWinnerDto> findWinnerPhotosByContestId(@Param("contestId") Long contestId);

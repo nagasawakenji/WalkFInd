@@ -49,7 +49,7 @@ public class ResultDisplayService {
         List<ContestResultResponse> results = contestResultMapper.findDetailedResultsByContestId(contestId, page, size);
 
         // 総投稿数を取得
-        long totalCount =
+        int totalCount =
                 contestResultMapper.countResultsByContestId(contestId);
 
         if (results.isEmpty()) {

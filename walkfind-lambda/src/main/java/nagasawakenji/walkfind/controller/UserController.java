@@ -4,6 +4,7 @@ import nagasawakenji.walkfind.domain.dto.UserProfileResponse;
 import nagasawakenji.walkfind.domain.dto.UserPublicProfileResponse;
 import nagasawakenji.walkfind.domain.dto.UserHistoryResponse;
 import nagasawakenji.walkfind.service.AuthService;
+import nagasawakenji.walkfind.service.S3DownloadPresignService;
 import nagasawakenji.walkfind.service.UserService;
 import nagasawakenji.walkfind.service.UserHistoryService;
 import nagasawakenji.walkfind.exception.UserStatusException;
@@ -14,6 +15,8 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.net.URL;
+
 
 @RestController
 @RequestMapping("/api/v1/users")
@@ -23,7 +26,8 @@ public class UserController {
 
     private final UserService userService;
     private final AuthService authService;
-    private final UserHistoryService userHistoryService; // ★ UserHistoryServiceを注入
+    private final UserHistoryService userHistoryService;
+    private final S3DownloadPresignService s3DownloadPresignService;
 
     /**
      * GET /api/v1/users/me : 認証済みユーザー自身のプロフィール情報を取得する。
@@ -62,10 +66,13 @@ public class UserController {
      * 認証は不要
      */
     @GetMapping("/{userId}/history")
-    public ResponseEntity<UserHistoryResponse> getUserActivityHistory(@PathVariable String userId) {
+    public ResponseEntity<UserHistoryResponse> getUserActivityHistory(@PathVariable("userId") String userId) {
         log.info("Request for user activity history: {}", userId);
         // UserHistoryServiceを呼び出し、活動履歴詳細を取得
         UserHistoryResponse history = userHistoryService.getUserActivityHistory(userId);
+
+        handleRecentPostPhotoUrl(history);
+
         return ResponseEntity.ok(history);
     }
 
@@ -98,5 +105,19 @@ public class UserController {
     public ResponseEntity<String> handleInternalErrors(Exception ex) {
         log.error("Unhandled Internal Error in UserController.", ex);
         return new ResponseEntity<>("Internal Server Error occurred.", HttpStatus.INTERNAL_SERVER_ERROR);
+    }
+
+    /**
+     * 最近の公開投稿の photoUrl をローカルストレージのダウンロードURLに変換
+     */
+    private void handleRecentPostPhotoUrl(UserHistoryResponse response) {
+        if (response.getRecentPublicPosts() == null) return;
+
+        response.getRecentPublicPosts().forEach(post -> {
+            if (post.getPhotoUrl() != null && !post.getPhotoUrl().isBlank()) {
+                URL url = s3DownloadPresignService.generatedDownloadUrl(post.getPhotoUrl());
+                post.setPhotoUrl(url.toString());
+            }
+        });
     }
 }

@@ -63,4 +63,65 @@
         WHERE
         user_id = #{userId}
     </update>
+
+    <update id="updateBestRankByContestId">
+        UPDATE user_profiles up
+        SET best_rank = sub.final_rank,
+        updated_at = now()
+        FROM (
+        SELECT
+        uph.user_id,
+        cr.final_rank
+        FROM contest_results cr
+        JOIN user_photos uph
+        ON cr.photo_id = uph.id
+        WHERE cr.contest_id = #{contestId}
+        ) AS sub
+        WHERE up.user_id = sub.user_id
+        AND (
+        up.best_rank IS NULL
+        OR up.best_rank = 0
+        OR sub.final_rank <![CDATA[ < ]]> up.best_rank
+        )
+    </update>
+
+    <update id="incrementTotalPosts">
+        UPDATE user_profiles
+        SET
+            total_posts = total_posts + 1,
+            updated_at = CURRENT_TIMESTAMP
+        WHERE
+            user_id = #{userId}
+    </update>
+
+    <update id="decrementTotalPosts">
+        UPDATE user_profiles
+        SET
+            total_posts = CASE
+                WHEN total_posts > 0 THEN total_posts - 1
+                ELSE 0
+            END,
+            updated_at = CURRENT_TIMESTAMP
+        WHERE
+            user_id = #{userId}
+    </update>
+
+    <update id="incrementTotalContestsEnteredIfFirstTime">
+        UPDATE user_profiles up
+        SET total_contests_entered = total_contests_entered + 1,
+        updated_at = now()
+        WHERE up.user_id = #{userId}
+        AND EXISTS (
+        SELECT 1
+        FROM contests c
+        WHERE c.id = #{contestId}
+        )
+        AND NOT EXISTS (
+        SELECT 1
+        FROM user_photos uph
+        WHERE uph.user_id = #{userId}
+        AND uph.contest_id = #{contestId}
+        )
+    </update>
+
 </mapper>

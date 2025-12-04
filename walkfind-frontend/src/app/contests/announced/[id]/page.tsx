@@ -2,6 +2,7 @@
 export const dynamic = "force-dynamic";
 
 import Image from "next/image";
+import Link from "next/link";
 import { notFound } from "next/navigation";
 import { apiClient } from "@/lib/axios";
 import { ContestDetailResponse, ContestResultResponse, ContestWinnerDto, ContestWinnerListResponse } from "@/types";
@@ -43,18 +44,19 @@ async function getContestWinners(id: string): Promise<ContestWinnerDto[]> {
 
 type PageProps = {
   params: Promise<{ id: string }>;
-  searchParams?: { page?: string; size?: string };
+  searchParams: Promise<{ page?: string; size?: string }>;
 };
 
 export default async function AnnouncedContestDetailPage({ params, searchParams }: PageProps) {
-  const resolvedParams = await params;
-  const contestId = resolvedParams.id;
+  const { id: contestId } = await params;
+  const resolvedSearchParams = (await searchParams) ?? {};
 
-  const page = Number(searchParams?.page ?? 0);
-  const size = Number(searchParams?.size ?? 12);
+  const page = Number(resolvedSearchParams.page ?? 0);
+  const size = Number(resolvedSearchParams.size ?? 12);
 
   const contest = await getContestDetail(contestId);
   const { items: results, totalCount } = await getContestResults(contestId, page, size);
+  const safeResults = Array.isArray(results) ? results : [];
   const winners = await getContestWinners(contestId);
 
   const totalPages = Math.ceil(totalCount / size);
@@ -109,7 +111,19 @@ export default async function AnnouncedContestDetailPage({ params, searchParams 
 
                 <div className="space-y-1">
                   <p className="text-xl font-bold">{winner.title}</p>
-                  <p className="text-gray-600">投稿者：{winner.username}</p>
+                  <p className="text-gray-600">
+                    投稿者：
+                    {winner.userId ? (
+                      <Link
+                        href={`/users/${winner.userId}`}
+                        className="text-blue-600 hover:underline"
+                      >
+                        {winner.username}
+                      </Link>
+                    ) : (
+                      <span className="text-gray-400">{winner.username}</span>
+                    )}
+                  </p>
                   <p className="text-gray-600">得票数：{winner.finalScore} 票</p>
                   <p className="text-gray-500 text-sm">
                     投稿日：{new Date(winner.submissionDate).toLocaleString()}
@@ -125,11 +139,11 @@ export default async function AnnouncedContestDetailPage({ params, searchParams 
       <section className="space-y-6">
         <h2 className="text-3xl font-bold">📊 最終ランキング</h2>
 
-        {results.length === 0 ? (
+        {safeResults.length === 0 ? (
           <p className="text-gray-500">投稿がありませんでした。</p>
         ) : (
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {results
+            {safeResults
               .filter(result => !winners.some(w => w.photoId === result.photoId))
               .map(result => (
               <div
@@ -153,7 +167,17 @@ export default async function AnnouncedContestDetailPage({ params, searchParams 
                     {result.finalRank} 位：{result.title}
                   </p>
                   <p className="text-sm text-gray-600">
-                    投稿者：{result.username}
+                    投稿者：
+                    {result.userId ? (
+                      <Link
+                        href={`/users/${result.userId}`}
+                        className="text-blue-600 hover:underline"
+                      >
+                        {result.username}
+                      </Link>
+                    ) : (
+                      <span className="text-gray-400">{result.username}</span>
+                    )}
                   </p>
                   <p className="text-sm text-gray-600">
                     得票数：{result.finalScore} 票

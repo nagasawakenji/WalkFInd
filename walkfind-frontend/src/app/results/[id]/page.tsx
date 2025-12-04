@@ -1,28 +1,32 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, use } from 'react';
 import Image from 'next/image';
 import axios, { AxiosError } from 'axios'; // AxiosError をインポート
 import Link from 'next/link';
 
 // 型定義
 interface ContestResultResponse {
-  rank: number;
   photoId: number;
+  contestId: number;
+  finalRank: number;
+  finalScore: number;
+  isWinner: boolean;
   title: string;
+  photoUrl: string;
+  userId: string;
   username: string;
-  totalVotes: number;
-  photoUrl: string; // 署名付きURL
+  submissionDate: string;
 }
 
 interface PageProps {
-  params: { id: string };
+  params: Promise<{ id: string }>;
 }
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8080/api/v1';
 
 export default function ResultPage({ params }: PageProps) {
-  const contestId = params.id;
+  const { id: contestId } = use(params);
   const [results, setResults] = useState<ContestResultResponse[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -31,7 +35,7 @@ export default function ResultPage({ params }: PageProps) {
     const fetchResults = async () => {
       try {
         const res = await axios.get(`${API_BASE_URL}/results/${contestId}`);
-        setResults(res.data);
+        setResults(res.data.contestResultResponses);
       } catch (err) {
         console.error(err);
         
@@ -78,19 +82,19 @@ export default function ResultPage({ params }: PageProps) {
           <div 
             key={item.photoId} 
             className={`relative flex flex-col md:flex-row bg-white rounded-xl shadow-lg overflow-hidden border-2 
-              ${item.rank === 1 ? 'border-yellow-400 order-first transform md:scale-105 z-10' : 
-                item.rank === 2 ? 'border-gray-300' : 
-                item.rank === 3 ? 'border-orange-300' : 'border-transparent'
+              ${item.finalRank === 1 ? 'border-yellow-400 order-first transform md:scale-105 z-10' : 
+                item.finalRank === 2 ? 'border-gray-300' : 
+                item.finalRank === 3 ? 'border-orange-300' : 'border-transparent'
               }`}
           >
             {/* 順位バッジ */}
             <div className={`absolute top-0 left-0 px-4 py-2 rounded-br-xl font-bold text-white z-20
-               ${item.rank === 1 ? 'bg-yellow-500 text-xl' : 
-                 item.rank === 2 ? 'bg-gray-400 text-lg' : 
-                 item.rank === 3 ? 'bg-orange-400 text-lg' : 'bg-blue-500'
+               ${item.finalRank === 1 ? 'bg-yellow-500 text-xl' : 
+                 item.finalRank === 2 ? 'bg-gray-400 text-lg' : 
+                 item.finalRank === 3 ? 'bg-orange-400 text-lg' : 'bg-blue-500'
                }`}
             >
-              {item.rank}位
+              {item.finalRank}位
             </div>
 
             {/* 写真エリア */}
@@ -107,11 +111,19 @@ export default function ResultPage({ params }: PageProps) {
             {/* 情報エリア */}
             <div className="p-6 md:w-1/2 flex flex-col justify-center">
               <h2 className="text-2xl font-bold mb-2">{item.title}</h2>
-              <p className="text-gray-600 mb-4">撮影者: {item.username}</p>
+              <p className="text-gray-600 mb-4">
+                撮影者:
+                <Link
+                  href={`/users/${item.userId}`}
+                  className="ml-2 text-blue-600 hover:underline"
+                >
+                  {item.username}
+                </Link>
+              </p>
               
               <div className="mt-auto">
                 <div className="text-sm text-gray-500">獲得票数</div>
-                <div className="text-3xl font-bold text-blue-600">{item.totalVotes} 票</div>
+                <div className="text-3xl font-bold text-blue-600">{item.finalScore} 票</div>
               </div>
             </div>
           </div>
