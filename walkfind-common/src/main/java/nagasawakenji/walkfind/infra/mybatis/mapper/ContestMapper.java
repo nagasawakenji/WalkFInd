@@ -44,4 +44,10 @@ public interface ContestMapper {
 
     // コンテストのステータス更新(CLOSED_VOTING → ANNOUNCED)
     int updateToAnnouncedIfCalculated();
+
+    // コンテストのアップデート
+    int update(Contest contest);
+
+    // コンテストの削除
+    int deleteById(@Param("contestId") Long contestId);
 }

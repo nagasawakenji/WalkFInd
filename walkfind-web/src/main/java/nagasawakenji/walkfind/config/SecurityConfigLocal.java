@@ -36,6 +36,15 @@ public class SecurityConfigLocal {
                         // 認証系は誰でもOK
                         .requestMatchers("/api/auth/**").permitAll()
 
+                        // コンテスト作成を許可
+                        .requestMatchers(HttpMethod.POST, "/api/v1/contests").permitAll()
+
+                        // アイコン投稿を許可
+                        .requestMatchers(HttpMethod.POST, "/api/v1/contest-icons/**").permitAll()
+                        // アイコン取得も許可
+                        .requestMatchers(HttpMethod.GET, "/api/v1/contest-icons").permitAll()
+
+
                         // ===== 公開 GET API =====
                         .requestMatchers(HttpMethod.GET, "/api/v1/users/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/v1/photos/**").permitAll()
