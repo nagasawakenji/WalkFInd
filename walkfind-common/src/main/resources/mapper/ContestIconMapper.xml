@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="nagasawakenji.walkfind.infra.mybatis.mapper.ContestIconMapper">
+    <!-- 結果マッピング -->
+    <resultMap id="ContestIconResultMap" type="nagasawakenji.walkfind.domain.model.ContestIcon">
+        <id     column="id"          property="id" />
+        <result column="contest_id"  property="contestId" />
+        <result column="icon_url"    property="iconUrl" />
+        <result column="uploaded_at" property="uploadedAt" />
+        <result column="updated_at"  property="updatedAt" />
+    </resultMap>
+
+    <!-- contestId で取得 -->
+    <select id="findByContestId" resultMap="ContestIconResultMap">
+        SELECT id, contest_id, icon_url, uploaded_at, updated_at
+        FROM contest_icons
+        WHERE contest_id = #{contestId}
+        LIMIT 1
+    </select>
+
+    <!-- 新規作成 -->
+    <insert id="insert" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO contest_icons (contest_id, icon_url, uploaded_at, updated_at)
+        VALUES (#{contestId}, #{iconUrl}, NOW(), NOW())
+    </insert>
+
+    <!-- 更新（URL の差し替え） -->
+    <update id="update">
+        UPDATE contest_icons
+        SET icon_url  = #{iconUrl},
+        updated_at = NOW()
+        WHERE contest_id = #{contestId}
+    </update>
+
+    <!-- 削除 -->
+    <delete id="deleteByContestId">
+        DELETE FROM contest_icons
+        WHERE contest_id = #{contestId}
+    </delete>
+
+    <!-- 複数のicon取得 -->
+    <select id="findByContestIds" resultMap="ContestIconResultMap">
+        SELECT id, contest_id, icon_url, uploaded_at, updated_at
+        FROM contest_icons
+        WHERE contest_id IN
+        <foreach collection="ids" item="id" open="(" separator="," close=")">
+            #{id}
+        </foreach>
+    </select>
+
+</mapper>

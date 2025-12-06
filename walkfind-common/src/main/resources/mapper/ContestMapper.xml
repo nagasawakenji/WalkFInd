@@ -89,4 +89,23 @@
         AND aggregation_completed = true
     </update>
 
+    <!-- コンテスト情報を更新する -->
+    <update id="update" parameterType="nagasawakenji.walkfind.domain.model.Contest">
+        UPDATE contests
+        SET
+            name = #{name},
+            theme = #{theme},
+            start_date = #{startDate},
+            end_date = #{endDate},
+            status = #{status, typeHandler=org.apache.ibatis.type.EnumTypeHandler},
+            updated_at = CURRENT_TIMESTAMP
+        WHERE id = #{id}
+    </update>
+
+    <!-- コンテストをIDで削除する -->
+    <delete id="deleteById">
+        DELETE FROM contests
+        WHERE id = #{contestId}
+    </delete>
+
 </mapper>

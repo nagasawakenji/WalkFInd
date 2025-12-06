@@ -9,6 +9,7 @@ export interface ContestResponse {
   endDate: string;
   thumbnailUrl?: string; // あれば
   status: ContestStatus;
+  iconUrl?: string | null; 
 }
 
 // コンテスト詳細用

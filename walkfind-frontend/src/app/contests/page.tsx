@@ -3,12 +3,61 @@ export const dynamic = "force-dynamic";
 import Link from 'next/link';
 import { apiClient } from '@/lib/axios';
 import { ContestResponse } from '@/types';
+import ContestIcon from '@/components/ContestIcon';
 
+
+interface ContestIconResponse {
+  contestId: number;
+  iconUrl: string | null;
+  success: boolean;
+  message?: string;
+}
+
+interface ContestIconListResponse {
+  icons: ContestIconResponse[];
+  totalCount: number;
+}
+
+// データの取得処理 (Server Component)
 // データの取得処理 (Server Component)
 async function getContests(): Promise<ContestResponse[]> {
   try {
-    // 実際のリクエスト: http://localhost:8080/api/v1/contests
-    return await apiClient.get('/contests');
+    // ① コンテスト一覧取得
+    // apiClient が「dataだけ返すラッパ」ならこのままでOK
+    const contests: ContestResponse[] = await apiClient.get('/contests');
+
+    if (!contests || contests.length === 0) {
+      return [];
+    }
+
+    // ② contestId をまとめてクエリ文字列にする
+    const idsParam = contests.map((c) => c.contestId).join(',');
+
+    // ③ アイコン一覧取得
+    let iconMap = new Map<number, string | null>();
+
+    try {
+      const iconList: ContestIconListResponse = await apiClient.get(
+        `/contest-icons`,
+        { params: { ids: idsParam } } // => /contest-icons?ids=1,2,3
+      );
+
+      iconMap = new Map(
+        iconList.icons.map((icon) => [icon.contestId, icon.iconUrl])
+      );
+    } catch (e) {
+      console.error('Failed to fetch contest icons:', e);
+      // アイコン取得に失敗してもコンテスト一覧自体は返したいので握りつぶす
+    }
+
+    // ④ アイコン URL を contests にマージ
+    const merged = contests.map((c) => ({
+      ...c,
+      iconUrl: iconMap.get(c.contestId) ?? null,
+    }));
+
+    return merged;
+
   } catch (error) {
     console.error("Failed to fetch contests:", error);
     return [];
@@ -55,8 +104,8 @@ export default async function HomePage() {
                     
                     {/* サムネイルエリア */}
                     <div className="h-40 bg-gray-100 border-b border-gray-200 flex items-center justify-center group-hover:opacity-90">
-                      {/* サムネイルがあれば画像を表示、なければプレースホルダー */}
-                      <span className="text-4xl opacity-50">📷</span>
+                      {/* サムネイルがあれば画像を表示、なければプレースホルダー（ContestIcon） */}
+                      <ContestIcon iconUrl={contest.iconUrl} size={64} />
                     </div>
 
                     <div className="p-4 flex flex-col flex-grow">
