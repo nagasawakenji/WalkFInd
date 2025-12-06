@@ -30,4 +30,10 @@ public interface PhotoMapper {
 
     // 指定コンテストの投稿写真を取得
     List<UserPhoto> findAllSubmissionsForCalculation(@Param("contestId") Long contestId);
+
+    // idで写真を取得
+    Optional<UserPhoto> findById(@Param("photoId") Long photoId);
+
+    // idで写真を削除
+    int deleteById(@Param("photoId") Long photoId);
 }

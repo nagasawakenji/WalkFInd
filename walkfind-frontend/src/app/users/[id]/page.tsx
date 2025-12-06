@@ -92,6 +92,17 @@ export default async function UserPage({ params }: PageProps) {
     fetchUserHistory(userId),
   ]);
 
+  // プロフィール画像URLがキーの場合は /api/v1/local-storage/{key} として扱う
+  const profileImageSrc =
+    profile.profileImageUrl &&
+    (profile.profileImageUrl.startsWith("http")
+      ? profile.profileImageUrl
+      : `${API_BASE_URL}/local-storage/${
+          profile.profileImageUrl.startsWith("/")
+            ? profile.profileImageUrl.slice(1)
+            : profile.profileImageUrl
+        }`);
+
   return (
     <main className="min-h-screen bg-[#F5F5F5] font-sans text-[#333]">
       {/* 共通ナビゲーションバー */}
@@ -112,9 +123,9 @@ export default async function UserPage({ params }: PageProps) {
           <div className="lg:col-span-1 space-y-6">
             <div className="bg-white border border-gray-300 rounded-sm p-6 shadow-sm text-center lg:text-left">
               <div className="relative w-32 h-32 mx-auto lg:mx-0 bg-gray-200 rounded-sm overflow-hidden mb-4 border border-gray-300">
-                {profile.profileImageUrl ? (
+                {profileImageSrc ? (
                   <Image
-                    src={profile.profileImageUrl}
+                    src={profileImageSrc}
                     alt={profile.nickname ?? "Profile"}
                     fill
                     unoptimized

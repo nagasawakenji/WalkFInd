@@ -21,6 +21,20 @@ interface PageProps {
   params: Promise<{ id: string }>;
 }
 
+// 写真削除APIのレスポンス型（Java側のDelete用DTOに対応）
+type DeletePhotoStatus =
+  | 'SUCCESS'
+  | 'NOT_FOUND'
+  | 'BUSINESS_RULE_VIOLATION'
+  | 'FAILED'
+  | 'INTERNAL_SERVER_ERROR';
+
+interface DeletingPhotoResponse {
+  photoId: number | null;
+  status: DeletePhotoStatus;
+  message?: string;
+}
+
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8080/api/v1';
 
 export default function PhotoListPage({ params }: PageProps) {
@@ -30,23 +44,51 @@ export default function PhotoListPage({ params }: PageProps) {
   const [totalCount, setTotalCount] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
   const [votingId, setVotingId] = useState<number | null>(null);
+  const [deletingId, setDeletingId] = useState<number | null>(null);
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
 
   const [page, setPage] = useState(0);
   const [size] = useState(18); // 3の倍数にしてグリッドの並びを綺麗にするため調整
 
+  console.log('[PhotoListPage] render', {
+    contestId,
+    page,
+    size,
+    photosCount: photos.length,
+    totalCount,
+    isLoading,
+    votingId,
+    deletingId,
+    currentUserId,
+  });
+
   // 初回ロード時に写真リストを取得
   useEffect(() => {
     const fetchPhotos = async () => {
+      console.log('[fetchPhotos] start', { contestId, page, size });
       try {
         setIsLoading(true);
         const res = await axios.get(`${API_BASE_URL}/contests/${contestId}/photos`, {
           params: { page, size }
         });
 
+        console.log('[fetchPhotos] success', {
+          status: res.status,
+          data: res.data,
+        });
+
         setPhotos(res.data.photoResponses);
         setTotalCount(res.data.totalCount);
       } catch (error) {
-        console.error('Failed to fetch photos:', error);
+        if (axios.isAxiosError(error)) {
+          console.error('[fetchPhotos] axios error', {
+            message: error.message,
+            status: error.response?.status,
+            data: error.response?.data,
+          });
+        } else {
+          console.error('[fetchPhotos] unknown error', error);
+        }
       } finally {
         setIsLoading(false);
       }
@@ -55,8 +97,19 @@ export default function PhotoListPage({ params }: PageProps) {
     fetchPhotos();
   }, [contestId, page, size]);
 
+  // ログインユーザーIDをローカルストレージから取得（キー名は環境に合わせて調整してください）
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const storedUserId = localStorage.getItem('user_id');
+    console.log('[currentUserId effect] storedUserId =', storedUserId);
+    if (storedUserId) {
+      setCurrentUserId(storedUserId);
+    }
+  }, []);
+
   // 投票ボタンクリック時の処理
   const handleVote = async (photoId: number) => {
+    console.log('[handleVote] called', { photoId, votingId });
     if (votingId !== null) return;
     setVotingId(photoId);
 
@@ -72,6 +125,12 @@ export default function PhotoListPage({ params }: PageProps) {
         return;
       }
 
+      console.log('[handleVote] sending request', {
+        contestId: Number(contestId),
+        photoId,
+        hasToken: !!token,
+      });
+
       await axios.post(`${API_BASE_URL}/votes`, 
         { 
           contestId: Number(contestId), 
@@ -82,6 +141,8 @@ export default function PhotoListPage({ params }: PageProps) {
         }
       );
 
+      console.log('[handleVote] success');
+
       setPhotos((prev) =>
         prev.map((p) =>
           p.photoId === photoId ? { ...p, totalVotes: p.totalVotes + 1 } : p
@@ -91,14 +152,91 @@ export default function PhotoListPage({ params }: PageProps) {
       alert('投票しました！');
 
     } catch (error) {
+      if (axios.isAxiosError(error)) {
+        console.error('[handleVote] axios error', {
+          message: error.message,
+          status: error.response?.status,
+          data: error.response?.data,
+        });
+      } else {
+        console.error('[handleVote] unknown error', error);
+      }
       if (axios.isAxiosError(error) && error.response?.status === 409) {
         alert('このコンテストには既に投票済みです（1人1票まで）。');
       } else {
-        console.error('Vote failed:', error);
         alert('投票に失敗しました。');
       }
     } finally {
       setVotingId(null);
+    }
+  };
+
+  // 写真削除ボタンクリック時の処理（自分の写真のみ）
+  const handleDelete = async (photoId: number) => {
+    console.log('[handleDelete] called', { photoId, deletingId });
+    if (deletingId !== null) return;
+
+    const confirmed = window.confirm('この写真を削除しますか？\n一度削除すると元に戻せません。');
+    if (!confirmed) return;
+
+    setDeletingId(photoId);
+
+    try {
+      const token = localStorage.getItem('access_token');
+      if (!token) {
+        const loginUrl = process.env.NEXT_PUBLIC_COGNITO_LOGIN_URL;
+        if (loginUrl) {
+          const currentPath = window.location.pathname + window.location.search;
+          localStorage.setItem('redirect_after_login', currentPath);
+          window.location.href = loginUrl;
+        }
+        return;
+      }
+
+      console.log('[handleDelete] sending delete request', {
+        photoId,
+        hasToken: !!token,
+        url: `${API_BASE_URL}/photos/${photoId}`,
+      });
+
+      const res = await axios.delete<DeletingPhotoResponse>(
+        `${API_BASE_URL}/photos/${photoId}`,
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        }
+      );
+
+      console.log('[handleDelete] response', {
+        status: res.status,
+        data: res.data,
+      });
+
+      const data = res.data;
+      if (data.status === 'SUCCESS') {
+        // 一覧から削除された写真を取り除く
+        setPhotos((prev) => prev.filter((p) => p.photoId !== photoId));
+        setTotalCount((prev) => Math.max(prev - 1, 0));
+        alert(data.message || '写真を削除しました。');
+      } else {
+        alert(data.message || '写真の削除に失敗しました。');
+      }
+    } catch (error) {
+      if (axios.isAxiosError(error)) {
+        console.error('[handleDelete] axios error', {
+          message: error.message,
+          status: error.response?.status,
+          data: error.response?.data,
+        });
+      } else {
+        console.error('[handleDelete] unknown error', error);
+      }
+      let msg = '写真の削除中にエラーが発生しました。';
+      if (axios.isAxiosError(error) && error.response?.data?.message) {
+        msg = error.response.data.message;
+      }
+      alert(msg);
+    } finally {
+      setDeletingId(null);
     }
   };
 
@@ -193,13 +331,26 @@ export default function PhotoListPage({ params }: PageProps) {
                         <span className="text-xs text-gray-400 ml-1">votes</span>
                       </div>
 
-                      <button
-                        onClick={() => handleVote(photo.photoId)}
-                        disabled={votingId !== null}
-                        className="bg-white border border-blue-600 text-blue-600 hover:bg-blue-600 hover:text-white px-5 py-2 rounded-sm text-sm font-bold transition-colors disabled:opacity-50 disabled:cursor-not-allowed disabled:border-gray-300 disabled:text-gray-400 disabled:bg-gray-100"
-                      >
-                        {votingId === photo.photoId ? 'Sending...' : 'Vote'}
-                      </button>
+                      <div className="flex items-center gap-2">
+                        <button
+                          onClick={() => handleVote(photo.photoId)}
+                          disabled={votingId !== null}
+                          className="bg-white border border-blue-600 text-blue-600 hover:bg-blue-600 hover:text-white px-5 py-2 rounded-sm text-sm font-bold transition-colors disabled:opacity-50 disabled:cursor-not-allowed disabled:border-gray-300 disabled:text-gray-400 disabled:bg-gray-100"
+                        >
+                          {votingId === photo.photoId ? 'Sending...' : 'Vote'}
+                        </button>
+
+                        {currentUserId && currentUserId === photo.userId && (
+                          <button
+                            type="button"
+                            onClick={() => handleDelete(photo.photoId)}
+                            disabled={deletingId === photo.photoId}
+                            className="bg-white border border-red-500 text-red-600 hover:bg-red-500 hover:text-white px-4 py-2 rounded-sm text-xs font-bold transition-colors disabled:opacity-50 disabled:cursor-not-allowed disabled:border-gray-300 disabled:text-gray-400 disabled:bg-gray-100"
+                          >
+                            {deletingId === photo.photoId ? 'Deleting...' : 'Delete'}
+                          </button>
+                        )}
+                      </div>
                     </div>
                   </div>
                 </div>

@@ -19,8 +19,9 @@ public class LocalStorageUploadService {
 
     /**
      * ローカル用のファイルアップロード処理
+     *
      * @param file MultipartFile（フロントから送られる）
-     * @param key 保存するキー（例: "contest-1/uuid.jpg"）
+     * @param key  保存するキー（例: "contest-1/uuid.jpg"）
      * @return 保存後のローカルパス（キー）
      */
     public String saveFile(MultipartFile file, String key) {
@@ -29,13 +30,28 @@ public class LocalStorageUploadService {
             throw new IllegalArgumentException("Uploaded file is empty.");
         }
 
-        // パスの整形
-        String cleanKey = StringUtils.cleanPath(key);
-        File destination = new File(storageRoot + File.separator + cleanKey);
+        // key が null / 空 なら、新しいキーを自動生成する
+        String cleanKey;
+        if (!StringUtils.hasText(key)) {
+            String originalFilename = file.getOriginalFilename();
+            String ext = "";
+            if (StringUtils.hasText(originalFilename)) {
+                int dotIndex = originalFilename.lastIndexOf('.');
+                if (dotIndex >= 0 && dotIndex < originalFilename.length() - 1) {
+                    ext = originalFilename.substring(dotIndex);
+                }
+            }
+            // 汎用に使える一意なファイル名を生成（例: "550e8400-e29b-41d4-a716-446655440000.png"）
+            cleanKey = java.util.UUID.randomUUID().toString() + ext;
+        } else {
+            cleanKey = StringUtils.cleanPath(key);
+        }
+
+        File destination = new File(storageRoot, cleanKey);
 
         // ディレクトリを作成
         File parentDir = destination.getParentFile();
-        if (!parentDir.exists() && !parentDir.mkdirs()) {
+        if (parentDir != null && !parentDir.exists() && !parentDir.mkdirs()) {
             throw new RuntimeException("Failed to create directory: " + parentDir.getAbsolutePath());
         }
 
@@ -46,6 +62,9 @@ public class LocalStorageUploadService {
             throw new RuntimeException("Failed to save file: " + destination.getAbsolutePath(), ex);
         }
 
+        log.info("Local file saved. key={}, path={}", cleanKey, destination.getAbsolutePath());
+
+        // DB などにはこの cleanKey（相対パス）を保存する想定
         return cleanKey;
     }
 

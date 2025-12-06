@@ -14,7 +14,7 @@ public class CreatingContestRequest {
     private final OffsetDateTime startDate;
     private final OffsetDateTime endDate;
 
-    @JsonCreator  // ✅ Jackson に「このコンストラクタで復元せよ」と指示
+    @JsonCreator
     public CreatingContestRequest(
             @JsonProperty("name") String name,
             @JsonProperty("theme") String theme,

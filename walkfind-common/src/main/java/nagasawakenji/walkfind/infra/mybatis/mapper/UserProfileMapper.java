@@ -56,6 +56,16 @@ public interface UserProfileMapper {
             @Param("contestId") Long contestId
     );
 
+    /**
+     * profile_image_url を更新します
+     */
+
+    int updateProfileImage(@Param("userId") String userId, @Param("imageUrl") String imageUrl);
+
+    /**
+     * bio を変更します
+     */
+    int updateBio(@Param("userId") String userId, @Param("bio") String bio);
 
 
 }
