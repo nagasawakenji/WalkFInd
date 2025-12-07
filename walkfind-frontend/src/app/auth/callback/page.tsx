@@ -4,8 +4,13 @@ import { useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import axios from "axios";
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:8080/api/v1";
-
+// ★ 環境変数がうまく読めない時のために、本番URLをここに直書きします
+const API_BASE_URL =
+  process.env.NEXT_PUBLIC_API_BASE_URL ||
+  (process.env.NODE_ENV === "production"
+    ? "https://b591pb4p16.execute-api.ap-northeast-1.amazonaws.com/Stage/api/v1"
+    : "http://localhost:8080/api/v1");
+    
 export default function AuthCallbackPage() {
   const searchParams = useSearchParams();
   const router = useRouter();
