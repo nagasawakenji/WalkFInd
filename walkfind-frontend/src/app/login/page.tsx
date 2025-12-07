@@ -1,7 +1,10 @@
 "use client";
 
-import { COGNITO_LOGIN_URL } from "@/lib/cognito";
 import Link from "next/link";
+
+// .env からログインURLを読む
+const COGNITO_LOGIN_URL =
+  process.env.NEXT_PUBLIC_COGNITO_LOGIN_URL ?? "";
 
 export default function LoginPage() {
   return (
