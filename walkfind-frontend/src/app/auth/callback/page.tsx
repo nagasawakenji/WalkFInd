@@ -4,6 +4,8 @@ import { useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import axios from "axios";
 
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:8080/api/v1";
+
 export default function AuthCallbackPage() {
   const searchParams = useSearchParams();
   const router = useRouter();
@@ -15,7 +17,7 @@ export default function AuthCallbackPage() {
     const login = async () => {
       try {
         const res = await axios.post(
-          "http://localhost:8080/api/auth/cognito/login",
+          `${API_BASE_URL}/auth/cognito/login`,
           { code },
           { withCredentials: true }
         );

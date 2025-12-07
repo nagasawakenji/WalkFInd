@@ -4,11 +4,8 @@ import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { signOut } from 'aws-amplify/auth';
 
-// Cognito の設定（ログイン URL と同じドメイン / client_id を利用）
-const COGNITO_DOMAIN = 'https://walkfind-auth.auth.ap-northeast-1.amazoncognito.com';
-const CLIENT_ID = '3n38j4erbgfcanu6v9n87he38r';
-// ログアウト後に戻ってくるURL（Cognitoのアプリ設定で "Sign-out URL(s)" に登録しておく）
-const LOGOUT_REDIRECT_URL = 'http://localhost:3000/';
+// Cognito Hosted UI のログアウトURL（環境変数から取得）
+const COGNITO_LOGOUT_URL = process.env.NEXT_PUBLIC_COGNITO_LOGOUT_URL ?? '';
 
 export default function LogoutPage() {
   const router = useRouter();
@@ -31,13 +28,15 @@ export default function LogoutPage() {
           window.localStorage.removeItem('user_id');
         }
 
-        // 3. Cognito Hosted UI のセッションも削除するため、/logout にリダイレクト
-        const url = new URL(`${COGNITO_DOMAIN}/logout`);
-        url.searchParams.set('client_id', CLIENT_ID);
-        url.searchParams.set('logout_uri', LOGOUT_REDIRECT_URL);
+        // 3. Cognito Hosted UI のセッションも削除するため、ログアウトURLにリダイレクト
+        if (!COGNITO_LOGOUT_URL) {
+          console.error('[LogoutPage] COGNITO_LOGOUT_URL is not defined.');
+          router.push('/');
+          return;
+        }
 
         // Next.js のルーターではなく、ブラウザリダイレクトで飛ばす
-        window.location.href = url.toString();
+        window.location.href = COGNITO_LOGOUT_URL;
       } catch (e) {
         console.error('[LogoutPage] unexpected error during logout:', e);
         // 何かあってもとりあえずトップに戻す
