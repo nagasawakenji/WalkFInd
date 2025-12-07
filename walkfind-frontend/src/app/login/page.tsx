@@ -1,17 +1,18 @@
-"use client";
+'use client';
 
-import Link from "next/link";
+import Link from 'next/link';
 
-// .env からログインURLを読む
 const COGNITO_LOGIN_URL =
-  process.env.NEXT_PUBLIC_COGNITO_LOGIN_URL ?? "";
+  process.env.NEXT_PUBLIC_COGNITO_LOGIN_URL ?? '';
 
 export default function LoginPage() {
   return (
     <main className="min-h-screen bg-[#F5F5F5] font-sans text-[#333] flex flex-col">
-      {/* 共通ナビゲーションバー */}
       <nav className="bg-black text-white h-12 flex items-center px-4 lg:px-8 shadow-sm">
-        <Link href="/" className="font-bold text-lg tracking-tight hover:text-gray-300">
+        <Link
+          href="/"
+          className="font-bold text-lg tracking-tight hover:text-gray-300"
+        >
           WalkFind
         </Link>
       </nav>
@@ -26,16 +27,24 @@ export default function LoginPage() {
             Please authenticate to continue.
           </p>
 
+          {/* デバッグ用に画面にも出してしまう */}
+          <p className="mb-4 text-xs break-all text-gray-400">
+            DEBUG URL: {COGNITO_LOGIN_URL || '(empty)'}
+          </p>
+
           <button
             className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-sm transition-colors shadow-sm flex items-center justify-center gap-2"
             onClick={() => {
-              console.log("[LoginPage] Using COGNITO_LOGIN_URL:", COGNITO_LOGIN_URL);
+              console.log(
+                '[LoginPage] Using COGNITO_LOGIN_URL:',
+                COGNITO_LOGIN_URL
+              );
 
               if (COGNITO_LOGIN_URL) {
                 window.location.href = COGNITO_LOGIN_URL;
               } else {
-                console.error("Cognito Login URL is not defined.");
-                alert("Login configuration error.");
+                console.error('Cognito Login URL is not defined.');
+                alert('Login configuration error.');
               }
             }}
           >
