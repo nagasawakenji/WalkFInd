@@ -4,13 +4,20 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { fetchAuthSession } from 'aws-amplify/auth';
 
-// cognitoのログインURL
+// Cognito のログインURL
+// - 環境変数 NEXT_PUBLIC_COGNITO_LOGIN_URL があればそれを優先
+// - それが無い場合、production では本番用プール、development ではローカル用プールを使う
+const DEFAULT_COGNITO_LOGIN_URL_PROD =
+  'https://ap-northeast-1lvczdifp6.auth.ap-northeast-1.amazoncognito.com/login?client_id=uut2o2ikg67fvhvll2ae3268o&response_type=code&scope=email+openid+phone&redirect_uri=https%3A%2F%2Fwalkfind.vercel.app%2Fauth%2Fcallback';
+
+const DEFAULT_COGNITO_LOGIN_URL_DEV =
+  'https://walkfind-auth.auth.ap-northeast-1.amazoncognito.com/login?client_id=3n38j4erbgfcanu6v9n87he38r&response_type=code&scope=email+openid+phone&redirect_uri=http%3A%2F%2Flocalhost%3A3000%2Fauth%2Fcallback';
+
 const COGNITO_LOGIN_URL =
-  'https://walkfind-auth.auth.ap-northeast-1.amazoncognito.com/login' +
-  '?client_id=3n38j4erbgfcanu6v9n87he38r' +
-  '&response_type=code' +
-  '&scope=email+openid+phone' +
-  '&redirect_uri=http%3A%2F%2Flocalhost%3A3000%2Fauth%2Fcallback';
+  process.env.NEXT_PUBLIC_COGNITO_LOGIN_URL ||
+  (process.env.NODE_ENV === 'production'
+    ? DEFAULT_COGNITO_LOGIN_URL_PROD
+    : DEFAULT_COGNITO_LOGIN_URL_DEV);
 
 export default function HomePage() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
