@@ -29,6 +29,8 @@ export default function LoginPage() {
           <button
             className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-sm transition-colors shadow-sm flex items-center justify-center gap-2"
             onClick={() => {
+              console.log("[LoginPage] Using COGNITO_LOGIN_URL:", COGNITO_LOGIN_URL);
+
               if (COGNITO_LOGIN_URL) {
                 window.location.href = COGNITO_LOGIN_URL;
               } else {
