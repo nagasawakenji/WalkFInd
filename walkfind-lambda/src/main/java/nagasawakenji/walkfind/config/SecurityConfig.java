@@ -11,7 +11,6 @@ import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationConverter;
 import org.springframework.security.oauth2.server.resource.authentication.JwtGrantedAuthoritiesConverter;
 import org.springframework.security.web.SecurityFilterChain;
-import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
@@ -22,11 +21,6 @@ import java.util.List;
 @RequiredArgsConstructor
 public class SecurityConfig {
 
-    // 認証フィルター（カスタム実装が必要だが、ここではDIして組み込む）
-    // Spring標準のOAuth2リソースサーバー機能を使うため、このフィルターは現在はコメントアウトして標準機能を使います。
-    // private final JwtAuthenticationFilter jwtAuthenticationFilter;
-
-    // Spring Security 6以降の標準的な設定方法
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
 
@@ -37,21 +31,18 @@ public class SecurityConfig {
                 // CSRFを無効化
                 .csrf(AbstractHttpConfigurer::disable)
 
-                // CORS設定の適用
+                // CORS設定の適用 (下のBeanを使います)
                 .cors(Customizer.withDefaults())
 
                 // JWTリソースサーバーの設定
-                // propertiesファイルで設定したCognito情報に基づき、JWTを自動検証します。
                 .oauth2ResourceServer(oauth2 -> oauth2.jwt(Customizer.withDefaults()))
 
                 // 認可規則（APIアクセス制御）
                 .authorizeHttpRequests(auth -> auth
-                        // 公開エンドポイント（認証不要）
-                        // コンテストリスト、結果表示、ヘルステスト
-                        .requestMatchers("/api/v1/contests/**", "/api/v1/results/**", "/api/auth/**").permitAll()
+                        // ★修正: パスを /api/v1/auth/** に変更 (ログインURLに合わせる)
+                        .requestMatchers("/api/v1/contests/**", "/api/v1/results/**", "/api/v1/auth/**").permitAll()
 
                         // 保護されたエンドポイント（認証必須）
-                        // 投稿、投票、ユーザー情報更新など
                         .requestMatchers("/api/v1/photos/**", "/api/v1/votes/**", "/api/v1/users/**").authenticated()
 
                         // 上記以外のすべては認証を要求
@@ -65,12 +56,20 @@ public class SecurityConfig {
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
 
-        // 実際のドメインに後で変更する
-        configuration.setAllowedOrigins(List.of("https://walkfind.com", "http://localhost:3000"));
+        // ★修正1: Vercelの本番URLを追加
+        configuration.setAllowedOrigins(List.of(
+                "https://walkfind.vercel.app", // 本番環境
+                "http://localhost:3000"        // ローカル開発用
+        ));
 
+        // すべてのHTTPメソッドを許可
         configuration.setAllowedMethods(List.of("GET","POST","PUT","PATCH","DELETE","OPTIONS"));
-        configuration.setAllowedHeaders(List.of("Authorization", "Content-Type")); // Authorizationは大文字で登録
-        configuration.setAllowCredentials(false);
+
+        // ★修正: ヘッダーはすべて許可しておくとトラブルが少ないです
+        configuration.setAllowedHeaders(List.of("*"));
+
+        // ★修正2: allowCredentialsを true に変更 (必須！)
+        configuration.setAllowCredentials(true);
 
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/**", configuration);
