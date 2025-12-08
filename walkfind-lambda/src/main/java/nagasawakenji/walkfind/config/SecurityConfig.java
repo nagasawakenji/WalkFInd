@@ -4,6 +4,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod; // 追加
 import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
@@ -28,53 +29,47 @@ public class SecurityConfig {
         log.info("=== SecurityConfig.securityFilterChain for LAMBDA is being built ===");
 
         http
-                // セッション管理をSTATELESSに設定
                 .sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-
-                // CSRFを無効化
                 .csrf(AbstractHttpConfigurer::disable)
 
-                // CORS設定の適用 (下のBeanを使います)
+                // 1. ここでcorsConfigurationSource Beanが自動的に適用されます
                 .cors(Customizer.withDefaults())
 
-                // JWTリソースサーバーの設定
                 .oauth2ResourceServer(oauth2 -> oauth2.jwt(Customizer.withDefaults()))
-
-                // 認可規則（APIアクセス制御）
                 .authorizeHttpRequests(auth -> auth
-                        // ★修正: パスを /api/v1/auth/** に変更 (ログインURLに合わせる)
+                        // ★【最重要】OPTIONSメソッド（Preflight）を無条件で全許可する
+                        // これがないとブラウザの事前確認が403/401ではじかれます
+                        .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
+
+                        // 認証不要なエンドポイント
                         .requestMatchers("/api/v1/contests/**", "/api/v1/results/**", "/api/v1/auth/**").permitAll()
 
-                        // 保護されたエンドポイント（認証必須）
-                        .requestMatchers("/api/v1/photos/**", "/api/v1/votes/**", "/api/v1/users/**").authenticated()
-
-                        // 上記以外のすべては認証を要求
+                        // それ以外は認証必須
                         .anyRequest().authenticated()
                 );
         return http.build();
     }
 
-    // CORS設定のBean
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
 
-        // 本番: Vercel とローカル開発の両方から叩けるように明示的に許可
-        // ※ allowCredentials(true) と併用する場合、"*" よりも明示的なオリジン指定の方が安全かつ確実
+        // 許可するオリジン（末尾にスラッシュを入れないよう注意）
         configuration.setAllowedOrigins(List.of(
-                "https://walkfind.vercel.app",   // Vercel 本番フロント
-                "http://localhost:3000"           // ローカル開発用フロント
+                "https://walkfind.vercel.app",
+                "http://localhost:3000"
         ));
 
-
-
-        // すべてのHTTPメソッドを許可
+        // メソッド許可
         configuration.setAllowedMethods(List.of("GET","POST","PUT","PATCH","DELETE","OPTIONS"));
 
-        // ★修正: ヘッダーはすべて許可しておくとトラブルが少ないです
+        // ヘッダー許可
         configuration.setAllowedHeaders(List.of("*"));
 
-        // ★修正2: allowCredentialsを true に変更 (必須！)
+        // 公開ヘッダー設定 (フロントエンドがAuthorizationヘッダー等を読み取れるようにする場合)
+        configuration.setExposedHeaders(List.of("Authorization", "Content-Type"));
+
+        // Cookieや認証情報を含むリクエストを許可
         configuration.setAllowCredentials(true);
 
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();

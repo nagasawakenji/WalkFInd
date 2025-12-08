@@ -42,12 +42,14 @@ public class CognitoOAuthClient {
         this.clientSecret = secret.clientSecret();
         this.domain = secret.domain();
         this.redirectUri = secret.redirectUri();
+        if (this.domain.endsWith("/")) {
+            this.domain = this.domain.substring(0, this.domain.length() - 1);
+        }
 
         log.info("Cognito secrets loaded successfully");
     }
 
     public CognitoTokenResponse fetchToken(String code) {
-
         String tokenUrl = domain + "/oauth2/token";
 
         MultiValueMap<String, String> body = new LinkedMultiValueMap<>();
@@ -65,19 +67,30 @@ public class CognitoOAuthClient {
 
         HttpEntity<?> request = new HttpEntity<>(body, headers);
 
-        ResponseEntity<String> response =
-                restTemplate.exchange(tokenUrl, HttpMethod.POST, request, String.class);
+        log.info("[Cognito] Token request -> url={}, code={}, clientId={}, redirectUri={}",
+                tokenUrl, code, clientId, redirectUri);
 
         try {
+            ResponseEntity<String> response =
+                    restTemplate.exchange(tokenUrl, HttpMethod.POST, request, String.class);
+
+            log.info("[Cognito] Token response status={}, body={}",
+                    response.getStatusCode(), response.getBody());
+
             JsonNode json = objectMapper.readTree(response.getBody());
 
             return CognitoTokenResponse.builder()
                     .idToken(json.get("id_token").asText())
                     .accessToken(json.get("access_token").asText())
-                    .refreshToken(json.get("refresh_token").asText())
+                    .refreshToken(json.path("refresh_token").asText(null))
                     .expiresIn(json.get("expires_in").asInt())
                     .build();
 
+        } catch (org.springframework.web.client.HttpClientErrorException e) {
+            // ここで Cognito からのエラーレスポンスを全部見る
+            log.error("[Cognito] Token request failed. status={}, body={}",
+                    e.getStatusCode(), e.getResponseBodyAsString());
+            throw e;
         } catch (Exception e) {
             throw new RuntimeException("Failed to parse Cognito token response", e);
         }

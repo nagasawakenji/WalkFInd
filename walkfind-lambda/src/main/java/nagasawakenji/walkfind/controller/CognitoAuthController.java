@@ -16,7 +16,7 @@ import java.util.Map;
 
 
 @RestController
-@RequestMapping("/api/auth")
+@RequestMapping("/api/v1/auth")
 @RequiredArgsConstructor
 public class CognitoAuthController {
 
