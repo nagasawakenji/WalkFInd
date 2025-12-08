@@ -6,6 +6,12 @@ Parameters:
   DbSecretArn:
     Type: String
     Description: ARN of the database secret (provided via SAM deploy parameters)
+  CognitoIssuerUri:
+    Type: String
+    Description: Issuer URI of the Cognito User Pool (e.g. https://cognito-idp.ap-northeast-1.amazonaws.com/ap-northeast-1_xxxxxxxx)
+  CognitoUserPoolArn:
+    Type: String
+    Description: ARN of the Cognito User Pool used by API Gateway authorizer
 
 Globals:
   Function:
@@ -22,6 +28,8 @@ Resources:
   # =======================================================
   WalkFindUserPool:
     Type: AWS::Cognito::UserPool
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
     Properties:
       UserPoolName: WalkFindContestUserPool
       AutoVerifiedAttributes: [ email ]
@@ -45,7 +53,7 @@ Resources:
       Auth:
         Authorizers:
           CognitoAuth:
-            UserPoolArn: !GetAtt WalkFindUserPool.Arn
+            UserPoolArn: !Ref CognitoUserPoolArn
 
   # =======================================================
   # 3. Lambda Function (Spring Boot)
@@ -59,16 +67,31 @@ Resources:
       Environment:
         Variables:
           DB_SECRET_ARN: !Ref DbSecretArn
+          COGNITO_ISSUER_URI: !Ref CognitoIssuerUri
 
-      # Secrets Manager の読み取り権限
       Policies:
-        - Statement:
-            Effect: Allow
-            Action:
-              - secretsmanager:GetSecretValue
-            Resource: !Sub "arn:aws:secretsmanager:${AWS::Region}:${AWS::AccountId}:secret:/walkfind/database-*"
+        # ★ Secrets Manager へのアクセスを明示的な IAM ポリシーとして定義
+        - Version: '2012-10-17'
+          Statement:
+            - Effect: Allow
+              Action:
+                - secretsmanager:GetSecretValue
+              Resource:
+                - !Sub "arn:aws:secretsmanager:${AWS::Region}:${AWS::AccountId}:secret:/walkfind/database-*"
+                - !Sub "arn:aws:secretsmanager:${AWS::Region}:${AWS::AccountId}:secret:/walkfind/cognito/prod-*"
 
       Events:
+
+        # -----------------------------------------
+        # 認証不要：auth（Cognito ログイン）
+        # -----------------------------------------
+        AuthLogin:
+          Type: Api
+          Properties:
+            Path: /api/v1/auth/cognito/login
+            Method: POST
+            RestApiId: !Ref WalkFindApi
+            # ログイン用なので Authorizer は付けない（Auth セクションを書かない）
 
         # -----------------------------------------
         # 認証不要：contests

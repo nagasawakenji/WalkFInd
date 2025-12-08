@@ -7,7 +7,7 @@ s3_prefix = "sam-app"
 confirm_changeset = true
 capabilities = "CAPABILITY_IAM"
 disable_rollback = true
-parameter_overrides = "DbSecretArn=\"\""
+parameter_overrides = "DbSecretArn=\"arn:aws:secretsmanager:ap-northeast-1:844739519142:secret:/walkfind/database-HpiCzf\" CognitoIssuerUri=\"https://cognito-idp.ap-northeast-1.amazonaws.com/ap-northeast-1_LVczdiFp6\" CognitoUserPoolArn=\"arn:aws:cognito-idp:ap-northeast-1:844739519142:userpool/ap-northeast-1_LVczdiFp6\""
 image_repositories = []
 
 [default.global.parameters]
