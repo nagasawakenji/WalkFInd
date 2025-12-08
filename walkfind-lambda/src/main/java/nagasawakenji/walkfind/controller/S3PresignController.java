@@ -17,35 +17,44 @@ public class S3PresignController {
 
     private final S3UploadPresignService presignService;
 
-    /**
-     * 指定された key に対する presigned URL を返す
-     * 例: key = "contest-model/123/photo.jpg"
-     */
     @GetMapping("/presigned-url")
-    public ResponseEntity<PresignedUrlResponse> getPresignedUrl(@RequestParam String key) {
-        // 拡張子を維持する処理
+    public ResponseEntity<PresignedUrlResponse> getPresignedUrl(
+            @RequestParam("key") String key,          // 例: "contest-icons/1/スクリーンショット.png"
+            @RequestParam("contentType") String contentType // 例: "image/png" (追加！)
+    ) {
+        // 拡張子の抽出
         String extension = "";
-        String baseName = key;
         int dotIndex = key.lastIndexOf('.');
         if (dotIndex >= 0) {
-            extension = key.substring(dotIndex); // ".jpg"
-            baseName = key.substring(0, dotIndex); // "photo"
+            extension = key.substring(dotIndex); // ".png"
         }
 
-        // "photo" + "-" + "UUID" + ".jpg" の形にする
-        String randomKey = baseName + "-" + UUID.randomUUID() + extension;
-        var url = presignService.generateUploadUrl(randomKey);
+        // ディレクトリ部分の抽出 (最後のスラッシュまで)
+        String directory = "";
+        int slashIndex = key.lastIndexOf('/');
+        if (slashIndex >= 0) {
+            directory = key.substring(0, slashIndex + 1); // "contest-icons/1/"
+        }
+
+        // 安全なキーの生成 (ディレクトリ + UUID + 拡張子)
+        // 日本語ファイル名はここで消滅し、安全なASCII文字だけにする
+        String safeKey = directory + UUID.randomUUID() + extension;
+
+        // 署名付きURLの発行 (Content-Typeを指定して署名)
+        var url = presignService.generateUploadUrl(safeKey, contentType);
+
         PresignedUrlResponse response = PresignedUrlResponse.builder()
                 .photoUrl(url)
-                .key(randomKey)
+                .key(safeKey)
                 .build();
 
         return ResponseEntity.ok(response);
     }
 
     @ExceptionHandler(Exception.class)
-    public ResponseEntity<String> handleException() {
+    public ResponseEntity<String> handleException(Exception e) {
+        log.error("Presign error", e);
         return ResponseEntity.internalServerError()
-                .body("URL生成中にエラーが発生しました");
+                .body("URL生成エラー: " + e.getMessage());
     }
 }

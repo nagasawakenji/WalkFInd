@@ -44,6 +44,9 @@ public class SecurityConfig {
                         // 認証不要なエンドポイント
                         .requestMatchers("/api/v1/contests/**", "/api/v1/results/**", "/api/v1/auth/**").permitAll()
 
+                        .requestMatchers(HttpMethod.GET, "/api/v1/contest-icons/**").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/v1/upload/**").authenticated() // Presigned URL発行は認証必須
+
                         // それ以外は認証必須
                         .anyRequest().authenticated()
                 );
