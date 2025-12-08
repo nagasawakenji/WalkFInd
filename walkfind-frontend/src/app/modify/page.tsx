@@ -12,6 +12,8 @@ const API_BASE_URL =
     ? "https://b591pb4p16.execute-api.ap-northeast-1.amazonaws.com/prod/api/v1"
     : "http://localhost:8080/api/v1");
 
+
+
 // コンテスト一覧のレスポンス型（必要な項目のみ）
 interface ContestResponse {
   contestId: number;
