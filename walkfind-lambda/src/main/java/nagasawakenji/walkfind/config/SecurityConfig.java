@@ -1,6 +1,7 @@
 package nagasawakenji.walkfind.config;
 
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.config.Customizer;
@@ -19,10 +20,12 @@ import java.util.List;
 @Configuration
 @EnableWebSecurity
 @RequiredArgsConstructor
+@Slf4j
 public class SecurityConfig {
 
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
+        log.info("=== SecurityConfig.securityFilterChain for LAMBDA is being built ===");
 
         http
                 // セッション管理をSTATELESSに設定
@@ -56,11 +59,14 @@ public class SecurityConfig {
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
 
-        // ★修正1: Vercelの本番URLを追加
+        // 本番: Vercel とローカル開発の両方から叩けるように明示的に許可
+        // ※ allowCredentials(true) と併用する場合、"*" よりも明示的なオリジン指定の方が安全かつ確実
         configuration.setAllowedOrigins(List.of(
-                "https://walkfind.vercel.app", // 本番環境
-                "http://localhost:3000"        // ローカル開発用
+                "https://walkfind.vercel.app",   // Vercel 本番フロント
+                "http://localhost:3000"           // ローカル開発用フロント
         ));
+
+
 
         // すべてのHTTPメソッドを許可
         configuration.setAllowedMethods(List.of("GET","POST","PUT","PATCH","DELETE","OPTIONS"));
