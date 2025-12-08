@@ -22,7 +22,6 @@ Globals:
       - x86_64
 
 Resources:
-
   # =======================================================
   # 1. Cognito User Pool
   # =======================================================
@@ -44,7 +43,7 @@ Resources:
       SupportedIdentityProviders: [ COGNITO ]
 
   # =======================================================
-  # 2. API Gateway — DefaultAuthorizer を設定しないことが最重要
+  # 2. API Gateway
   # =======================================================
   WalkFindApi:
     Type: AWS::Serverless::Api
@@ -54,6 +53,7 @@ Resources:
         Authorizers:
           CognitoAuth:
             UserPoolArn: !Ref CognitoUserPoolArn
+      # ★重要: SAM側のグローバルCORS設定は削除済み（Spring Securityに任せるため）
 
   # =======================================================
   # 3. Lambda Function (Spring Boot)
@@ -68,9 +68,9 @@ Resources:
         Variables:
           DB_SECRET_ARN: !Ref DbSecretArn
           COGNITO_ISSUER_URI: !Ref CognitoIssuerUri
+          APP_DUMMY_VERSION: 2025-12-08-03 # バージョン上げ
 
       Policies:
-        # ★ Secrets Manager へのアクセスを明示的な IAM ポリシーとして定義
         - Version: '2012-10-17'
           Statement:
             - Effect: Allow
@@ -81,17 +81,17 @@ Resources:
                 - !Sub "arn:aws:secretsmanager:${AWS::Region}:${AWS::AccountId}:secret:/walkfind/cognito/prod-*"
 
       Events:
-
         # -----------------------------------------
         # 認証不要：auth（Cognito ログイン）
+        # ★ここを修正！ POST -> ANY
         # -----------------------------------------
         AuthLogin:
           Type: Api
           Properties:
             Path: /api/v1/auth/cognito/login
-            Method: POST
+            Method: ANY  # <--- これが修正ポイント！OPTIONSを通すため必須
             RestApiId: !Ref WalkFindApi
-            # ログイン用なので Authorizer は付けない（Auth セクションを書かない）
+            # Authなし（public）
 
         # -----------------------------------------
         # 認証不要：contests
@@ -221,7 +221,7 @@ Resources:
 
 
         # -----------------------------------------
-        # 認証必要：model-photos（単独ルート）
+        # 認証必要：model-photos
         # -----------------------------------------
         ModelPhotosRoot:
           Type: Api
@@ -291,9 +291,6 @@ Resources:
             Schedule: rate(60 minutes)
             Enabled: true
 
-# =======================================================
-# Outputs
-# =======================================================
 Outputs:
   WalkFindApiUrl:
     Description: "API Gateway endpoint URL"
