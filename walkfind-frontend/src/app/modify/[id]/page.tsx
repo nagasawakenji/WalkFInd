@@ -264,13 +264,18 @@ export default function ModifyContestDetailPage() {
         
         // Step 1: アップロード用URLを取得
         const originalName = iconFile.name;
-        // キーの構成はバックエンドの想定に合わせる (例: contest-icons/{id}/filename)
         const baseKey = `contest-icons/${contestId}/${originalName}`;
+
+        // ★ contentType が空の場合のフォールバックを追加
+        const mimeType = iconFile.type || 'application/octet-stream';
 
         const presignRes = await axios.get<PresignedUrlResponse>(
           `${API_BASE_URL}/upload/presigned-url`,
           {
-            params: { key: baseKey },
+            params: { 
+              key: baseKey,
+              contentType: mimeType // ここで変数を渡す
+             },
             headers: { Authorization: `Bearer ${token}` },
           }
         );
@@ -278,10 +283,10 @@ export default function ModifyContestDetailPage() {
         const { photoUrl: uploadUrl, key: finalS3Key } = presignRes.data;
 
         // Step 2: S3へ直接アップロード (PUT)
-        // ★重要: Authヘッダーなし、Content-Type指定あり
+        // ★ ここも修正: 同じ mimeType を使う
         await axios.put(uploadUrl, iconFile, {
           headers: {
-            'Content-Type': iconFile.type,
+            'Content-Type': mimeType, 
           },
         });
 
