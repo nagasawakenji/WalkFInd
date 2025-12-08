@@ -4,7 +4,7 @@ import { useState, ChangeEvent, FormEvent, use } from 'react';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
 import Link from 'next/link';
-import axios, { AxiosError } from 'axios'; 
+import axios from 'axios'; 
 import { uploadImage } from '@/lib/upload'; 
 
 interface PageProps {
@@ -60,6 +60,7 @@ export default function SubmitPhotoPage({ params }: PageProps) {
       const token = localStorage.getItem("access_token");
 
       if (!token) {
+        // ログインしていない場合のリダイレクト処理
         const currentPath = window.location.pathname;
         localStorage.setItem("redirect_after_login", currentPath);
 
@@ -71,18 +72,31 @@ export default function SubmitPhotoPage({ params }: PageProps) {
         }
         return;
       }
-      const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8080/api/v1';
-      const IS_LOCAL = process.env.NEXT_PUBLIC_IS_LOCAL === 'true';
+
+      // ★ URL設定: 環境変数が読めない時のためのフォールバック
+      const API_BASE_URL =
+        process.env.NEXT_PUBLIC_API_BASE_URL ||
+        (process.env.NODE_ENV === "production"
+          ? "https://b591pb4p16.execute-api.ap-northeast-1.amazonaws.com/prod/api/v1"
+          : "http://localhost:8080/api/v1");
+        
+      // ★ IS_LOCAL設定: NODE_ENV を見て判定 (本番なら false になる)
+      // Vercel上では NODE_ENV は必ず 'production' になるため、これで安全に分岐できます
+      const IS_LOCAL = process.env.NODE_ENV !== 'production';
+
+      console.log(`Submitting to: ${API_BASE_URL}, Mode: ${IS_LOCAL ? 'Local' : 'Production'}`);
 
       if (IS_LOCAL) {
+        // ローカル環境: FormDataで直接送信
         const formData = new FormData();
         const requestDto = {
           contestId: Number(contestId),
-          photoUrl: "local",
+          photoUrl: "local", // ローカル時はバックエンド側で無視されるか、適当な値でOK
           title: title,
           description: description,
         };
 
+        // JSONパートをBlobとして追加
         formData.append(
           "request",
           new Blob([JSON.stringify(requestDto)], {
@@ -94,19 +108,23 @@ export default function SubmitPhotoPage({ params }: PageProps) {
         await axios.post(`${API_BASE_URL}/photos`, formData, {
           headers: {
             Authorization: `Bearer ${token}`,
+            // Axiosが自動で boundary を設定するので Content-Type は指定しない
           },
         });
 
       } else {
+        // 本番環境 (AWS): S3 Presigned URL 方式
+        // 1. S3に画像をアップロードしてキーを取得
         const photoKey = await uploadImage(file, contestId);
 
+        // 2. メタデータをDBに登録
         await axios.post(
           `${API_BASE_URL}/photos`,
           {
             contestId: Number(contestId),
             title: title,
             description: description,
-            photoUrl: photoKey,
+            photoUrl: photoKey, // S3のキーを渡す
           },
           {
             headers: { Authorization: `Bearer ${token}` },
@@ -132,7 +150,7 @@ export default function SubmitPhotoPage({ params }: PageProps) {
 
   return (
     <main className="min-h-screen bg-[#F5F5F5] font-sans text-[#333]">
-      {/* 共通ナビゲーションバー（ブレッドクラム） */}
+      {/* 共通ナビゲーションバー */}
       <nav className="bg-black text-white h-12 flex items-center px-4 lg:px-8 mb-8 shadow-sm">
         <Link href="/" className="font-bold text-lg tracking-tight hover:text-gray-300">
           WalkFind

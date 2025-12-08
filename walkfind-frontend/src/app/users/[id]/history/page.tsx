@@ -1,5 +1,13 @@
 import { notFound } from "next/navigation";
 
+// ★ 環境変数がうまく読めない時のために、本番URLをここに直書きします
+// 末尾に /api/v1 を含んでいるため、呼び出し側では /users/... のように続けます
+const API_BASE_URL =
+  process.env.NEXT_PUBLIC_API_BASE_URL ||
+  (process.env.NODE_ENV === "production"
+    ? "https://b591pb4p16.execute-api.ap-northeast-1.amazonaws.com/prod/api/v1"
+    : "http://localhost:8080/api/v1");
+
 type ContestResultDto = {
   contestId: string;
   contestName: string;
@@ -28,14 +36,12 @@ async function fetchUserHistory(
   page: number,
   size: number
 ): Promise<UserHistoryResponse> {
-  const rawBaseUrl = process.env.NEXT_PUBLIC_API_BASE_URL;
-  const baseUrl = rawBaseUrl
-    ? rawBaseUrl.replace(/\/api\/v1\/?$/, "").replace(/\/$/, "")
-    : "http://localhost:8080";
-  console.log("[fetchUserHistory] baseUrl =", baseUrl);
+  // 修正: 複雑なbaseUrl計算をやめ、定義した定数 API_BASE_URL を使用します
+  console.log("[fetchUserHistory] API_BASE_URL =", API_BASE_URL);
 
   const res = await fetch(
-    `${baseUrl}/api/v1/users/${encodeURIComponent(userId)}/history?page=${page}&size=${size}`,
+    // API_BASE_URL が既に /api/v1 を含んでいるため、/users/... から記述します
+    `${API_BASE_URL}/users/${encodeURIComponent(userId)}/history?page=${page}&size=${size}`,
     {
       cache: "no-store",
       headers: {
