@@ -41,6 +41,10 @@ public class SecurityConfig {
                         // これがないとブラウザの事前確認が403/401ではじかれます
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
 
+                        // /users/me はemailなどが記載されるため、認証が必要
+                        .requestMatchers("/api/v1/users/me").authenticated()
+                        // /users/id は公開情報のため認証は不要
+                        .requestMatchers(HttpMethod.GET, "/api/v1/users/**").permitAll()
                         // 認証不要なエンドポイント
                         .requestMatchers("/api/v1/contests/**", "/api/v1/results/**", "/api/v1/auth/**").permitAll()
 

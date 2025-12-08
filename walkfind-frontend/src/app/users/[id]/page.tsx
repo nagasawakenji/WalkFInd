@@ -56,7 +56,9 @@ async function fetchUserProfile(
     notFound();
   }
   if (!res.ok) {
-    throw new Error(`Failed to fetch profile: ${res.status}`);
+    const errorText = await res.text(); // バックエンドのエラーメッセージを取得
+    console.error(`Backend Error (${res.status}):`, errorText); // Vercelのログに出る
+    throw new Error(`Failed to fetch profile: ${res.status} - ${errorText}`);
   }
 
   return res.json();
