@@ -1,9 +1,11 @@
-// src/lib/axios.ts
 import axios from 'axios';
 
-// ローカルと本番で切り替えるための環境変数
-// .env.local には NEXT_PUBLIC_API_BASE_URL=http://localhost:8080/api/v1 を設定
-const BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8080/api/v1';
+// 環境変数が読めない場合でも、本番ビルドならAWSのURLを強制的に使うように修正
+const BASE_URL =
+  process.env.NEXT_PUBLIC_API_BASE_URL ||
+  (process.env.NODE_ENV === 'production'
+    ? 'https://b591pb4p16.execute-api.ap-northeast-1.amazonaws.com/prod/api/v1'
+    : 'http://localhost:8080/api/v1');
 
 export const apiClient = axios.create({
   baseURL: BASE_URL,
@@ -12,5 +14,14 @@ export const apiClient = axios.create({
   },
 });
 
-// レスポンスのデータ部分だけを返すインターセプター（任意）
-apiClient.interceptors.response.use((response) => response.data);
+// レスポンスのデータ部分だけを返すインターセプター
+// これがあるため、呼び出し側は response.data ではなく response をそのまま使えます
+apiClient.interceptors.response.use(
+  (response) => {
+    return response.data;
+  },
+  (error) => {
+    // エラーハンドリング（任意）
+    return Promise.reject(error);
+  }
+);

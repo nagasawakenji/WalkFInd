@@ -2,10 +2,14 @@ import axios from 'axios';
 import { fetchAuthSession } from 'aws-amplify/auth';
 
 // 環境変数からローカル環境かどうかを判定
-const IS_LOCAL = process.env.NEXT_PUBLIC_IS_LOCAL === 'true';
+const IS_LOCAL = process.env.NEXT_PUBLIC_IS_LOCAL === 'false';
 
-// APIのベースURL
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8080/api/v1';
+// ★ 環境変数がうまく読めない時のために、本番URLをここに直書きします
+const API_BASE_URL =
+  process.env.NEXT_PUBLIC_API_BASE_URL ||
+  (process.env.NODE_ENV === "production"
+    ? "https://b591pb4p16.execute-api.ap-northeast-1.amazonaws.com/prod/api/v1"
+    : "http://localhost:8080/api/v1");
 
 /**
  * 画像をアップロードし、保存先のキー(Path)を返す関数
