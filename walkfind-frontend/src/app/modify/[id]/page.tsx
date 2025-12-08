@@ -5,8 +5,13 @@ import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import axios, { AxiosError } from 'axios';
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8080/api/v1';
-
+// ★ 環境変数がうまく読めない時のために、本番URLをここに直書きします
+const API_BASE_URL =
+  process.env.NEXT_PUBLIC_API_BASE_URL ||
+  (process.env.NODE_ENV === "production"
+    ? "https://b591pb4p16.execute-api.ap-northeast-1.amazonaws.com/prod/api/v1"
+    : "http://localhost:8080/api/v1");
+    
 // コンテスト詳細の型（必要な項目のみ）
 interface ContestDetailResponse {
   contestId: number;
