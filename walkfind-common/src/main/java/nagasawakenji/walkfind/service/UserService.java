@@ -13,6 +13,8 @@ import nagasawakenji.walkfind.infra.mybatis.mapper.UserProfileMapper;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.Optional;
+
 /**
  * ユーザー情報のDB管理、同期、および基本情報取得を担うサービス。
  */
@@ -96,12 +98,35 @@ public class UserService {
             throw new UserStatusException("Account is suspended.", "SUSPENDED");
         }
 
+        // user_profiles が存在しないケースも考慮して Optional で取得
+        Optional<UserProfile> userProfileOpt = userProfileMapper.findByUserId(userId);
+
+        // プロフィール画像 URL（null 許容）
+        String profileImageUrl = userProfileOpt
+                .map(UserProfile::getProfileImageUrl)
+                .orElse(null);
+
+        // 統計情報は、レコードが存在しない場合は 0 として扱う
+        int bestRank = userProfileOpt
+                .map(UserProfile::getBestRank)
+                .orElse(0);
+        int totalContestsEntered = userProfileOpt
+                .map(UserProfile::getTotalContestsEntered)
+                .orElse(0);
+        int totalPosts = userProfileOpt
+                .map(UserProfile::getTotalPosts)
+                .orElse(0);
+
         // Modelから表示用DTOへの変換
         return UserProfileResponse.builder()
                 .userId(user.getUserId())
                 .username(user.getUserName())
                 .email(user.getEmail())
                 .joinDate(user.getCreatedAt())
+                .profileImageUrl(profileImageUrl)
+                .bestRank(bestRank)
+                .totalContestsEntered(totalContestsEntered)
+                .totalPosts(totalPosts)
                 .build();
     }
 }

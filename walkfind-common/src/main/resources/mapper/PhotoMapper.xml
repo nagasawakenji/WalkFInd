@@ -90,5 +90,28 @@
         ORDER BY total_votes DESC, submission_date ASC
     </select>
 
+    <!-- photoId で写真を取得する -->
+    <select id="findById" resultMap="UserPhotoResultMap">
+        SELECT
+            id,
+            contest_id,
+            user_id,
+            photo_url,
+            submission_date,
+            total_votes,
+            is_approved
+        FROM user_photos
+        WHERE id = #{photoId}
+    </select>
+
+    <!-- photoId で写真を削除する -->
+    <delete id="deleteById">
+        DELETE FROM user_photos
+        WHERE id = #{photoId}
+    </delete>
+
+
+
+
 
 </mapper>

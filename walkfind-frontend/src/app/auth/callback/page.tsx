@@ -4,12 +4,43 @@ import { useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import axios from "axios";
 
+
+type JwtPayload = {
+  sub?: string;
+  "cognito:username"?: string;
+  userId?: string;
+  username?: string;
+  [key: string]: unknown;
+};
+
+function parseJwt(token: string): JwtPayload | null {
+  try {
+    const parts = token.split(".");
+    if (parts.length < 2) return null;
+
+    const base64Url = parts[1];
+    const base64 = base64Url.replace(/-/g, "+").replace(/_/g, "/");
+    const jsonPayload = decodeURIComponent(
+      atob(base64)
+        .split("")
+        .map((c) => "%" + ("00" + c.charCodeAt(0).toString(16)).slice(-2))
+        .join("")
+    );
+
+    return JSON.parse(jsonPayload) as JwtPayload;
+  } catch (e) {
+    console.error("Failed to parse JWT", e);
+    return null;
+  }
+}
+
 // ★ 環境変数がうまく読めない時のために、本番URLをここに直書きします
 const API_BASE_URL =
   process.env.NEXT_PUBLIC_API_BASE_URL ||
   (process.env.NODE_ENV === "production"
     ? "https://b591pb4p16.execute-api.ap-northeast-1.amazonaws.com/prod/api/v1"
     : "http://localhost:8080/api/v1");
+
 
 export default function AuthCallbackPage() {
   const searchParams = useSearchParams();
@@ -32,7 +63,22 @@ export default function AuthCallbackPage() {
         // ローカル保存（本番では HttpOnly Cookie 推奨）
         localStorage.setItem("access_token", accessToken);
 
-        
+
+        // アクセストークンからユーザーIDを抽出して保存
+        const payload = parseJwt(accessToken);
+        if (payload) {
+          const userId =
+            payload.sub ||
+            payload["cognito:username"] ||
+            payload.userId ||
+            payload.username;
+
+          if (userId && typeof userId === "string") {
+            localStorage.setItem("user_id", userId);
+          }
+        }
+
+
         const redirectPath =
           localStorage.getItem("redirect_after_login") || "/";
 

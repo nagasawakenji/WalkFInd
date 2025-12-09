@@ -1,4 +1,5 @@
 import axios from 'axios';
+import { fetchAuthSession } from 'aws-amplify/auth';
 
 // 環境変数からローカル環境かどうかを判定
 const IS_LOCAL = process.env.NODE_ENV !== 'production';
@@ -83,4 +84,64 @@ export async function uploadImage(file: File, contestId: string, token: string):
       throw error;
     }
   }
+}
+
+/**
+ * ユーザーのプロフィール画像をアップロードし、更新されたプロフィール画像URLを返す関数
+ * UserProfileController#updateProfileImage (PUT /api/v1/profile/profile-image) を呼び出します。
+ */
+export async function uploadProfileImage(file: File): Promise<string> {
+  let token: string | null = null;
+
+  // 1. まず Amplify のセッションから取得を試みる
+  try {
+    const session = await fetchAuthSession();
+    console.log('fetchAuthSession result (uploadProfileImage):', session);
+
+    // accessToken / idToken のどちらかがあれば使う
+    token =
+      session.tokens?.accessToken?.toString() ??
+      session.tokens?.idToken?.toString() ??
+      null;
+  } catch (e) {
+    console.warn('fetchAuthSession failed in uploadProfileImage:', e);
+  }
+
+  // 2. それでもダメなら localStorage に保存してあるトークンを使う
+  if (!token && typeof window !== 'undefined') {
+    const storedAccess = window.localStorage.getItem('access_token');
+    const storedId = window.localStorage.getItem('id_token');
+    console.log(
+      '[uploadProfileImage] fallback tokens from localStorage:',
+      !!storedAccess,
+      !!storedId,
+    );
+    token = storedAccess ?? storedId;
+  }
+
+  // 3. どこにもトークンが無ければエラー
+  if (!token) {
+    console.error('[uploadProfileImage] 認証トークンが取得できませんでした。');
+    throw new Error(
+      '認証情報が見つからないため、プロフィール画像を更新できません。まずログインしてください。',
+    );
+  }
+
+  const formData = new FormData();
+  formData.append('file', file);
+
+  // 4. Authorization ヘッダ付きで PUT
+  const res = await axios.put(
+    `${API_BASE_URL}/profile/profile-image`,
+    formData,
+    {
+      headers: {
+        Authorization: `Bearer ${token}`,
+        'Content-Type': 'multipart/form-data',
+      },
+    },
+  );
+
+  // UpdatingUserProfileResponse の profileImageUrl を返す想定
+  return res.data.profileImageUrl as string;
 }

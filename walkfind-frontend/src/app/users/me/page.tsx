@@ -66,6 +66,17 @@ export default function MyPage() {
 
   if (!profile) return null;
 
+  // プロフィール画像URLが「キー」の場合は /api/v1/local-storage/{key} として扱う
+  const profileImageSrc =
+    profile.profileImageUrl &&
+    (profile.profileImageUrl.startsWith('http')
+      ? profile.profileImageUrl
+      : `${API_BASE_URL}/local-storage/${
+          profile.profileImageUrl.startsWith('/')
+            ? profile.profileImageUrl.slice(1)
+            : profile.profileImageUrl
+        }`);
+
   return (
     <main className="min-h-screen bg-[#F5F5F5] font-sans text-[#333]">
       {/* 共通ナビゲーションバー */}
@@ -85,14 +96,14 @@ export default function MyPage() {
             <div className="bg-white border border-gray-300 rounded-sm p-6 shadow-sm text-center">
               {/* アイコンエリア */}
               <div className="relative w-32 h-32 mx-auto bg-gray-100 rounded-sm overflow-hidden mb-4 border border-gray-200">
-                {profile.profileImageUrl ? (
-                   <Image
-                   src={profile.profileImageUrl}
-                   alt={profile.username}
-                   fill
-                   className="object-cover"
-                   unoptimized
-                 />
+                {profileImageSrc ? (
+                  <Image
+                    src={profileImageSrc}
+                    alt={profile.username}
+                    fill
+                    className="object-cover"
+                    unoptimized
+                  />
                 ) : (
                   <div className="flex items-center justify-center h-full text-4xl text-gray-300 font-bold bg-gray-100">
                     {(profile.username || profile.userId)[0]?.toUpperCase()}
@@ -122,13 +133,19 @@ export default function MyPage() {
                  </div>
               </div>
 
-              <div className="mt-6 pt-4 border-t border-gray-100">
-                <button 
-                  onClick={() => {/* 編集画面への遷移など */}}
-                  className="w-full py-2 bg-white border border-gray-300 text-sm font-bold text-gray-700 rounded-sm hover:bg-gray-50 hover:text-black transition-colors"
+              <div className="mt-6 pt-4 border-t border-gray-100 space-y-2">
+                <Link
+                  href="/users/me/bio"
+                  className="block w-full text-center py-2 bg-white border border-gray-300 text-sm font-bold text-gray-700 rounded-sm hover:bg-gray-50 hover:text-black transition-colors"
                 >
-                  Edit Profile
-                </button>
+                  自己紹介文を編集
+                </Link>
+                <Link
+                  href="/users/me/image"
+                  className="block w-full text-center py-2 bg-white border border-gray-300 text-sm font-bold text-gray-700 rounded-sm hover:bg-gray-50 hover:text-black transition-colors"
+                >
+                  プロフィール画像を変更
+                </Link>
               </div>
             </div>
           </div>

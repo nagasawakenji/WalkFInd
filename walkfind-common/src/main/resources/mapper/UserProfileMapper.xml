@@ -124,4 +124,18 @@
         )
     </update>
 
+    <!-- profile_image_url の更新-->
+    <update id="updateProfileImage">
+        UPDATE user_profiles
+        SET profile_image_url = #{imageUrl}
+        WHERE user_id = #{userId}
+    </update>
+
+    <!-- bio の更新-->
+    <update id="updateBio">
+        UPDATE user_profiles
+        SET bio = #{bio}
+        WHERE user_id = #{userId}
+    </update>
+
 </mapper>

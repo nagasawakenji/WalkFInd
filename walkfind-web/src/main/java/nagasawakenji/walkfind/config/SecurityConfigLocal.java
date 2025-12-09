@@ -56,6 +56,7 @@ public class SecurityConfigLocal {
                         .requestMatchers(HttpMethod.POST, "/api/v1/**").authenticated()
                         .requestMatchers(HttpMethod.PUT, "/api/v1/**").authenticated()
                         .requestMatchers(HttpMethod.DELETE, "/api/v1/**").authenticated()
+                        .requestMatchers("/api/v1/profile/**").authenticated()
 
                         // その他
                         .anyRequest().permitAll()
@@ -69,7 +70,7 @@ public class SecurityConfigLocal {
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration config = new CorsConfiguration();
         config.setAllowedOrigins(List.of("http://localhost:3000"));
-        config.setAllowedMethods(List.of("GET","POST","PUT","DELETE","OPTIONS"));
+        config.setAllowedMethods(List.of("GET","POST","PUT","DELETE","OPTIONS","PATCH"));
         config.setAllowedHeaders(List.of("*"));
         config.setAllowCredentials(true);
 
