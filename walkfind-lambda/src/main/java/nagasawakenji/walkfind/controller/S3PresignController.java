@@ -3,10 +3,12 @@ package nagasawakenji.walkfind.controller;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import nagasawakenji.walkfind.domain.dto.PresignedUrlResponse;
+import nagasawakenji.walkfind.service.S3DownloadPresignService;
 import nagasawakenji.walkfind.service.S3UploadPresignService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.net.URL;
 import java.util.UUID;
 
 @RestController
@@ -16,6 +18,7 @@ import java.util.UUID;
 public class S3PresignController {
 
     private final S3UploadPresignService presignService;
+    private final S3DownloadPresignService s3DownloadPresignService;
 
     @GetMapping("/presigned-url")
     public ResponseEntity<PresignedUrlResponse> getPresignedUrl(
@@ -46,6 +49,27 @@ public class S3PresignController {
         PresignedUrlResponse response = PresignedUrlResponse.builder()
                 .photoUrl(url)
                 .key(safeKey)
+                .build();
+
+        return ResponseEntity.ok(response);
+    }
+
+    /**
+     * ダウンロード用 Presigned URL 発行
+     */
+    @GetMapping("/presigned-download-url")
+    public ResponseEntity<PresignedUrlResponse> getPresignedDownloadUrl(
+            @RequestParam("key") String key
+    ) {
+        log.info("Generating presigned download URL for key: {}", key);
+
+        // Serviceを使ってURL生成
+        URL url = s3DownloadPresignService.generatedDownloadUrl(key);
+
+        // 既存の DTO を再利用して返却
+        PresignedUrlResponse response = PresignedUrlResponse.builder()
+                .key(key)       // リクエストされたキーをそのまま返す
+                .photoUrl(url)  // ここにダウンロード用URLが入る
                 .build();
 
         return ResponseEntity.ok(response);
