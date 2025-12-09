@@ -58,8 +58,7 @@ export default function SubmitPhotoPage({ params }: PageProps) {
     setErrorMessage('');
 
     try {
-      const session = await fetchAuthSession();
-      const token = session.tokens?.idToken?.toString();
+      const token = typeof window !== 'undefined' ? localStorage.getItem('access_token') : null;
       if (!token) {
         // ログインしていない場合のリダイレクト処理
         const currentPath = window.location.pathname;

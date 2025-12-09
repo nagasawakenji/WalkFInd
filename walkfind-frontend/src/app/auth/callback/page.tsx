@@ -32,7 +32,7 @@ export default function AuthCallbackPage() {
         // ローカル保存（本番では HttpOnly Cookie 推奨）
         localStorage.setItem("access_token", accessToken);
 
-        // ✅ ログイン前に保存していた遷移先へ復帰
+        
         const redirectPath =
           localStorage.getItem("redirect_after_login") || "/";
 
