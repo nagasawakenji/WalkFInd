@@ -5,6 +5,17 @@ import axios from 'axios';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import Image from 'next/image';
+import { fetchAuthSession } from 'aws-amplify/auth';
+
+// ★ 環境変数または NODE_ENV でローカル判定
+const IS_LOCAL = process.env.NODE_ENV !== 'production';
+
+// APIのベースURL設定
+const API_BASE_URL =
+  process.env.NEXT_PUBLIC_API_BASE_URL ||
+  (IS_LOCAL
+    ? "http://localhost:8080/api/v1"
+    : "https://b591pb4p16.execute-api.ap-northeast-1.amazonaws.com/prod/api/v1");
 
 interface UserProfileResponse {
   userId: string;
@@ -13,41 +24,80 @@ interface UserProfileResponse {
   role: string;
   totalPhotos: number;
   totalVotesReceived: number;
-  // プロフィール画像などがAPIにある場合はここに追加
   profileImageUrl?: string; 
 }
 
-// ★ 環境変数がうまく読めない時のために、本番URLをここに直書きします
-const API_BASE_URL =
-  process.env.NEXT_PUBLIC_API_BASE_URL ||
-  (process.env.NODE_ENV === "production"
-    ? "https://b591pb4p16.execute-api.ap-northeast-1.amazonaws.com/prod/api/v1"
-    : "http://localhost:8080/api/v1");
-
 export default function MyPage() {
   const [profile, setProfile] = useState<UserProfileResponse | null>(null);
+  // 表示用に解決された画像URLを保持するState
+  const [displayImageUrl, setDisplayImageUrl] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const router = useRouter();
 
   useEffect(() => {
     const getProfile = async () => {
       try {
-        const token = localStorage.getItem("access_token");
+        // 1. トークン取得 (Amplify -> LocalStorage フォールバック)
+        let token: string | null = null;
+        try {
+          const session = await fetchAuthSession();
+          token = session.tokens?.idToken?.toString() ?? null;
+        } catch (e) {
+          console.warn('fetchAuthSession failed, fallback to localStorage', e);
+        }
+
+        if (!token && typeof window !== 'undefined') {
+          token = window.localStorage.getItem('access_token');
+        }
 
         if (!token) {
           router.push('/');
           return;
         }
 
-        const res = await axios.get(`${API_BASE_URL}/users/me`, {
+        // 2. プロフィール情報取得
+        const res = await axios.get<UserProfileResponse>(`${API_BASE_URL}/users/me`, {
           headers: { Authorization: `Bearer ${token}` }
         });
-        setProfile(res.data);
+        
+        const userData = res.data;
+        setProfile(userData);
+
+        // 3. プロフィール画像URLの解決 (S3対応)
+        if (userData.profileImageUrl) {
+          const originalUrl = userData.profileImageUrl;
+
+          // すでに http(s) から始まる完全なURLならそのまま使う
+          if (originalUrl.startsWith('http')) {
+            setDisplayImageUrl(originalUrl);
+          } else {
+            // キー("profile-images/xxx.jpg")の状態の場合
+            if (IS_LOCAL) {
+              // --- ローカル環境: ローカルストレージAPIへ ---
+              // キーの先頭にスラッシュがある場合のケア
+              const cleanKey = originalUrl.startsWith('/') ? originalUrl.slice(1) : originalUrl;
+              setDisplayImageUrl(`${API_BASE_URL}/local-storage/${cleanKey}`);
+            } else {
+              // --- 本番環境 (S3): Presigned URLを取得 ---
+              try {
+                // ダウンロード用URLを取得するAPIを叩く
+                // (バックエンドに GET /api/v1/upload/presigned-download-url?key=... が必要です)
+                const presignRes = await axios.get(`${API_BASE_URL}/upload/presigned-download-url`, {
+                  params: { key: originalUrl },
+                  headers: { Authorization: `Bearer ${token}` }
+                });
+                setDisplayImageUrl(presignRes.data.url); // バックエンドのレスポンス形式に合わせて調整してください
+              } catch (err) {
+                console.error('Failed to get presigned download url', err);
+                // 取得失敗時はキーをそのまま入れておく（表示は壊れるがデバッグ用）
+                setDisplayImageUrl(null);
+              }
+            }
+          }
+        }
 
       } catch (error) {
         console.error('Profile fetch error', error);
-        // エラー時はログインへリダイレクトするなど適宜調整
-        // router.push('/login'); 
       } finally {
         setLoading(false);
       }
@@ -66,17 +116,6 @@ export default function MyPage() {
 
   if (!profile) return null;
 
-  // プロフィール画像URLが「キー」の場合は /api/v1/local-storage/{key} として扱う
-  const profileImageSrc =
-    profile.profileImageUrl &&
-    (profile.profileImageUrl.startsWith('http')
-      ? profile.profileImageUrl
-      : `${API_BASE_URL}/local-storage/${
-          profile.profileImageUrl.startsWith('/')
-            ? profile.profileImageUrl.slice(1)
-            : profile.profileImageUrl
-        }`);
-
   return (
     <main className="min-h-screen bg-[#F5F5F5] font-sans text-[#333]">
       {/* 共通ナビゲーションバー */}
@@ -86,6 +125,7 @@ export default function MyPage() {
         </Link>
         <span className="mx-2 text-gray-500">/</span>
         <span className="text-sm text-white font-medium">My Page</span>
+        {IS_LOCAL && <span className="ml-4 text-xs bg-blue-600 px-2 py-0.5 rounded">LOCAL MODE</span>}
       </nav>
 
       <div className="max-w-5xl mx-auto px-4 pb-12">
@@ -96,13 +136,13 @@ export default function MyPage() {
             <div className="bg-white border border-gray-300 rounded-sm p-6 shadow-sm text-center">
               {/* アイコンエリア */}
               <div className="relative w-32 h-32 mx-auto bg-gray-100 rounded-sm overflow-hidden mb-4 border border-gray-200">
-                {profileImageSrc ? (
+                {displayImageUrl ? (
                   <Image
-                    src={profileImageSrc}
+                    src={displayImageUrl}
                     alt={profile.username}
                     fill
                     className="object-cover"
-                    unoptimized
+                    unoptimized // S3などの外部URLを表示する場合に推奨
                   />
                 ) : (
                   <div className="flex items-center justify-center h-full text-4xl text-gray-300 font-bold bg-gray-100">
