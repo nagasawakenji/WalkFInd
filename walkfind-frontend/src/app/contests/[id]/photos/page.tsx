@@ -66,7 +66,8 @@ export default function PhotoListPage({ params }: PageProps) {
     setVotingId(photoId);
 
     try {
-      const token = localStorage.getItem("access_token");
+      const session = await fetchAuthSession()
+      const token = session.tokens?.idToken?.toString();
       if (!token) {
         const loginUrl = process.env.NEXT_PUBLIC_COGNITO_LOGIN_URL;
         if (loginUrl) {

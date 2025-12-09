@@ -6,6 +6,7 @@ import Image from 'next/image';
 import Link from 'next/link';
 import axios from 'axios'; 
 import { uploadImage } from '@/lib/upload'; 
+import { fetchAuthSession } from 'aws-amplify/auth';
 
 interface PageProps {
   params: Promise<{ id: string }>;
@@ -57,8 +58,8 @@ export default function SubmitPhotoPage({ params }: PageProps) {
     setErrorMessage('');
 
     try {
-      const token = localStorage.getItem("access_token");
-
+      const session = await fetchAuthSession();
+      const token = session.tokens?.idToken?.toString();
       if (!token) {
         // ログインしていない場合のリダイレクト処理
         const currentPath = window.location.pathname;
@@ -115,7 +116,7 @@ export default function SubmitPhotoPage({ params }: PageProps) {
       } else {
         // 本番環境 (AWS): S3 Presigned URL 方式
         // 1. S3に画像をアップロードしてキーを取得
-        const photoKey = await uploadImage(file, contestId);
+        const photoKey = await uploadImage(file, contestId, token);
 
         // 2. メタデータをDBに登録
         await axios.post(
