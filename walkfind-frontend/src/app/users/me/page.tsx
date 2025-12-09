@@ -86,7 +86,7 @@ export default function MyPage() {
                   params: { key: originalUrl },
                   headers: { Authorization: `Bearer ${token}` }
                 });
-                setDisplayImageUrl(presignRes.data.url); // バックエンドのレスポンス形式に合わせて調整してください
+                setDisplayImageUrl(presignRes.data.photoUrl);
               } catch (err) {
                 console.error('Failed to get presigned download url', err);
                 // 取得失敗時はキーをそのまま入れておく（表示は壊れるがデバッグ用）
