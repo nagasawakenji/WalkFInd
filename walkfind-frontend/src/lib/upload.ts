@@ -61,7 +61,11 @@ export async function uploadImage(file: File, contestId: string, token: string):
         headers: authHeaders
       });
 
-      const { uploadUrl, key } = presignRes.data;
+      const { photoUrl: uploadUrl, key } = presignRes.data;
+
+      if (!uploadUrl) {
+         throw new Error("アップロードURL (photoUrl) の取得に失敗しました");
+      }
 
       // 2. S3へ直接アップロード (PUT)
       // AWS S3への直接アクセスなので、Authorizationヘッダーは不要
