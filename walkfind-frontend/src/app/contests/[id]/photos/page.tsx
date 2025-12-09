@@ -66,8 +66,8 @@ export default function PhotoListPage({ params }: PageProps) {
     setVotingId(photoId);
 
     try {
-      const session = await fetchAuthSession()
-      const token = session.tokens?.idToken?.toString();
+      // 応急処置、将来的にamplifyにする
+      const token = typeof window !== 'undefined' ? localStorage.getItem('access_token') : null;
       if (!token) {
         const loginUrl = process.env.NEXT_PUBLIC_COGNITO_LOGIN_URL;
         if (loginUrl) {
