@@ -153,6 +153,25 @@ Resources:
             RestApiId: !Ref WalkFindApi
 
         # -----------------------------------------
+        # 認証必要：me
+        # -----------------------------------------
+        BioRoot:
+          Type: Api
+          Properties:
+            Path: /api/v1/me/profile/bio
+            Method: ANY
+            RestApiId: !Ref WalkFindApi
+
+        ImageRoot:
+          Type: Api
+          Properties:
+            Path: /api/v1/me/profile/image
+            Method: ANY
+            RestApiId: !Ref WalkFindApi
+
+
+
+        # -----------------------------------------
         # 認証必要：votes (Auth削除 -> Spring Securityへ)
         # -----------------------------------------
         VotesRoot:
