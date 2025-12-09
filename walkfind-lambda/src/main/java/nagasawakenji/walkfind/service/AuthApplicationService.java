@@ -13,7 +13,10 @@ import org.springframework.transaction.annotation.Transactional;
 public class AuthApplicationService {
 
     private final CognitoOAuthClient cognitoOAuthClient;
-    private final nagasawakenji.walkfind.infra.mybatis.mapper.UserMapper userMapper;
+
+    // ★ 修正1: UserMapper を削除し、UserService を追加
+    // private final nagasawakenji.walkfind.infra.mybatis.mapper.UserMapper userMapper; // 削除
+    private final UserService userService; // 追加
 
     @Transactional
     public CognitoTokenResponse loginWithCognito(String code) {
@@ -23,31 +26,26 @@ public class AuthApplicationService {
         CognitoTokenResponse token = cognitoOAuthClient.fetchToken(code);
 
         try {
-            // IDトークンをデコード
+            // IDトークンをデコードしてユーザー情報を取得
             com.auth0.jwt.interfaces.DecodedJWT jwt =
                     com.auth0.jwt.JWT.decode(token.getIdToken());
 
-            String sub = jwt.getSubject(); // users.id
+            String sub = jwt.getSubject(); // users.id (CognitoのUUID)
             String username = jwt.getClaim("cognito:username").asString();
             String email = jwt.getClaim("email").asString();
 
             log.info("Cognito login user: sub={}, username={}, email={}", sub, username, email);
 
-            // users テーブルに存在するか確認
-            var existing = userMapper.findById(sub);
-
-            // 初回ログインなら users に INSERT
-            if (existing.isEmpty()) {
-                log.info("First login detected. Creating user in DB.");
-                userMapper.insert(sub, username, email);
-            }
+            // これにより、ユーザーが存在しない場合は作成され、
+            // 「ユーザーはいるがプロフィールがない」場合も自動修復されます。
+            userService.syncUser(sub, email, username);
 
         } catch (Exception e) {
-            log.error("Failed to process Cognito ID token", e);
-            throw new RuntimeException("Invalid Cognito ID token", e);
+            log.error("Failed to process Cognito ID token or sync user", e);
+            throw new RuntimeException("Login process failed", e);
         }
 
-        // ⑤ トークンはそのまま返却
+        // 3. トークンを返却
         return token;
     }
 }

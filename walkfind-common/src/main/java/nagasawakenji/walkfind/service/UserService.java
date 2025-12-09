@@ -6,7 +6,7 @@ import nagasawakenji.walkfind.domain.model.UserProfile;
 import nagasawakenji.walkfind.domain.statusenum.UserRole;
 import nagasawakenji.walkfind.infra.mybatis.mapper.UserMapper;
 import nagasawakenji.walkfind.exception.UserStatusException;
-import nagasawakenji.walkfind.exception.DatabaseOperationException; // ★ 追加
+import nagasawakenji.walkfind.exception.DatabaseOperationException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import nagasawakenji.walkfind.infra.mybatis.mapper.UserProfileMapper;
@@ -26,46 +26,66 @@ public class UserService {
     private final UserMapper userMapper;
     private final UserProfileMapper userProfileMapper;
 
-    // ユーザー情報の取得、新規登録を行う
+    /**
+     * ユーザー情報の取得・同期を行う。
+     * ユーザーが存在しない場合は新規作成し、
+     * プロフィールが存在しない場合（不整合データ）は自動修復する。
+     */
     @Transactional
     public User syncUser(String cognitoId, String email, String username) {
-        return userMapper.findById(cognitoId)
-                .orElseGet(() -> {
-                    // DBにユーザーが存在しない場合、新規登録する
-                    User newUser = new User();
 
-                    // 【修正点】ModelのSetterメソッド名を確認 (setUserId, setUserName, setActive を想定)
-                    // 仮にModelのフィールドが id, username, isActive であれば、
-                    // newUser.setId(cognitoId);
-                    // newUser.setUsername(username);
-                    // newUser.setIsActive(true);
+        // まずユーザーテーブルを確認
+        User user = userMapper.findById(cognitoId).orElse(null);
 
-                    newUser.setUserId(cognitoId);
-                    newUser.setEmail(email);
-                    newUser.setUserName(username);
-                    newUser.setRole(UserRole.USER);
-                    newUser.setActive(true);
+        if (user == null) {
+            log.info("User not found in DB. Creating new user: {}", cognitoId);
 
-                    UserProfile newProfile = new UserProfile();
-                    newProfile.setUserId(cognitoId);
+            user = new User();
+            user.setUserId(cognitoId);
+            user.setEmail(email);
+            user.setUserName(username);
+            user.setRole(UserRole.USER);
+            user.setActive(true);
 
-                    try {
-                        int insertedUser = userMapper.insert(cognitoId, username, email);
-                        int insertedProfile = userProfileMapper.insert(newProfile);
-                        if (insertedUser == 0 || insertedProfile == 0) {
-                            // 更新行数0の場合はDB操作失敗とみなす
-                            throw new DatabaseOperationException("User insertion failed. Rows affected: 0");
-                        }
-                    } catch (Exception e) {
-                        // DB側の制約違反（重複など）を含む例外を捕捉し、非チェック例外として再スローしてロールバックを確実にする
-                        log.error("Failed to insert new user {} into DB.", cognitoId, e);
-                        throw new DatabaseOperationException("Failed to insert new user into database.", e);
-                    }
+            try {
+                int insertedUser = userMapper.insert(cognitoId, username, email);
+                if (insertedUser == 0) {
+                    throw new DatabaseOperationException("User insertion failed. Rows affected: 0");
+                }
+            } catch (Exception e) {
+                // DB操作失敗時はロールバックさせるため例外を投げる
+                log.error("Failed to insert new user {} into DB.", cognitoId, e);
+                throw new DatabaseOperationException("Failed to insert new user into database.", e);
+            }
+        } else {
+            log.info("User found in DB: {}", cognitoId);
+            // 必要に応じて、ここでCognito側の最新情報(email, username)でDBを更新する処理を入れても良い
+        }
 
-                    log.info("New user registered in DB: ID {}", cognitoId);
-                    // 新しく登録されたUserモデルを返す
-                    return newUser;
-                });
+        // ユーザーが「新規作成」か「既存」かに関わらず、プロフィールデータが欠損していないか確認する。
+        // これにより、過去の不整合データ（ユーザーだけいてプロフィールがない状態）をログイン時に修復できる。
+        boolean profileExists = userProfileMapper.findByUserId(cognitoId).isPresent();
+
+        if (!profileExists) {
+            log.warn("UserProfile missing for user {}. Creating default profile (Auto-Repair).", cognitoId);
+
+            UserProfile newProfile = new UserProfile();
+            newProfile.setUserId(cognitoId);
+            // 初期値が必要であればここでセット (例: newProfile.setBio(""); )
+
+            try {
+                int insertedProfile = userProfileMapper.insert(newProfile);
+                if (insertedProfile == 0) {
+                    throw new DatabaseOperationException("Profile insertion failed. Rows affected: 0");
+                }
+                log.info("Created missing profile for user: {}", cognitoId);
+            } catch (Exception e) {
+                log.error("Failed to insert profile for user {}", cognitoId, e);
+                throw new DatabaseOperationException("Failed to insert profile.", e);
+            }
+        }
+
+        return user;
     }
 
 
@@ -74,7 +94,7 @@ public class UserService {
         User user = userMapper.findById(userId)
                 .orElseThrow(() -> new UserStatusException("User not found.", "NOT_FOUND"));
 
-        if (!user.isActive()) { // ModelのGetter名に合わせる
+        if (!user.isActive()) {
             throw new UserStatusException("Account is suspended.", "SUSPENDED");
         }
 
@@ -101,7 +121,7 @@ public class UserService {
         return UserProfileResponse.builder()
                 .userId(user.getUserId())
                 .username(user.getUserName())
-                .email(user.getEmail()) // 公開情報としてメールアドレスを含めるか否かは要検討
+                .email(user.getEmail())
                 .joinDate(user.getCreatedAt())
                 .profileImageUrl(profileImageUrl)
                 .bestRank(bestRank)

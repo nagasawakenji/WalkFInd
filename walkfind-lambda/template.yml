@@ -6,6 +6,12 @@ Parameters:
   DbSecretArn:
     Type: String
     Description: ARN of the database secret (provided via SAM deploy parameters)
+  CognitoIssuerUri:
+    Type: String
+    Description: Issuer URI of the Cognito User Pool (e.g. https://cognito-idp.ap-northeast-1.amazonaws.com/ap-northeast-1_xxxxxxxx)
+  CognitoUserPoolArn:
+    Type: String
+    Description: ARN of the Cognito User Pool used by API Gateway authorizer
 
 Globals:
   Function:
@@ -15,13 +21,20 @@ Globals:
     Architectures:
       - x86_64
 
-Resources:
+  # ★追加: 画像アップロードのためのバイナリ設定
+  Api:
+    BinaryMediaTypes:
+      - multipart/form-data
+      - image~1*
 
+Resources:
   # =======================================================
   # 1. Cognito User Pool
   # =======================================================
   WalkFindUserPool:
     Type: AWS::Cognito::UserPool
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
     Properties:
       UserPoolName: WalkFindContestUserPool
       AutoVerifiedAttributes: [ email ]
@@ -36,7 +49,7 @@ Resources:
       SupportedIdentityProviders: [ COGNITO ]
 
   # =======================================================
-  # 2. API Gateway — DefaultAuthorizer を設定しないことが最重要
+  # 2. API Gateway
   # =======================================================
   WalkFindApi:
     Type: AWS::Serverless::Api
@@ -45,7 +58,7 @@ Resources:
       Auth:
         Authorizers:
           CognitoAuth:
-            UserPoolArn: !GetAtt WalkFindUserPool.Arn
+            UserPoolArn: !Ref CognitoUserPoolArn
 
   # =======================================================
   # 3. Lambda Function (Spring Boot)
@@ -59,16 +72,34 @@ Resources:
       Environment:
         Variables:
           DB_SECRET_ARN: !Ref DbSecretArn
+          COGNITO_ISSUER_URI: !Ref CognitoIssuerUri
+          APP_DUMMY_VERSION: 2025-12-08-04
+          S3_BUCKET_NAME: walkfind-photos
 
-      # Secrets Manager の読み取り権限
       Policies:
-        - Statement:
-            Effect: Allow
-            Action:
-              - secretsmanager:GetSecretValue
-            Resource: !Sub "arn:aws:secretsmanager:${AWS::Region}:${AWS::AccountId}:secret:/walkfind/database-*"
+        - S3CrudPolicy:
+            BucketName: walkfind-photos
+
+        # 既存のポリシー (Secrets Manager)
+        - Version: '2012-10-17'
+          Statement:
+            - Effect: Allow
+              Action:
+                - secretsmanager:GetSecretValue
+              Resource:
+                - !Sub "arn:aws:secretsmanager:${AWS::Region}:${AWS::AccountId}:secret:/walkfind/database-*"
+                - !Sub "arn:aws:secretsmanager:${AWS::Region}:${AWS::AccountId}:secret:/walkfind/cognito/prod-*"
 
       Events:
+        # -----------------------------------------
+        # 認証不要：auth（Cognito ログイン）
+        # -----------------------------------------
+        AuthLogin:
+          Type: Api
+          Properties:
+            Path: /api/v1/auth/cognito/login
+            Method: ANY
+            RestApiId: !Ref WalkFindApi
 
         # -----------------------------------------
         # 認証不要：contests
@@ -122,7 +153,7 @@ Resources:
             RestApiId: !Ref WalkFindApi
 
         # -----------------------------------------
-        # 認証必要：votes
+        # 認証必要：votes (Auth削除 -> Spring Securityへ)
         # -----------------------------------------
         VotesRoot:
           Type: Api
@@ -130,8 +161,6 @@ Resources:
             Path: /api/v1/votes
             Method: ANY
             RestApiId: !Ref WalkFindApi
-            Auth:
-              Authorizer: CognitoAuth
 
         VotesProxy:
           Type: Api
@@ -139,11 +168,9 @@ Resources:
             Path: /api/v1/votes/{proxy+}
             Method: ANY
             RestApiId: !Ref WalkFindApi
-            Auth:
-              Authorizer: CognitoAuth
 
         # -----------------------------------------
-        # 認証必要：photos
+        # 認証必要：photos (Auth削除 -> Spring Securityへ)
         # -----------------------------------------
         PhotosRoot:
           Type: Api
@@ -151,8 +178,6 @@ Resources:
             Path: /api/v1/photos
             Method: ANY
             RestApiId: !Ref WalkFindApi
-            Auth:
-              Authorizer: CognitoAuth
 
         PhotosProxy:
           Type: Api
@@ -160,11 +185,9 @@ Resources:
             Path: /api/v1/photos/{proxy+}
             Method: ANY
             RestApiId: !Ref WalkFindApi
-            Auth:
-              Authorizer: CognitoAuth
 
         # -----------------------------------------
-        # 認証必要：/users/me
+        # 認証必要：/users/me (Auth削除 -> Spring Securityへ)
         # -----------------------------------------
         MeApi:
           Type: Api
@@ -172,11 +195,9 @@ Resources:
             Path: /api/v1/users/me
             Method: ANY
             RestApiId: !Ref WalkFindApi
-            Auth:
-              Authorizer: CognitoAuth
 
         # -----------------------------------------
-        # 認証必要：upload（presigned URL）
+        # 認証必要：upload（presigned URL） (Auth削除)
         # -----------------------------------------
         UploadRoot:
           Type: Api
@@ -184,8 +205,6 @@ Resources:
             Path: /api/v1/upload
             Method: ANY
             RestApiId: !Ref WalkFindApi
-            Auth:
-              Authorizer: CognitoAuth
 
         UploadProxy:
           Type: Api
@@ -193,12 +212,9 @@ Resources:
             Path: /api/v1/upload/{proxy+}
             Method: ANY
             RestApiId: !Ref WalkFindApi
-            Auth:
-              Authorizer: CognitoAuth
-
 
         # -----------------------------------------
-        # 認証必要：model-photos（単独ルート）
+        # 認証必要：model-photos (Auth削除)
         # -----------------------------------------
         ModelPhotosRoot:
           Type: Api
@@ -206,8 +222,6 @@ Resources:
             Path: /api/v1/model-photos
             Method: ANY
             RestApiId: !Ref WalkFindApi
-            Auth:
-              Authorizer: CognitoAuth
 
         ModelPhotosProxy:
           Type: Api
@@ -215,8 +229,23 @@ Resources:
             Path: /api/v1/model-photos/{proxy+}
             Method: ANY
             RestApiId: !Ref WalkFindApi
-            Auth:
-              Authorizer: CognitoAuth
+
+        # =======================================================
+        # Contest Icons (Authなし)
+        # =======================================================
+        ContestIconsRoot:
+          Type: Api
+          Properties:
+            Path: /api/v1/contest-icons
+            Method: ANY
+            RestApiId: !Ref WalkFindApi
+
+        ContestIconsProxy:
+          Type: Api
+          Properties:
+            Path: /api/v1/contest-icons/{proxy+}
+            Method: ANY
+            RestApiId: !Ref WalkFindApi
 
   ResultCalculationFunction:
     Type: AWS::Serverless::Function
@@ -235,7 +264,9 @@ Resources:
             Effect: Allow
             Action:
               - secretsmanager:GetSecretValue
-            Resource: !Sub "arn:aws:secretsmanager:${AWS::Region}:${AWS::AccountId}:secret:/walkfind/database-*"
+            Resource:
+              - !Sub "arn:aws:secretsmanager:${AWS::Region}:${AWS::AccountId}:secret:/walkfind/database-*"
+              - !Sub "arn:aws:secretsmanager:${AWS::Region}:${AWS::AccountId}:secret:/walkfind/cognito/prod-*"
       Events:
         ResultCalculationSchedule:
           Type: Schedule
@@ -260,7 +291,9 @@ Resources:
             Effect: Allow
             Action:
               - secretsmanager:GetSecretValue
-            Resource: !Sub "arn:aws:secretsmanager:${AWS::Region}:${AWS::AccountId}:secret:/walkfind/database-*"
+            Resource:
+              - !Sub "arn:aws:secretsmanager:${AWS::Region}:${AWS::AccountId}:secret:/walkfind/database-*"
+              - !Sub "arn:aws:secretsmanager:${AWS::Region}:${AWS::AccountId}:secret:/walkfind/cognito/prod-*"
       Events:
         ContestStatusSchedule:
           Type: Schedule
@@ -268,9 +301,6 @@ Resources:
             Schedule: rate(60 minutes)
             Enabled: true
 
-# =======================================================
-# Outputs
-# =======================================================
 Outputs:
   WalkFindApiUrl:
     Description: "API Gateway endpoint URL"

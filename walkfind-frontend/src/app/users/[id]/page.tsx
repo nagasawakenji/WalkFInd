@@ -2,8 +2,12 @@ import { notFound } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
 
+// ★ 環境変数がうまく読めない時のために、本番URLをここに直書きします
 const API_BASE_URL =
-  process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:8080/api/v1";
+  process.env.NEXT_PUBLIC_API_BASE_URL ||
+  (process.env.NODE_ENV === "production"
+    ? "https://b591pb4p16.execute-api.ap-northeast-1.amazonaws.com/prod/api/v1"
+    : "http://localhost:8080/api/v1");
 
 // --- 型定義 ---
 
@@ -52,7 +56,9 @@ async function fetchUserProfile(
     notFound();
   }
   if (!res.ok) {
-    throw new Error(`Failed to fetch profile: ${res.status}`);
+    const errorText = await res.text(); // バックエンドのエラーメッセージを取得
+    console.error(`Backend Error (${res.status}):`, errorText); // Vercelのログに出る
+    throw new Error(`Failed to fetch profile: ${res.status} - ${errorText}`);
   }
 
   return res.json();

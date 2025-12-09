@@ -4,6 +4,7 @@ import { useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import axios from "axios";
 
+
 type JwtPayload = {
   sub?: string;
   "cognito:username"?: string;
@@ -33,6 +34,14 @@ function parseJwt(token: string): JwtPayload | null {
   }
 }
 
+// ★ 環境変数がうまく読めない時のために、本番URLをここに直書きします
+const API_BASE_URL =
+  process.env.NEXT_PUBLIC_API_BASE_URL ||
+  (process.env.NODE_ENV === "production"
+    ? "https://b591pb4p16.execute-api.ap-northeast-1.amazonaws.com/prod/api/v1"
+    : "http://localhost:8080/api/v1");
+
+
 export default function AuthCallbackPage() {
   const searchParams = useSearchParams();
   const router = useRouter();
@@ -44,7 +53,7 @@ export default function AuthCallbackPage() {
     const login = async () => {
       try {
         const res = await axios.post(
-          "http://localhost:8080/api/auth/cognito/login",
+          `${API_BASE_URL}/auth/cognito/login`,
           { code },
           { withCredentials: true }
         );
@@ -53,6 +62,7 @@ export default function AuthCallbackPage() {
 
         // ローカル保存（本番では HttpOnly Cookie 推奨）
         localStorage.setItem("access_token", accessToken);
+
 
         // アクセストークンからユーザーIDを抽出して保存
         const payload = parseJwt(accessToken);
@@ -68,7 +78,7 @@ export default function AuthCallbackPage() {
           }
         }
 
-        // ✅ ログイン前に保存していた遷移先へ復帰
+
         const redirectPath =
           localStorage.getItem("redirect_after_login") || "/";
 

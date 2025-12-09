@@ -1,8 +1,10 @@
 package nagasawakenji.walkfind.config;
 
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod; // 追加
 import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
@@ -11,7 +13,6 @@ import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationConverter;
 import org.springframework.security.oauth2.server.resource.authentication.JwtGrantedAuthoritiesConverter;
 import org.springframework.security.web.SecurityFilterChain;
-import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
@@ -20,57 +21,63 @@ import java.util.List;
 @Configuration
 @EnableWebSecurity
 @RequiredArgsConstructor
+@Slf4j
 public class SecurityConfig {
 
-    // 認証フィルター（カスタム実装が必要だが、ここではDIして組み込む）
-    // Spring標準のOAuth2リソースサーバー機能を使うため、このフィルターは現在はコメントアウトして標準機能を使います。
-    // private final JwtAuthenticationFilter jwtAuthenticationFilter;
-
-    // Spring Security 6以降の標準的な設定方法
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
+        log.info("=== SecurityConfig.securityFilterChain for LAMBDA is being built ===");
 
         http
-                // セッション管理をSTATELESSに設定
                 .sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-
-                // CSRFを無効化
                 .csrf(AbstractHttpConfigurer::disable)
 
-                // CORS設定の適用
+                // 1. ここでcorsConfigurationSource Beanが自動的に適用されます
                 .cors(Customizer.withDefaults())
 
-                // JWTリソースサーバーの設定
-                // propertiesファイルで設定したCognito情報に基づき、JWTを自動検証します。
                 .oauth2ResourceServer(oauth2 -> oauth2.jwt(Customizer.withDefaults()))
-
-                // 認可規則（APIアクセス制御）
                 .authorizeHttpRequests(auth -> auth
-                        // 公開エンドポイント（認証不要）
-                        // コンテストリスト、結果表示、ヘルステスト
-                        .requestMatchers("/api/v1/contests/**", "/api/v1/results/**", "/api/auth/**").permitAll()
+                        // ★【最重要】OPTIONSメソッド（Preflight）を無条件で全許可する
+                        // これがないとブラウザの事前確認が403/401ではじかれます
+                        .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
 
-                        // 保護されたエンドポイント（認証必須）
-                        // 投稿、投票、ユーザー情報更新など
-                        .requestMatchers("/api/v1/photos/**", "/api/v1/votes/**", "/api/v1/users/**").authenticated()
+                        // /users/me はemailなどが記載されるため、認証が必要
+                        .requestMatchers("/api/v1/users/me").authenticated()
+                        // /users/id は公開情報のため認証は不要
+                        .requestMatchers(HttpMethod.GET, "/api/v1/users/**").permitAll()
+                        // 認証不要なエンドポイント
+                        .requestMatchers("/api/v1/contests/**", "/api/v1/results/**", "/api/v1/auth/**").permitAll()
 
-                        // 上記以外のすべては認証を要求
+                        .requestMatchers(HttpMethod.GET, "/api/v1/contest-icons/**").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/v1/upload/**").authenticated() // Presigned URL発行は認証必須
+
+                        // それ以外は認証必須
                         .anyRequest().authenticated()
                 );
         return http.build();
     }
 
-    // CORS設定のBean
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
 
-        // 実際のドメインに後で変更する
-        configuration.setAllowedOrigins(List.of("https://walkfind.com", "http://localhost:3000"));
+        // 許可するオリジン（末尾にスラッシュを入れないよう注意）
+        configuration.setAllowedOrigins(List.of(
+                "https://walkfind.vercel.app",
+                "http://localhost:3000"
+        ));
 
+        // メソッド許可
         configuration.setAllowedMethods(List.of("GET","POST","PUT","PATCH","DELETE","OPTIONS"));
-        configuration.setAllowedHeaders(List.of("Authorization", "Content-Type")); // Authorizationは大文字で登録
-        configuration.setAllowCredentials(false);
+
+        // ヘッダー許可
+        configuration.setAllowedHeaders(List.of("*"));
+
+        // 公開ヘッダー設定 (フロントエンドがAuthorizationヘッダー等を読み取れるようにする場合)
+        configuration.setExposedHeaders(List.of("Authorization", "Content-Type"));
+
+        // Cookieや認証情報を含むリクエストを許可
+        configuration.setAllowCredentials(true);
 
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/**", configuration);
