@@ -1,4 +1,5 @@
 import axios from 'axios';
+import { fetchAuthSession } from 'aws-amplify/auth';
 
 // 環境変数からローカル環境かどうかを判定
 const IS_LOCAL = process.env.NODE_ENV !== 'production';
