@@ -1,139 +1,120 @@
-// src/app/users/[id]/page.tsx
-import { notFound } from "next/navigation";
-import Link from "next/link";
-import Image from "next/image";
+'use client';
 
-// ★ 環境変数設定
-const IS_LOCAL = process.env.NODE_ENV !== "production";
+import { useState, useEffect } from 'react';
+import axios from 'axios';
+import { useRouter } from 'next/navigation';
+import Link from 'next/link';
+import Image from 'next/image';
+import { fetchAuthSession } from 'aws-amplify/auth';
 
+// ★ 環境変数または NODE_ENV でローカル判定
+const IS_LOCAL = process.env.NODE_ENV !== 'production';
+
+// APIのベースURL設定
 const API_BASE_URL =
   process.env.NEXT_PUBLIC_API_BASE_URL ||
   (IS_LOCAL
     ? "http://localhost:8080/api/v1"
     : "https://b591pb4p16.execute-api.ap-northeast-1.amazonaws.com/prod/api/v1");
 
-// --- 型定義 ---
-
-type UserPublicProfileResponse = {
+interface UserProfileResponse {
   userId: string;
-  nickname: string | null;
-  profileImageUrl: string | null;
-  bio: string | null;
-  totalPosts: number;
-  totalContestsEntered: number;
-  bestRank: number; 
-};
-
-type ContestResultDto = {
-  contestId: string;
-  contestName: string;
-  heldDate: string;
-  rank: number;
-  totalParticipants: number;
-  photoId: string;
-};
-
-type PhotoDto = {
-  photoId: string;
-  title: string;
-  submissionDate: string;
-  totalVotes: number;
-  photoUrl: string;
-};
-
-type UserHistoryResponse = {
-  contestResults: ContestResultDto[];
-  recentPublicPosts: PhotoDto[];
-};
-
-// --- ヘルパー関数: プロフィール画像のURL解決 ---
-async function resolveProfileImageUrl(originalUrl: string | null): Promise<string | null> {
-  if (!originalUrl) return null;
-
-  // すでにhttp(s)で始まる完全なURLならそのまま返す
-  if (originalUrl.startsWith("http")) {
-    return originalUrl;
-  }
-
-  // キーの先頭にスラッシュがある場合の除去（Local/S3共通で念のため処理）
-  const cleanKey = originalUrl.startsWith("/") ? originalUrl.slice(1) : originalUrl;
-
-  // ローカル環境: local-storage APIへ向ける
-  if (IS_LOCAL) {
-    return `${API_BASE_URL}/local-storage/${cleanKey}`;
-  }
-
-  // 本番環境(S3): Presigned URLを取得するAPIを叩く
-  try {
-    const params = new URLSearchParams({ key: cleanKey });
-    const endpoint = `${API_BASE_URL}/upload/presigned-download-url?${params.toString()}`;
-
-    const res = await fetch(endpoint, {
-      cache: "no-store",
-
-    });
-    
-    if (res.ok) {
-      const data = await res.json();
-      // console.log(`PhotoUrl resolved: ${data.photoUrl}`); // デバッグ用
-      return data.photoUrl; 
-    } else {
-      console.warn(`Failed to resolve S3 URL for key: ${originalUrl}. Status: ${res.status} ${res.statusText}`);
-    
-      return null;
-    }
-  } catch (error) {
-    console.error("Error resolving profile image url:", error);
-    return null;
-  }
+  username: string;
+  email: string;
+  role: string;
+  totalPhotos: number;
+  totalVotesReceived: number;
+  profileImageUrl?: string; 
 }
 
-// --- データ取得関数 ---
+export default function MyPage() {
+  const [profile, setProfile] = useState<UserProfileResponse | null>(null);
+  // 表示用に解決された画像URLを保持するState
+  const [displayImageUrl, setDisplayImageUrl] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
+  const router = useRouter();
 
-async function fetchUserProfile(userId: string): Promise<UserPublicProfileResponse> {
-  const res = await fetch(`${API_BASE_URL}/users/${userId}`, {
-    cache: "no-store",
-  });
+  useEffect(() => {
+    const getProfile = async () => {
+      try {
+        // 1. トークン取得 (Amplify -> LocalStorage フォールバック)
+        let token: string | null = null;
+        try {
+          const session = await fetchAuthSession();
+          token = session.tokens?.idToken?.toString() ?? null;
+        } catch (e) {
+          console.warn('fetchAuthSession failed, fallback to localStorage', e);
+        }
 
-  if (res.status === 404) notFound();
-  if (!res.ok) {
-    const errorText = await res.text();
-    throw new Error(`Failed to fetch profile: ${res.status} - ${errorText}`);
+        if (!token && typeof window !== 'undefined') {
+          token = window.localStorage.getItem('access_token');
+        }
+
+        if (!token) {
+          router.push('/');
+          return;
+        }
+
+        // 2. プロフィール情報取得
+        const res = await axios.get<UserProfileResponse>(`${API_BASE_URL}/users/me`, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        
+        const userData = res.data;
+        setProfile(userData);
+
+        // 3. プロフィール画像URLの解決 (S3対応)
+        if (userData.profileImageUrl) {
+          const originalUrl = userData.profileImageUrl;
+
+          // すでに http(s) から始まる完全なURLならそのまま使う
+          if (originalUrl.startsWith('http')) {
+            setDisplayImageUrl(originalUrl);
+          } else {
+            // キー("profile-images/xxx.jpg")の状態の場合
+            if (IS_LOCAL) {
+              // --- ローカル環境: ローカルストレージAPIへ ---
+              // キーの先頭にスラッシュがある場合のケア
+              const cleanKey = originalUrl.startsWith('/') ? originalUrl.slice(1) : originalUrl;
+              setDisplayImageUrl(`${API_BASE_URL}/local-storage/${cleanKey}`);
+            } else {
+              // --- 本番環境 (S3): Presigned URLを取得 ---
+              try {
+                // ダウンロード用URLを取得するAPIを叩く
+                // (バックエンドに GET /api/v1/upload/presigned-download-url?key=... が必要です)
+                const presignRes = await axios.get(`${API_BASE_URL}/upload/presigned-download-url`, {
+                  params: { key: originalUrl },
+                  headers: { Authorization: `Bearer ${token}` }
+                });
+                setDisplayImageUrl(presignRes.data.photoUrl);
+              } catch (err) {
+                console.error('Failed to get presigned download url', err);
+                // 取得失敗時はキーをそのまま入れておく（表示は壊れるがデバッグ用）
+                setDisplayImageUrl(null);
+              }
+            }
+          }
+        }
+
+      } catch (error) {
+        console.error('Profile fetch error', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    getProfile();
+  }, [router]);
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-[#F5F5F5] flex items-center justify-center">
+        <div className="animate-spin rounded-full h-10 w-10 border-t-2 border-b-2 border-gray-900"></div>
+      </div>
+    );
   }
 
-  return res.json();
-}
-
-async function fetchUserHistory(userId: string): Promise<UserHistoryResponse> {
-  const res = await fetch(`${API_BASE_URL}/users/${userId}/history`, {
-    cache: "no-store",
-  });
-
-  if (res.status === 404) notFound();
-  if (!res.ok) {
-    return { contestResults: [], recentPublicPosts: [] };
-  }
-
-  return res.json();
-}
-
-// --- ページ本体 ---
-
-interface PageProps {
-  params: Promise<{ id: string }>;
-}
-
-export default async function UserPage({ params }: PageProps) {
-  const { id: userId } = await params;
-
-  // 1. プロフィールと履歴を並列取得
-  const [profile, history] = await Promise.all([
-    fetchUserProfile(userId),
-    fetchUserHistory(userId),
-  ]);
-
-  // 2. プロフィール画像URLを解決 (ローカル/S3の分岐処理)
-  const profileImageSrc = await resolveProfileImageUrl(profile.profileImageUrl);
+  if (!profile) return null;
 
   return (
     <main className="min-h-screen bg-[#F5F5F5] font-sans text-[#333]">
@@ -143,176 +124,107 @@ export default async function UserPage({ params }: PageProps) {
           WalkFind
         </Link>
         <span className="mx-2 text-gray-500">/</span>
-        <span className="text-sm text-white font-medium">Users</span>
-        <span className="mx-2 text-gray-500">/</span>
-        <span className="text-sm text-gray-300">{profile.userId}</span>
+        <span className="text-sm text-white font-medium">My Page</span>
         {IS_LOCAL && <span className="ml-4 text-xs bg-blue-600 px-2 py-0.5 rounded">LOCAL MODE</span>}
       </nav>
 
-      <div className="max-w-6xl mx-auto px-4 pb-12">
-        <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+      <div className="max-w-5xl mx-auto px-4 pb-12">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           
-          {/* 左カラム：プロフィール情報 */}
+          {/* 左カラム：プロフィールカード */}
           <div className="lg:col-span-1 space-y-6">
-            <div className="bg-white border border-gray-300 rounded-sm p-6 shadow-sm text-center lg:text-left">
-              <div className="relative w-32 h-32 mx-auto lg:mx-0 bg-gray-200 rounded-sm overflow-hidden mb-4 border border-gray-300">
-                {profileImageSrc ? (
+            <div className="bg-white border border-gray-300 rounded-sm p-6 shadow-sm text-center">
+              {/* アイコンエリア */}
+              <div className="relative w-32 h-32 mx-auto bg-gray-100 rounded-sm overflow-hidden mb-4 border border-gray-200">
+                {displayImageUrl ? (
                   <Image
-                    src={profileImageSrc}
-                    alt={profile.nickname ?? "Profile"}
+                    src={displayImageUrl}
+                    alt={profile.username}
                     fill
-                    unoptimized // 外部URL(S3/Local)を表示するために必須
                     className="object-cover"
+                    unoptimized // S3などの外部URLを表示する場合に推奨
                   />
                 ) : (
-                  <div className="flex items-center justify-center h-full text-4xl text-gray-400 font-bold bg-gray-100">
-                    {(profile.nickname ?? profile.userId)[0]?.toUpperCase() ?? "U"}
+                  <div className="flex items-center justify-center h-full text-4xl text-gray-300 font-bold bg-gray-100">
+                    {(profile.username || profile.userId)[0]?.toUpperCase()}
                   </div>
                 )}
               </div>
 
-              <h1 className="text-xl font-bold text-black break-words">
-                {profile.nickname ?? "No nickname"}
+              <h1 className="text-xl font-bold text-black break-words mb-1">
+                {profile.username}
               </h1>
-              <p className="text-sm text-gray-500 font-mono mb-4 break-all">
+              <p className="text-sm text-gray-500 font-mono mb-4 bg-gray-50 inline-block px-2 py-0.5 rounded-sm border border-gray-200">
                 @{profile.userId}
               </p>
+              
+              <div className="border-t border-gray-100 pt-4 text-left space-y-3">
+                 <div>
+                    <span className="text-xs font-bold text-gray-400 uppercase block mb-1">Role</span>
+                    <span className="text-xs font-bold text-white bg-gray-600 px-2 py-1 rounded-sm uppercase">
+                      {profile.role}
+                    </span>
+                 </div>
+                 <div>
+                    <span className="text-xs font-bold text-gray-400 uppercase block mb-1">Email</span>
+                    <span className="text-sm text-gray-700 font-mono break-all">
+                      {profile.email}
+                    </span>
+                 </div>
+              </div>
 
-              {profile.bio && (
-                <div className="text-sm text-gray-700 whitespace-pre-line border-t border-gray-100 pt-3">
-                  {profile.bio}
-                </div>
-              )}
-            </div>
-
-            {/* 統計サマリカード */}
-            <div className="bg-white border border-gray-300 rounded-sm shadow-sm overflow-hidden">
-                <div className="p-3 border-b border-gray-200 bg-gray-50 text-xs font-bold text-gray-500 uppercase">
-                    Statistics
-                </div>
-                <div className="divide-y divide-gray-100">
-                    <div className="p-4 flex justify-between items-center">
-                        <span className="text-sm text-gray-600">Total Posts</span>
-                        <span className="text-lg font-bold text-black">{profile.totalPosts}</span>
-                    </div>
-                    <div className="p-4 flex justify-between items-center">
-                        <span className="text-sm text-gray-600">Contests</span>
-                        <span className="text-lg font-bold text-black">{profile.totalContestsEntered}</span>
-                    </div>
-                    <div className="p-4 flex justify-between items-center">
-                        <span className="text-sm text-gray-600">Best Rank</span>
-                        <span className="text-lg font-bold text-blue-600">
-                            {profile.bestRank > 0 ? `#${profile.bestRank}` : "-"}
-                        </span>
-                    </div>
-                </div>
+              <div className="mt-6 pt-4 border-t border-gray-100 space-y-2">
+                <Link
+                  href="/users/me/bio"
+                  className="block w-full text-center py-2 bg-white border border-gray-300 text-sm font-bold text-gray-700 rounded-sm hover:bg-gray-50 hover:text-black transition-colors"
+                >
+                  自己紹介文を編集
+                </Link>
+                <Link
+                  href="/users/me/image"
+                  className="block w-full text-center py-2 bg-white border border-gray-300 text-sm font-bold text-gray-700 rounded-sm hover:bg-gray-50 hover:text-black transition-colors"
+                >
+                  プロフィール画像を変更
+                </Link>
+              </div>
             </div>
           </div>
 
-          {/* 右カラム：メインコンテンツ */}
-          <div className="lg:col-span-3 space-y-8">
+          {/* 右カラム：統計・アクティビティ */}
+          <div className="lg:col-span-2 space-y-6">
             
-            {/* コンテスト成績 */}
-            <section className="bg-white border border-gray-300 rounded-sm shadow-sm p-6">
-              <h2 className="text-lg font-bold text-black mb-4 flex items-center gap-2">
-                <span className="text-xl">🏆</span> Contest History
+            {/* 統計ダッシュボード */}
+            <div className="grid grid-cols-2 gap-4">
+              <div className="bg-white border border-gray-300 rounded-sm p-5 shadow-sm hover:border-blue-400 transition-colors">
+                <div className="text-xs font-bold text-gray-500 uppercase mb-2">Total Posts</div>
+                <div className="flex items-end gap-2">
+                  <span className="text-3xl font-bold text-black">{profile.totalPhotos}</span>
+                  <span className="text-sm text-gray-400 mb-1">shots</span>
+                </div>
+              </div>
+              <div className="bg-white border border-gray-300 rounded-sm p-5 shadow-sm hover:border-pink-400 transition-colors">
+                <div className="text-xs font-bold text-gray-500 uppercase mb-2">Total Votes Received</div>
+                <div className="flex items-end gap-2">
+                  <span className="text-3xl font-bold text-black">{profile.totalVotesReceived}</span>
+                  <span className="text-sm text-gray-400 mb-1">votes</span>
+                </div>
+              </div>
+            </div>
+
+            {/* コンテンツエリア（プレースホルダー） */}
+            <div className="bg-white border border-gray-300 rounded-sm shadow-sm p-6 min-h-[300px]">
+              <h2 className="text-lg font-bold text-black mb-4 flex items-center gap-2 border-b border-gray-200 pb-2">
+                <span className="text-xl">⚙️</span> Dashboard
               </h2>
+              
+              <div className="text-center py-12 text-gray-400">
+                 <p className="mb-2">Your recent activity will appear here.</p>
+                 <Link href="/contests" className="text-blue-600 hover:underline text-sm font-bold">
+                   Join a Contest &rarr;
+                 </Link>
+              </div>
+            </div>
 
-              {history.contestResults.length === 0 ? (
-                <p className="text-sm text-gray-500 py-4 text-center bg-gray-50 border border-dashed border-gray-200 rounded-sm">
-                  コンテスト参加履歴はまだありません。
-                </p>
-              ) : (
-                <div className="overflow-x-auto">
-                  <table className="w-full text-sm border-collapse min-w-[600px]">
-                    <thead>
-                      <tr className="bg-gray-100 text-gray-600 border-b border-gray-300">
-                        <th className="py-2 px-4 text-left font-bold">Contest Name</th>
-                        <th className="py-2 px-4 text-center font-bold">Rank</th>
-                        <th className="py-2 px-4 text-right font-bold">Participants</th>
-                        <th className="py-2 px-4 text-right font-bold">Date</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {history.contestResults.map((result, idx) => (
-                        <tr
-                          key={`${result.contestId}-${result.photoId}`}
-                          className={`border-b border-gray-100 hover:bg-blue-50 transition-colors ${idx % 2 === 0 ? 'bg-white' : 'bg-[#FAFAFA]'}`}
-                        >
-                          <td className="py-3 px-4 font-medium text-gray-800">
-                            <Link href={`/contests/announced/${result.contestId}`} className="hover:underline hover:text-blue-600">
-                              {result.contestName}
-                            </Link>
-                          </td>
-                          <td className="py-3 px-4 text-center">
-                            <span className={`inline-block w-12 py-0.5 rounded-sm font-bold text-xs ${
-                                result.rank === 1 ? 'bg-yellow-100 text-yellow-700 border border-yellow-200' : 
-                                result.rank <= 3 ? 'bg-gray-200 text-gray-700' : 'text-gray-600'
-                            }`}>
-                                #{result.rank}
-                            </span>
-                          </td>
-                          <td className="py-3 px-4 text-right text-gray-600 font-mono">
-                            {result.totalParticipants}
-                          </td>
-                          <td className="py-3 px-4 text-right text-gray-500 font-mono">
-                            {new Date(result.heldDate).toLocaleDateString("ja-JP")}
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              )}
-            </section>
-
-            {/* 最近の投稿 */}
-            <section>
-              <h2 className="text-lg font-bold text-black mb-4 flex items-center gap-2">
-                <span className="text-xl">📸</span> Recent Posts
-              </h2>
-
-              {history.recentPublicPosts.length === 0 ? (
-                <div className="bg-white border border-gray-300 rounded-sm p-8 text-center text-gray-500">
-                  公開投稿はまだありません。
-                </div>
-              ) : (
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {history.recentPublicPosts.map((photo) => (
-                    <div
-                      key={photo.photoId}
-                      className="bg-white border border-gray-300 rounded-sm hover:shadow-md transition-all duration-200 group flex flex-col"
-                    >
-                      <div className="relative aspect-[4/3] w-full bg-gray-200 overflow-hidden border-b border-gray-200">
-                        {photo.photoUrl ? (
-                          <Image
-                            src={photo.photoUrl}
-                            alt={photo.title || "User submitted photo"}
-                            fill
-                            unoptimized // ここも重要
-                            className="object-cover group-hover:scale-105 transition-transform duration-500"
-                          />
-                        ) : (
-                            <div className="flex items-center justify-center h-full text-gray-400 text-xs">No Image</div>
-                        )}
-                        <div className="absolute top-0 right-0 bg-black/60 text-white text-xs px-2 py-1 font-mono">
-                            ♥ {photo.totalVotes}
-                        </div>
-                      </div>
-
-                      <div className="p-3 flex flex-col flex-grow">
-                        <h3 className="font-bold text-sm text-gray-900 mb-1 line-clamp-1 group-hover:text-blue-600 transition-colors">
-                            {photo.title}
-                        </h3>
-                        <p className="mt-auto text-xs text-gray-500 font-mono text-right">
-                          {new Date(photo.submissionDate).toLocaleDateString("ja-JP")}
-                        </p>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </section>
           </div>
         </div>
       </div>

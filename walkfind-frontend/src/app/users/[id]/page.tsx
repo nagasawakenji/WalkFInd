@@ -47,7 +47,6 @@ type UserHistoryResponse = {
 };
 
 // --- ヘルパー関数: プロフィール画像のURL解決 ---
-// MyPageのロジックをサーバーサイドで再現
 async function resolveProfileImageUrl(originalUrl: string | null): Promise<string | null> {
   if (!originalUrl) return null;
 
@@ -56,25 +55,36 @@ async function resolveProfileImageUrl(originalUrl: string | null): Promise<strin
     return originalUrl;
   }
 
+  // キーの先頭にスラッシュがある場合の除去（Local/S3共通で念のため処理）
+  const cleanKey = originalUrl.startsWith("/") ? originalUrl.slice(1) : originalUrl;
+
   // ローカル環境: local-storage APIへ向ける
   if (IS_LOCAL) {
-    const cleanKey = originalUrl.startsWith("/") ? originalUrl.slice(1) : originalUrl;
     return `${API_BASE_URL}/local-storage/${cleanKey}`;
   }
 
   // 本番環境(S3): Presigned URLを取得するAPIを叩く
   try {
-    // ※ 公開プロフィールの画像取得用に、認証不要またはサーバー間通信として取得
-    const res = await fetch(`${API_BASE_URL}/upload/presigned-download-url?key=${originalUrl}`, {
+    // 【修正点】URLSearchParamsを使用して正しくエンコードする
+    // "profile-images/xxx" -> "profile-images%2Fxxx" となりサーバーが正しく認識できる
+    const params = new URLSearchParams({ key: cleanKey });
+    const endpoint = `${API_BASE_URL}/upload/presigned-download-url?${params.toString()}`;
+
+    const res = await fetch(endpoint, {
       cache: "no-store",
+      // 注意: 公開ページのためAuthorizationヘッダーはありません。
+      // もしAPIが認証必須で401/403を返す場合、バックエンド側でこのエンドポイントを公開許可する必要があります。
     });
     
     if (res.ok) {
       const data = await res.json();
-      console.log(`PhotoUrl is ${data.photoUrl}`)
+      // console.log(`PhotoUrl resolved: ${data.photoUrl}`); // デバッグ用
       return data.photoUrl; 
     } else {
-      console.warn(`Failed to resolve S3 URL for key: ${originalUrl}, status: ${res.status}`);
+      console.warn(`Failed to resolve S3 URL for key: ${originalUrl}. Status: ${res.status} ${res.statusText}`);
+      // レスポンスボディも確認のためにログ出力（必要に応じて）
+      // const text = await res.text();
+      // console.warn("Error body:", text);
       return null;
     }
   } catch (error) {
