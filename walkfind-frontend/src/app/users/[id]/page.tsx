@@ -1,13 +1,16 @@
+// src/app/users/[id]/page.tsx
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
 
-// ★ 環境変数がうまく読めない時のために、本番URLをここに直書きします
+// ★ 環境変数設定
+const IS_LOCAL = process.env.NODE_ENV !== "production";
+
 const API_BASE_URL =
   process.env.NEXT_PUBLIC_API_BASE_URL ||
-  (process.env.NODE_ENV === "production"
-    ? "https://b591pb4p16.execute-api.ap-northeast-1.amazonaws.com/prod/api/v1"
-    : "http://localhost:8080/api/v1");
+  (IS_LOCAL
+    ? "http://localhost:8080/api/v1"
+    : "https://b591pb4p16.execute-api.ap-northeast-1.amazonaws.com/prod/api/v1");
 
 // --- 型定義 ---
 
@@ -43,21 +46,52 @@ type UserHistoryResponse = {
   recentPublicPosts: PhotoDto[];
 };
 
-// --- API 呼び出し ---
+// --- ヘルパー関数: プロフィール画像のURL解決 ---
+// MyPageのロジックをサーバーサイドで再現
+async function resolveProfileImageUrl(originalUrl: string | null): Promise<string | null> {
+  if (!originalUrl) return null;
 
-async function fetchUserProfile(
-  userId: string
-): Promise<UserPublicProfileResponse> {
+  // すでにhttp(s)で始まる完全なURLならそのまま返す
+  if (originalUrl.startsWith("http")) {
+    return originalUrl;
+  }
+
+  // ローカル環境: local-storage APIへ向ける
+  if (IS_LOCAL) {
+    const cleanKey = originalUrl.startsWith("/") ? originalUrl.slice(1) : originalUrl;
+    return `${API_BASE_URL}/local-storage/${cleanKey}`;
+  }
+
+  // 本番環境(S3): Presigned URLを取得するAPIを叩く
+  try {
+    // ※ 公開プロフィールの画像取得用に、認証不要またはサーバー間通信として取得
+    const res = await fetch(`${API_BASE_URL}/upload/presigned-download-url?key=${originalUrl}`, {
+      cache: "no-store",
+    });
+    
+    if (res.ok) {
+      const data = await res.json();
+      return data.photoUrl; // { photoUrl: "https://s3..." }
+    } else {
+      console.warn(`Failed to resolve S3 URL for key: ${originalUrl}, status: ${res.status}`);
+      return null;
+    }
+  } catch (error) {
+    console.error("Error resolving profile image url:", error);
+    return null;
+  }
+}
+
+// --- データ取得関数 ---
+
+async function fetchUserProfile(userId: string): Promise<UserPublicProfileResponse> {
   const res = await fetch(`${API_BASE_URL}/users/${userId}`, {
     cache: "no-store",
   });
 
-  if (res.status === 404) {
-    notFound();
-  }
+  if (res.status === 404) notFound();
   if (!res.ok) {
-    const errorText = await res.text(); // バックエンドのエラーメッセージを取得
-    console.error(`Backend Error (${res.status}):`, errorText); // Vercelのログに出る
+    const errorText = await res.text();
     throw new Error(`Failed to fetch profile: ${res.status} - ${errorText}`);
   }
 
@@ -69,16 +103,9 @@ async function fetchUserHistory(userId: string): Promise<UserHistoryResponse> {
     cache: "no-store",
   });
 
-  if (res.status === 404) {
-    notFound();
-  }
-
+  if (res.status === 404) notFound();
   if (!res.ok) {
-    console.error("Failed to fetch history, fallback to empty:", res.status);
-    return {
-      contestResults: [],
-      recentPublicPosts: [],
-    };
+    return { contestResults: [], recentPublicPosts: [] };
   }
 
   return res.json();
@@ -93,21 +120,14 @@ interface PageProps {
 export default async function UserPage({ params }: PageProps) {
   const { id: userId } = await params;
 
+  // 1. プロフィールと履歴を並列取得
   const [profile, history] = await Promise.all([
     fetchUserProfile(userId),
     fetchUserHistory(userId),
   ]);
 
-  // プロフィール画像URLがキーの場合は /api/v1/local-storage/{key} として扱う
-  const profileImageSrc =
-    profile.profileImageUrl &&
-    (profile.profileImageUrl.startsWith("http")
-      ? profile.profileImageUrl
-      : `${API_BASE_URL}/local-storage/${
-          profile.profileImageUrl.startsWith("/")
-            ? profile.profileImageUrl.slice(1)
-            : profile.profileImageUrl
-        }`);
+  // 2. プロフィール画像URLを解決 (ローカル/S3の分岐処理)
+  const profileImageSrc = await resolveProfileImageUrl(profile.profileImageUrl);
 
   return (
     <main className="min-h-screen bg-[#F5F5F5] font-sans text-[#333]">
@@ -120,6 +140,7 @@ export default async function UserPage({ params }: PageProps) {
         <span className="text-sm text-white font-medium">Users</span>
         <span className="mx-2 text-gray-500">/</span>
         <span className="text-sm text-gray-300">{profile.userId}</span>
+        {IS_LOCAL && <span className="ml-4 text-xs bg-blue-600 px-2 py-0.5 rounded">LOCAL MODE</span>}
       </nav>
 
       <div className="max-w-6xl mx-auto px-4 pb-12">
@@ -134,7 +155,7 @@ export default async function UserPage({ params }: PageProps) {
                     src={profileImageSrc}
                     alt={profile.nickname ?? "Profile"}
                     fill
-                    unoptimized
+                    unoptimized // 外部URL(S3/Local)を表示するために必須
                     className="object-cover"
                   />
                 ) : (
@@ -158,7 +179,7 @@ export default async function UserPage({ params }: PageProps) {
               )}
             </div>
 
-            {/* サマリカード（モバイルでは下に、PCでは左サイドバーの下に配置） */}
+            {/* 統計サマリカード */}
             <div className="bg-white border border-gray-300 rounded-sm shadow-sm overflow-hidden">
                 <div className="p-3 border-b border-gray-200 bg-gray-50 text-xs font-bold text-gray-500 uppercase">
                     Statistics
@@ -213,7 +234,9 @@ export default async function UserPage({ params }: PageProps) {
                           className={`border-b border-gray-100 hover:bg-blue-50 transition-colors ${idx % 2 === 0 ? 'bg-white' : 'bg-[#FAFAFA]'}`}
                         >
                           <td className="py-3 px-4 font-medium text-gray-800">
-                            {result.contestName}
+                            <Link href={`/contests/announced/${result.contestId}`} className="hover:underline hover:text-blue-600">
+                              {result.contestName}
+                            </Link>
                           </td>
                           <td className="py-3 px-4 text-center">
                             <span className={`inline-block w-12 py-0.5 rounded-sm font-bold text-xs ${
@@ -260,7 +283,7 @@ export default async function UserPage({ params }: PageProps) {
                             src={photo.photoUrl}
                             alt={photo.title || "User submitted photo"}
                             fill
-                            unoptimized
+                            unoptimized // ここも重要
                             className="object-cover group-hover:scale-105 transition-transform duration-500"
                           />
                         ) : (
