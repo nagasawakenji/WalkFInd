@@ -1,4 +1,4 @@
-// src/app/page.tsx
+// src/app/contests/page.tsx
 export const dynamic = "force-dynamic";
 import Link from 'next/link';
 import { apiClient } from '@/lib/axios';
@@ -19,11 +19,9 @@ interface ContestIconListResponse {
 }
 
 // データの取得処理 (Server Component)
-// データの取得処理 (Server Component)
 async function getContests(): Promise<ContestResponse[]> {
   try {
     // ① コンテスト一覧取得
-    // apiClient が「dataだけ返すラッパ」ならこのままでOK
     const contests: ContestResponse[] = await apiClient.get('/contests');
 
     if (!contests || contests.length === 0) {
@@ -39,7 +37,7 @@ async function getContests(): Promise<ContestResponse[]> {
     try {
       const iconList: ContestIconListResponse = await apiClient.get(
         `/contest-icons`,
-        { params: { ids: idsParam } } // => /contest-icons?ids=1,2,3
+        { params: { ids: idsParam } }
       );
 
       iconMap = new Map(
@@ -47,7 +45,6 @@ async function getContests(): Promise<ContestResponse[]> {
       );
     } catch (e) {
       console.error('Failed to fetch contest icons:', e);
-      // アイコン取得に失敗してもコンテスト一覧自体は返したいので握りつぶす
     }
 
     // ④ アイコン URL を contests にマージ
@@ -69,7 +66,7 @@ export default async function HomePage() {
 
   return (
     <main className="min-h-screen bg-[#F5F5F5] font-sans text-[#333]">
-      {/* AtCoder風 黒いナビゲーションバー（共通パーツとして想定） */}
+      {/* AtCoder風 黒いナビゲーションバー */}
       <nav className="bg-black text-white h-12 flex items-center px-4 lg:px-8 mb-6 shadow-sm">
         <Link href="/" className="font-bold text-lg tracking-tight hover:text-gray-300 transition">
           WalkFind
@@ -77,10 +74,10 @@ export default async function HomePage() {
       </nav>
 
       <div className="container mx-auto px-4 pb-12">
-        {/* メインコンテンツエリア：白背景のパネル風 */}
+        {/* メインコンテンツエリア */}
         <div className="bg-white rounded-sm border border-gray-300 p-6 md:p-8 shadow-sm">
           
-          {/* 見出し：下線付きで区切りを明確に */}
+          {/* 見出し */}
           <div className="border-b border-gray-200 mb-6 pb-2">
             <h1 className="text-2xl font-bold text-black">
               開催中のフォトコンテスト
@@ -99,18 +96,28 @@ export default async function HomePage() {
                   key={contest.contestId}
                   className="block group"
                 >
-                  {/* カード：フラットなデザイン、ホバーで枠線色変化 */}
-                  <div className="h-full bg-white border border-gray-300 rounded-sm transition duration-200 hover:border-blue-400 hover:bg-blue-50/10 flex flex-col">
+                  {/* カード */}
+                  <div className="h-full bg-white border border-gray-300 rounded-sm transition duration-200 hover:border-blue-400 hover:bg-blue-50/10 flex flex-col overflow-hidden">
                     
-                    {/* サムネイルエリア */}
-                    <div className="h-40 bg-gray-100 border-b border-gray-200 flex items-center justify-center group-hover:opacity-90">
-                      {/* サムネイルがあれば画像を表示、なければプレースホルダー（ContestIcon） */}
-                      <ContestIcon iconUrl={contest.iconUrl} size={64} />
+                    <div className="relative h-64 bg-gray-100 border-b border-gray-200 group-hover:opacity-90">
+                      {contest.iconUrl ? (
+                        // 画像がある場合：imgタグで領域いっぱいに表示(object-cover)
+                        <img 
+                          src={contest.iconUrl} 
+                          alt={contest.name}
+                          className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
+                        />
+                      ) : (
+                        // 画像がない場合：以前と同様に中央揃えでプレースホルダーを表示（サイズを少し大きく調整）
+                        <div className="w-full h-full flex items-center justify-center bg-gray-50 text-gray-400">
+                          <ContestIcon iconUrl={null} size={100} />
+                        </div>
+                      )}
                     </div>
 
                     <div className="p-4 flex flex-col flex-grow">
                       <div className="flex justify-between items-start mb-2">
-                        {/* ステータスバッジ：Bootstrap風の角ばったデザイン */}
+                        {/* ステータスバッジ */}
                         <span className="text-xs font-bold text-white bg-green-600 px-2 py-0.5 rounded-sm">
                           {contest.status}
                         </span>
@@ -119,12 +126,12 @@ export default async function HomePage() {
                         </span>
                       </div>
 
-                      {/* タイトル：リンクカラー（青）を使用 */}
+                      {/* タイトル */}
                       <h2 className="text-lg font-bold mb-2 text-blue-600 group-hover:underline decoration-blue-600 underline-offset-2 line-clamp-2">
                         {contest.name}
                       </h2>
                       
-                      {/* テーマ：説明文 */}
+                      {/* テーマ */}
                       <div className="mt-auto pt-2 border-t border-dashed border-gray-200">
                         <p className="text-gray-600 text-sm line-clamp-2">
                           <span className="font-bold text-gray-400 text-xs mr-1">THEME:</span>

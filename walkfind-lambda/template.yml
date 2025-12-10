@@ -68,6 +68,7 @@ Resources:
     Properties:
       FunctionName: WalkFindUserApi
       CodeUri: .
+      AutoPublishAlias: live
       Handler: nagasawakenji.walkfind.handler.StreamLambdaHandler::handleRequest
       Environment:
         Variables:
@@ -265,6 +266,12 @@ Resources:
             Path: /api/v1/contest-icons/{proxy+}
             Method: ANY
             RestApiId: !Ref WalkFindApi
+
+      # =======================================================
+      # レイテンシ改善(コールドスタート対策)
+      # =======================================================
+      SnapStart:
+        ApplyOn: PublishedVersions
 
   ResultCalculationFunction:
     Type: AWS::Serverless::Function

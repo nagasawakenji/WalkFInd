@@ -34,6 +34,7 @@ public class ContestResultController {
                                                                        @RequestParam(value = "size", defaultValue = "20") int size) {
 
         ContestResultListResponse response = resultDisplayService.getFinalResults(contestId, page, size);
+        handlePhotoUrl(response);
 
         // 結果が空の場合でも 200 OK と空リストを返す (コンテストは存在するが投稿がなかった場合など)
         return ResponseEntity.ok(response);
@@ -46,6 +47,8 @@ public class ContestResultController {
     public ResponseEntity<ContestWinnerListResponse> getContestWinner(@PathVariable("contestId") Long contestId) {
 
         ContestWinnerListResponse response = resultDisplayService.getFinalWinners(contestId);
+
+        handleWinnerPhotoUrl(response);
 
         return ResponseEntity.ok(response);
     }
@@ -82,7 +85,7 @@ public class ContestResultController {
     }
 
     /**
-     * photoUrl をローカルストレージのダウンロードURLに変換
+     * photoUrl をS3のダウンロードURLに変換
      */
     private void handlePhotoUrl(ContestResultListResponse response) {
         response.getContestResultResponses().forEach(result -> {
@@ -94,7 +97,7 @@ public class ContestResultController {
     }
 
     /**
-     * 優勝作品一覧の photoUrl をローカルストレージのダウンロードURLに変換
+     * 優勝作品一覧の photoUrl をS3のダウンロードURLに変換
      */
     private void handleWinnerPhotoUrl(ContestWinnerListResponse response) {
         response.getWinners().forEach(winner -> {
