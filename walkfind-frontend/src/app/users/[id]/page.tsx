@@ -71,7 +71,8 @@ async function resolveProfileImageUrl(originalUrl: string | null): Promise<strin
     
     if (res.ok) {
       const data = await res.json();
-      return data.photoUrl; // { photoUrl: "https://s3..." }
+      console.log(`PhotoUrl is ${data.photoUrl}`)
+      return data.photoUrl; 
     } else {
       console.warn(`Failed to resolve S3 URL for key: ${originalUrl}, status: ${res.status}`);
       return null;
