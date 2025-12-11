@@ -46,6 +46,12 @@ type UserHistoryResponse = {
   recentPublicPosts: PhotoDto[];
 };
 
+// レスポンスの型定義（JavaのPresignedUrlResponseに対応）
+type PresignedUrlResponse = {
+  key: string;
+  photoUrl: string; // JavaのURL型はJSONでは文字列になります
+};
+
 // --- ヘルパー関数: プロフィール画像のURL解決 ---
 async function resolveProfileImageUrl(originalUrl: string | null): Promise<string | null> {
   if (!originalUrl) return null;
@@ -65,26 +71,21 @@ async function resolveProfileImageUrl(originalUrl: string | null): Promise<strin
 
   // 本番環境(S3): Presigned URLを取得するAPIを叩く
   try {
-    // 【修正点】URLSearchParamsを使用して正しくエンコードする
-    // "profile-images/xxx" -> "profile-images%2Fxxx" となりサーバーが正しく認識できる
+    // URLSearchParamsを使用してクエリパラメータを正しくエンコードする
+    // これにより "profile-images/xxx.png" が正しくサーバーに伝わります
     const params = new URLSearchParams({ key: cleanKey });
     const endpoint = `${API_BASE_URL}/upload/presigned-download-url?${params.toString()}`;
 
+    // SecurityConfigで許可されたため、認証ヘッダーなしで取得可能
     const res = await fetch(endpoint, {
       cache: "no-store",
-      // 注意: 公開ページのためAuthorizationヘッダーはありません。
-      // もしAPIが認証必須で401/403を返す場合、バックエンド側でこのエンドポイントを公開許可する必要があります。
     });
     
     if (res.ok) {
-      const data = await res.json();
-      // console.log(`PhotoUrl resolved: ${data.photoUrl}`); // デバッグ用
+      const data: PresignedUrlResponse = await res.json();
       return data.photoUrl; 
     } else {
-      console.warn(`Failed to resolve S3 URL for key: ${originalUrl}. Status: ${res.status} ${res.statusText}`);
-      // レスポンスボディも確認のためにログ出力（必要に応じて）
-      // const text = await res.text();
-      // console.warn("Error body:", text);
+      console.warn(`Failed to resolve S3 URL for key: ${originalUrl}. Status: ${res.status}`);
       return null;
     }
   } catch (error) {
@@ -138,7 +139,11 @@ export default async function UserPage({ params }: PageProps) {
   ]);
 
   // 2. プロフィール画像URLを解決 (ローカル/S3の分岐処理)
+  // ここでAPIを叩いてS3の署名付きURLへ変換します
   const profileImageSrc = await resolveProfileImageUrl(profile.profileImageUrl);
+
+  // 表示名またはIDの最初の文字（アイコン用）
+  const initial = (profile.nickname ?? profile.userId)[0]?.toUpperCase() ?? "U";
 
   return (
     <main className="min-h-screen bg-[#F5F5F5] font-sans text-[#333]">
@@ -166,12 +171,12 @@ export default async function UserPage({ params }: PageProps) {
                     src={profileImageSrc}
                     alt={profile.nickname ?? "Profile"}
                     fill
-                    unoptimized // 外部URL(S3/Local)を表示するために必須
+                    unoptimized // S3の署名付きURLは外部ドメインのため必須
                     className="object-cover"
                   />
                 ) : (
                   <div className="flex items-center justify-center h-full text-4xl text-gray-400 font-bold bg-gray-100">
-                    {(profile.nickname ?? profile.userId)[0]?.toUpperCase() ?? "U"}
+                    {initial}
                   </div>
                 )}
               </div>
@@ -294,7 +299,7 @@ export default async function UserPage({ params }: PageProps) {
                             src={photo.photoUrl}
                             alt={photo.title || "User submitted photo"}
                             fill
-                            unoptimized // ここも重要
+                            unoptimized
                             className="object-cover group-hover:scale-105 transition-transform duration-500"
                           />
                         ) : (

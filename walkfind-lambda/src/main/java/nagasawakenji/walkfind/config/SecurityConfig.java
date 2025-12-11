@@ -50,6 +50,7 @@ public class SecurityConfig {
 
                         .requestMatchers(HttpMethod.GET, "/api/v1/contest-icons/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/v1/upload/presigned-url").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/v1/upload/presigned-download-url").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/v1/upload/**").authenticated() // Presigned URL発行は認証必須
 
                         // それ以外は認証必須
