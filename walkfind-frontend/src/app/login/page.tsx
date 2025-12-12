@@ -2,19 +2,7 @@
 
 import Link from 'next/link';
 
-// ★ 本番・ローカルのデフォルトURL（必要なら書き換え）
-const DEFAULT_COGNITO_LOGIN_URL_PROD =
-  'https://ap-northeast-1lvczdifp6.auth.ap-northeast-1.amazoncognito.com/login?client_id=uut2o2ikg67fvhvll2ae3268o&response_type=code&scope=email+openid+phone&redirect_uri=https%3A%2F%2Fwalkfind.vercel.app%2Fauth%2Fcallback';
-
-const DEFAULT_COGNITO_LOGIN_URL_DEV =
-  'https://walkfind-auth.auth.ap-northeast-1.amazoncognito.com/login?client_id=3n38j4erbgfcanu6v9n87he38r&response_type=code&scope=email+openid+phone&redirect_uri=http%3A%2F%2Flocalhost%3A3000%2Fauth%2Fcallback';
-
-// ★ env → なければ NODE_ENV でデフォルト
-const COGNITO_LOGIN_URL =
-  process.env.NEXT_PUBLIC_COGNITO_LOGIN_URL ||
-  (process.env.NODE_ENV === 'production'
-    ? DEFAULT_COGNITO_LOGIN_URL_PROD
-    : DEFAULT_COGNITO_LOGIN_URL_DEV);
+const COGNITO_LOGIN_URL = process.env.NEXT_PUBLIC_COGNITO_LOGIN_URL
 
 export default function LoginPage() {
   return (
