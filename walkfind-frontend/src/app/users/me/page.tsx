@@ -7,15 +7,9 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { fetchAuthSession } from 'aws-amplify/auth';
 
-// ★ 環境変数または NODE_ENV でローカル判定
-const IS_LOCAL = process.env.NODE_ENV !== 'production';
-
-// APIのベースURL設定
-const API_BASE_URL =
-  process.env.NEXT_PUBLIC_API_BASE_URL ||
-  (IS_LOCAL
-    ? "http://localhost:8080/api/v1"
-    : "https://b591pb4p16.execute-api.ap-northeast-1.amazonaws.com/prod/api/v1");
+// 環境変数
+const IS_LOCAL = process.env.NEXT_PUBLIC_IS_LOCAL;
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL;
 
 interface UserProfileResponse {
   userId: string;

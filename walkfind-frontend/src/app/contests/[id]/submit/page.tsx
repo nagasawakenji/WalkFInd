@@ -8,6 +8,10 @@ import axios from 'axios';
 import { uploadImage } from '@/lib/upload'; 
 import { fetchAuthSession } from 'aws-amplify/auth';
 
+// 環境変数
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL;
+const IS_LOCAL = process.env.NEXT_PUBLIC_IS_LOCAL;
+
 interface PageProps {
   params: Promise<{ id: string }>;
 }
@@ -72,17 +76,6 @@ export default function SubmitPhotoPage({ params }: PageProps) {
         }
         return;
       }
-
-      // ★ URL設定: 環境変数が読めない時のためのフォールバック
-      const API_BASE_URL =
-        process.env.NEXT_PUBLIC_API_BASE_URL ||
-        (process.env.NODE_ENV === "production"
-          ? "https://b591pb4p16.execute-api.ap-northeast-1.amazonaws.com/prod/api/v1"
-          : "http://localhost:8080/api/v1");
-        
-      // ★ IS_LOCAL設定: NODE_ENV を見て判定 (本番なら false になる)
-      // Vercel上では NODE_ENV は必ず 'production' になるため、これで安全に分岐できます
-      const IS_LOCAL = process.env.NODE_ENV !== 'production';
 
       console.log(`Submitting to: ${API_BASE_URL}, Mode: ${IS_LOCAL ? 'Local' : 'Production'}`);
 

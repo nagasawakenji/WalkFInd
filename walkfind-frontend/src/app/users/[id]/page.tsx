@@ -3,17 +3,11 @@ import { notFound } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
 
-// ★ 環境変数設定
-const IS_LOCAL = process.env.NODE_ENV !== "production";
-
-const API_BASE_URL =
-  process.env.NEXT_PUBLIC_API_BASE_URL ||
-  (IS_LOCAL
-    ? "http://localhost:8080/api/v1"
-    : "https://b591pb4p16.execute-api.ap-northeast-1.amazonaws.com/prod/api/v1");
+// 環境変数設定
+const IS_LOCAL = process.env.NEXT_PUBLIC_IS_LOCAL;
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL;
 
 // --- 型定義 ---
-
 type UserPublicProfileResponse = {
   userId: string;
   nickname: string | null;

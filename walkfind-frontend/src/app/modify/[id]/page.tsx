@@ -5,18 +5,8 @@ import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import axios, { AxiosError } from 'axios';
 
-// ★ 環境変数がうまく読めない時のために、本番URLをここに直書きします
-const API_BASE_URL =
-  process.env.NEXT_PUBLIC_API_BASE_URL ||
-  (process.env.NODE_ENV === "production"
-    ? "https://b591pb4p16.execute-api.ap-northeast-1.amazonaws.com/prod/api/v1"
-    : "http://localhost:8080/api/v1");
-
-const COGNITO_LOGIN_URL =
-  process.env.NEXT_PUBLIC_COGNITO_LOGIN_URL ||
-  (process.env.NODE_ENV === "production"
-    ? "https://ap-northeast-1lvczdifp6.auth.ap-northeast-1.amazoncognito.com/login?client_id=uut2o2ikg67fvhvll2ae3268o&response_type=code&scope=email+openid+phone&redirect_uri=https://walkfind.vercel.app/auth/callback"
-    : "http://localhost:3000/login"); // ローカル開発時にHosted UIを使わない場合は /login など
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL;
+const COGNITO_LOGIN_URL = process.env.NEXT_PUBLIC_COGNITO_LOGIN_URL;
 
 // コンテスト詳細の型
 interface ContestDetailResponse {

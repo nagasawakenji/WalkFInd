@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { signOut } from 'aws-amplify/auth';
 
 // Cognito Hosted UI のログアウトURL（環境変数から取得）
-const COGNITO_LOGOUT_URL = process.env.NEXT_PUBLIC_COGNITO_LOGOUT_URL ?? '';
+const COGNITO_LOGOUT_URL = process.env.NEXT_PUBLIC_COGNITO_LOGOUT_URL;
 
 export default function LogoutPage() {
   const router = useRouter();
