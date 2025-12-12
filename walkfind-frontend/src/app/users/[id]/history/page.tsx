@@ -2,11 +2,7 @@ import { notFound } from "next/navigation";
 
 // ★ 環境変数がうまく読めない時のために、本番URLをここに直書きします
 // 末尾に /api/v1 を含んでいるため、呼び出し側では /users/... のように続けます
-const API_BASE_URL =
-  process.env.NEXT_PUBLIC_API_BASE_URL ||
-  (process.env.NODE_ENV === "production"
-    ? "https://b591pb4p16.execute-api.ap-northeast-1.amazonaws.com/prod/api/v1"
-    : "http://localhost:8080/api/v1");
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL;
 
 type ContestResultDto = {
   contestId: string;
