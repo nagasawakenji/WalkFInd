@@ -3,10 +3,11 @@
 import { useEffect, useState, FormEvent } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
-import axios, { AxiosError } from 'axios';
+import axios, { isAxiosError } from 'axios';
+import { api } from '@/lib/api';
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL;
-const COGNITO_LOGIN_URL = process.env.NEXT_PUBLIC_COGNITO_LOGIN_URL;
+// 環境変数（文字列なので boolean 化）
+const IS_LOCAL = process.env.NEXT_PUBLIC_IS_LOCAL === 'true';
 
 // コンテスト詳細の型
 interface ContestDetailResponse {
@@ -95,15 +96,24 @@ export default function ModifyContestDetailPage() {
       setLoading(true);
       setError(null);
       try {
-        const res = await axios.get<ContestDetailResponse>(`${API_BASE_URL}/contests/${contestId}`);
+        const res = await api.get<ContestDetailResponse>(`/contests/${contestId}`);
         const data = res.data;
         setContest(data);
         setName(data.name);
         setTheme(data.theme);
         setStartDateInput(toLocalInputValue(data.startDate));
         setEndDateInput(toLocalInputValue(data.endDate));
-      } catch (err) {
-        console.error(err);
+      } catch (err: unknown) {
+        if (isAxiosError(err)) {
+          const status = err.response?.status;
+          console.error(err.response);
+          if (status === 401) {
+            redirectToLogin();
+            return;
+          }
+        } else {
+          console.error(err);
+        }
         setError('コンテスト情報の取得に失敗しました');
       } finally {
         setLoading(false);
@@ -118,13 +128,22 @@ export default function ModifyContestDetailPage() {
     const fetchIcon = async () => {
       setIconLoading(true);
       try {
-        const res = await axios.get<ContestIconListResponse>(`${API_BASE_URL}/contest-icons`, {
+        const res = await api.get<ContestIconListResponse>('/contest-icons', {
           params: { ids: contestId },
         });
         const icon = res.data.icons[0];
         setIconUrl(icon?.iconUrl ?? null);
-      } catch (err) {
-        console.error(err);
+      } catch (err: unknown) {
+        if (isAxiosError(err)) {
+          const status = err.response?.status;
+          console.error(err.response);
+          if (status === 401) {
+            redirectToLogin();
+            return;
+          }
+        } else {
+          console.error(err);
+        }
       } finally {
         setIconLoading(false);
       }
@@ -132,25 +151,14 @@ export default function ModifyContestDetailPage() {
     fetchIcon();
   }, [contestId]);
 
-  const getTokenOrRedirect = (): string | null => {
-    // フロント側でのみ実行される前提
-    const token = typeof window !== 'undefined' ? localStorage.getItem('access_token') : null;
-
-    if (!token) {
-      const currentPath = typeof window !== 'undefined' ? window.location.pathname : '/';
+  const redirectToLogin = () => {
+    const currentPath = typeof window !== 'undefined' ? window.location.pathname : '/';
+    try {
       localStorage.setItem('redirect_after_login', currentPath);
-
-      // ★ 修正: 定数 COGNITO_LOGIN_URL を使用する
-      if (COGNITO_LOGIN_URL) {
-        window.location.href = COGNITO_LOGIN_URL;
-      } else {
-        // 万が一URL設定がない場合の安全策（ローカルのログインページへ）
-        router.push('/login');
-      }
-      return null;
+    } catch {
+      // ignore
     }
-
-    return token;
+    router.replace('/login');
   };
 
   const handleSubmit = async (e: FormEvent) => {
@@ -168,22 +176,24 @@ export default function ModifyContestDetailPage() {
       return;
     }
 
-    const token = getTokenOrRedirect();
-    if (!token) {
-      setSaving(false);
-      return;
-    }
-
     try {
-      const res = await axios.put<UpdatingContestResponse>(
-        `${API_BASE_URL}/contests/${contestId}`,
-        { name, theme, startDate: startIso, endDate: endIso },
-        { headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' } }
+      const res = await api.put<UpdatingContestResponse>(
+        `/contests/${contestId}`,
+        { name, theme, startDate: startIso, endDate: endIso }
       );
       setMessage(res.data.message ?? '更新しました');
       setContest((prev) => prev ? { ...prev, name, theme, startDate: startIso, endDate: endIso } : prev);
-    } catch (err) {
-      console.error(err);
+    } catch (err: unknown) {
+      if (isAxiosError(err)) {
+        const status = err.response?.status;
+        console.error(err.response);
+        if (status === 401) {
+          redirectToLogin();
+          return;
+        }
+      } else {
+        console.error(err);
+      }
       setError('更新に失敗しました');
     } finally {
       setSaving(false);
@@ -208,14 +218,9 @@ export default function ModifyContestDetailPage() {
   const handleIconUpload = async () => {
     if (!contestId || !iconFile) return;
 
-    const token = getTokenOrRedirect();
-    if (!token) return;
-
     setIconLoading(true);
     setIconMessage(null);
 
-    // 環境判定: 本番(production)以外なら true
-    const IS_LOCAL = process.env.NODE_ENV !== 'production';
     console.log(`[IconUpload] Mode: ${IS_LOCAL ? 'Local' : 'Production'}`);
 
     try {
@@ -227,15 +232,9 @@ export default function ModifyContestDetailPage() {
         // バックエンドの @RequestParam("file") に合わせる
         formData.append('file', iconFile);
 
-        const res = await axios.post<ContestIconResponse>(
-          `${API_BASE_URL}/contest-icons/${contestId}`,
-          formData,
-          {
-            headers: {
-              Authorization: `Bearer ${token}`,
-              // ★重要: Content-Type は指定しない (Axiosがboundary付きで自動設定する)
-            },
-          }
+        const res = await api.post<ContestIconResponse>(
+          `/contest-icons/${contestId}`,
+          formData
         );
 
         const data = res.data;
@@ -259,16 +258,12 @@ export default function ModifyContestDetailPage() {
         // ★ contentType が空の場合のフォールバックを追加
         const mimeType = iconFile.type || 'application/octet-stream';
 
-        const presignRes = await axios.get<PresignedUrlResponse>(
-          `${API_BASE_URL}/upload/presigned-url`,
-          {
-            params: { 
-              key: baseKey,
-              contentType: mimeType // ここで変数を渡す
-             },
-            headers: { Authorization: `Bearer ${token}` },
-          }
-        );
+        const presignRes = await api.get<PresignedUrlResponse>('/upload/presigned-url', {
+          params: {
+            key: baseKey,
+            contentType: mimeType,
+          },
+        });
 
         const { photoUrl: uploadUrl, key: finalS3Key } = presignRes.data;
 
@@ -281,15 +276,9 @@ export default function ModifyContestDetailPage() {
         });
 
         // Step 3: DB更新 (完了通知)
-        const registerRes = await axios.post<ContestIconResponse>(
-          `${API_BASE_URL}/contest-icons/${contestId}`,
-          { key: finalS3Key }, // DTOのフィールド名に合わせる
-          {
-            headers: {
-              Authorization: `Bearer ${token}`,
-              'Content-Type': 'application/json',
-            },
-          }
+        const registerRes = await api.post<ContestIconResponse>(
+          `/contest-icons/${contestId}`,
+          { key: finalS3Key }
         );
 
         const data = registerRes.data;
@@ -302,10 +291,17 @@ export default function ModifyContestDetailPage() {
         }
       }
 
-    } catch (err) {
+    } catch (err: unknown) {
       console.error('Failed to upload icon', err);
-      if (axios.isAxiosError(err) && err.response) {
-        console.error('Error detail:', err.response.data);
+      if (isAxiosError(err)) {
+        const status = err.response?.status;
+        if (err.response) {
+          console.error('Error detail:', err.response.data);
+        }
+        if (status === 401) {
+          redirectToLogin();
+          return;
+        }
       }
       setIconMessage('アップロード中にエラーが発生しました');
     } finally {
@@ -317,17 +313,11 @@ export default function ModifyContestDetailPage() {
     if (!contestId) return;
     if (!window.confirm('削除しますか？')) return;
 
-    const token = getTokenOrRedirect();
-    if (!token) return;
-
     setIconLoading(true);
     setIconMessage(null);
 
     try {
-      const res = await axios.delete<ContestIconResponse>(
-        `${API_BASE_URL}/contest-icons/${contestId}`,
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
+      const res = await api.delete<ContestIconResponse>(`/contest-icons/${contestId}`);
       const data = res.data;
       if (data.success) {
         setIconUrl(null);
@@ -336,8 +326,17 @@ export default function ModifyContestDetailPage() {
       } else {
         setIconMessage(data.message ?? '削除失敗');
       }
-    } catch (err) {
-      console.error(err);
+    } catch (err: unknown) {
+      if (isAxiosError(err)) {
+        const status = err.response?.status;
+        console.error(err.response);
+        if (status === 401) {
+          redirectToLogin();
+          return;
+        }
+      } else {
+        console.error(err);
+      }
       setIconMessage('削除エラー');
     } finally {
       setIconLoading(false);
