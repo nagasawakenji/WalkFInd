@@ -38,17 +38,23 @@ public class CognitoAuthController {
                 .maxAge(token.getExpiresIn())
                 .build();
 
-        // レスポンスボディには refreshToken を含めない
+        // access_token も HttpOnly Cookie にセット
+        ResponseCookie accessCookie = ResponseCookie.from("access_token", token.getAccessToken())
+                .httpOnly(true)
+                .secure(true)
+                .path("/")
+                .sameSite("Lax")
+                .maxAge(token.getExpiresIn())
+                .build();
+
+        // レスポンスボディには refreshToken accessToken を含めない
         CognitoTokenResponse safeResponse = CognitoTokenResponse.builder()
-                .idToken(token.getIdToken())
-                .accessToken(token.getAccessToken())
-                .expiresIn(token.getExpiresIn())
-                .refreshToken(null)
                 .build();
 
         return ResponseEntity
                 .status(HttpStatus.OK)
                 .header(HttpHeaders.SET_COOKIE, refreshCookie.toString())
+                .header(HttpHeaders.SET_COOKIE, accessCookie.toString())
                 .body(safeResponse);
     }
 
