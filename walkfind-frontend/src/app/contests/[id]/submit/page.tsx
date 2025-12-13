@@ -1,16 +1,14 @@
 'use client';
 
-import { useState, ChangeEvent, FormEvent, use } from 'react';
+import { useState, type ChangeEvent, type FormEvent, use } from 'react';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
 import Link from 'next/link';
-import axios from 'axios'; 
-import { uploadImage } from '@/lib/upload'; 
-import { fetchAuthSession } from 'aws-amplify/auth';
+import axios, { isAxiosError } from 'axios';
+import { api } from '@/lib/api';
 
 // 環境変数
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL;
-const IS_LOCAL = process.env.NEXT_PUBLIC_IS_LOCAL;
+const IS_LOCAL = process.env.NEXT_PUBLIC_IS_LOCAL === 'true';
 
 interface PageProps {
   params: Promise<{ id: string }>;
@@ -62,79 +60,89 @@ export default function SubmitPhotoPage({ params }: PageProps) {
     setErrorMessage('');
 
     try {
-      const token = typeof window !== 'undefined' ? localStorage.getItem('access_token') : null;
-      if (!token) {
-        // ログインしていない場合のリダイレクト処理
-        const currentPath = window.location.pathname;
-        localStorage.setItem("redirect_after_login", currentPath);
-
-        const loginUrl = process.env.NEXT_PUBLIC_COGNITO_LOGIN_URL;
-        if (loginUrl) {
-          window.location.href = loginUrl;
-        } else {
-          router.push('/login');
-        }
-        return;
-      }
-
-      console.log(`Submitting to: ${API_BASE_URL}, Mode: ${IS_LOCAL ? 'Local' : 'Production'}`);
+      console.log(`[SubmitPhoto] Mode: ${IS_LOCAL ? 'Local' : 'Production'}`);
 
       if (IS_LOCAL) {
         // ローカル環境: FormDataで直接送信
         const formData = new FormData();
         const requestDto = {
           contestId: Number(contestId),
-          photoUrl: "local", // ローカル時はバックエンド側で無視されるか、適当な値でOK
-          title: title,
-          description: description,
+          photoUrl: 'local',
+          title,
+          description,
         };
 
-        // JSONパートをBlobとして追加
         formData.append(
-          "request",
+          'request',
           new Blob([JSON.stringify(requestDto)], {
-            type: "application/json",
+            type: 'application/json',
           })
         );
-        formData.append("file", file);
+        formData.append('file', file);
 
-        await axios.post(`${API_BASE_URL}/photos`, formData, {
-          headers: {
-            Authorization: `Bearer ${token}`,
-            // Axiosが自動で boundary を設定するので Content-Type は指定しない
+        // Cookie認証（HttpOnly）で送る。Content-Type はAxiosが自動で設定。
+        await api.post('/photos', formData);
+      } else {
+        // 本番環境 (AWS): S3 Presigned URL 方式
+        const mimeType = file.type || 'application/octet-stream';
+        const key = `contest-photos/${contestId}/${Date.now()}_${file.name}`;
+
+        // 1) 署名付きアップロードURLを取得（Cookie認証）
+        const presignRes = await api.get<{ photoUrl: string; key: string }>('/upload/presigned-url', {
+          params: {
+            key,
+            contentType: mimeType,
           },
         });
 
-      } else {
-        // 本番環境 (AWS): S3 Presigned URL 方式
-        // 1. S3に画像をアップロードしてキーを取得
-        const photoKey = await uploadImage(file, contestId, token);
+        const { photoUrl: uploadUrl, key: finalS3Key } = presignRes.data;
 
-        // 2. メタデータをDBに登録
-        await axios.post(
-          `${API_BASE_URL}/photos`,
-          {
-            contestId: Number(contestId),
-            title: title,
-            description: description,
-            photoUrl: photoKey, // S3のキーを渡す
+        // 2) S3へ直接PUT（S3のURLは別ドメインなので api ではなく axios を使う）
+        await axios.put(uploadUrl, file, {
+          headers: {
+            'Content-Type': mimeType,
           },
-          {
-            headers: { Authorization: `Bearer ${token}` },
-          }
-        );
+        });
+
+        // 3) メタデータをDBに登録（Cookie認証）
+        await api.post('/photos', {
+          contestId: Number(contestId),
+          title,
+          description,
+          photoUrl: finalS3Key,
+        });
       }
 
       alert('投稿が完了しました！');
       router.push(`/contests/${contestId}/photos`);
 
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('Submission failed:', error);
-      
-      let msg = '投稿に失敗しました。再度お試しください。';
-      if (axios.isAxiosError(error) && error.response?.data?.message) {
-        msg = error.response.data.message;
+
+      // 未ログイン/期限切れ
+      if (isAxiosError(error) && error.response?.status === 401) {
+        const currentPath = typeof window !== 'undefined' ? window.location.pathname : `/contests/${contestId}/submit`;
+        try {
+          localStorage.setItem('redirect_after_login', currentPath);
+        } catch {
+          // ignore
+        }
+        router.replace('/login');
+        return;
       }
+
+      let msg = '投稿に失敗しました。再度お試しください。';
+
+      if (isAxiosError(error)) {
+        const data = error.response?.data as unknown;
+        if (data && typeof data === 'object' && 'message' in data) {
+          const maybeMessage = (data as { message?: unknown }).message;
+          if (typeof maybeMessage === 'string' && maybeMessage.length > 0) {
+            msg = maybeMessage;
+          }
+        }
+      }
+
       setErrorMessage(msg);
     } finally {
       setIsSubmitting(false);

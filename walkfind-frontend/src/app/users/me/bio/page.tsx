@@ -1,54 +1,26 @@
 'use client';
 
-import { useState, FormEvent, useEffect } from 'react';
-import axios, { AxiosError } from 'axios';
-import { fetchAuthSession } from 'aws-amplify/auth';
+import { useState, FormEvent } from 'react';
+import { isAxiosError } from 'axios';
+import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import { api } from '@/lib/api';
 
-// ★ 環境変数または NODE_ENV でローカル判定
-const IS_LOCAL = process.env.NODE_ENV !== 'production';
-
-// APIのベースURL設定
-const API_BASE_URL =
-  process.env.NEXT_PUBLIC_API_BASE_URL ||
-  (IS_LOCAL
-    ? "http://localhost:8080/api/v1"
-    : "https://b591pb4p16.execute-api.ap-northeast-1.amazonaws.com/prod/api/v1");
+// 環境変数（文字列なので boolean 化）
+const IS_LOCAL = process.env.NEXT_PUBLIC_IS_LOCAL === 'true';
 
 export default function EditBioPage() {
   const [bio, setBio] = useState('');
   const [loading, setLoading] = useState(false);
   const [successMessage, setSuccessMessage] = useState('');
   const [errorMessage, setErrorMessage] = useState('');
-
-  // トークン取得関数 (画像ページと同じロジック)
-  const getToken = async (): Promise<string | null> => {
-    try {
-      const session = await fetchAuthSession();
-      if (session.tokens?.idToken) {
-        return session.tokens.idToken.toString();
-      }
-    } catch (e) {
-      console.warn('fetchAuthSession failed, checking localStorage');
-    }
-    if (typeof window !== 'undefined') {
-      return window.localStorage.getItem('access_token');
-    }
-    return null;
-  };
+  const router = useRouter();
 
   const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setLoading(true);
     setSuccessMessage('');
     setErrorMessage('');
-
-    const token = await getToken();
-    if (!token) {
-      setErrorMessage('ログイン情報が取得できませんでした。まずログインしてください。');
-      setLoading(false);
-      return;
-    }
 
     try {
       console.log(`[BioUpdate] Mode: ${IS_LOCAL ? 'Local' : 'Production'}`);
@@ -58,25 +30,27 @@ export default function EditBioPage() {
       // 本番: UserProfileController (/api/v1/me/profile/bio)
       const endpointPath = IS_LOCAL ? '/profile/bio' : '/me/profile/bio';
 
-      await axios.patch(
-        `${API_BASE_URL}${endpointPath}`,
-        { bio },
-        {
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${token}`,
-          },
-        },
-      );
+      await api.patch(endpointPath, { bio });
 
       setSuccessMessage('自己紹介文を更新しました。');
-    } catch (err) {
-      const axiosError = err as AxiosError;
-      if (axiosError.response) {
-        console.error('update bio error response:', axiosError.response);
-        setErrorMessage(`更新に失敗しました: ${axiosError.response.status}`);
+    } catch (err: unknown) {
+      if (isAxiosError(err)) {
+        const status = err.response?.status;
+        console.error('update bio error response:', err.response);
+
+        if (status === 401) {
+          // 未ログイン/期限切れ
+          localStorage.setItem('redirect_after_login', '/users/me/bio');
+          router.replace('/login');
+          return;
+        }
+
+        setErrorMessage(`更新に失敗しました: ${status ?? 'unknown'}`);
+      } else if (err instanceof Error) {
+        console.error('update bio error:', err);
+        setErrorMessage(err.message);
       } else {
-        console.error('update bio network error:', err);
+        console.error('update bio unknown error:', err);
         setErrorMessage('ネットワークエラーが発生しました。接続状況を確認してください。');
       }
     } finally {

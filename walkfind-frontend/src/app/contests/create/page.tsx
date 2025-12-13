@@ -1,9 +1,9 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, type ChangeEvent, type FormEvent } from 'react';
 import { useRouter } from 'next/navigation';
-import axios from 'axios';
-import { fetchAuthSession } from 'aws-amplify/auth';
+import { isAxiosError } from 'axios';
+import { api } from '@/lib/api';
 
 // 型定義
 interface CreatingContestRequest {
@@ -28,8 +28,12 @@ interface CreatingContestResponse {
     message: string;
 }
 
-// 環境変数
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL;
+const isCreationContestStatus = (v: unknown): v is CreationContestStatus =>
+  v === 'SUCCESS' ||
+  v === 'NAME_DUPLICATED' ||
+  v === 'INVALID_DATE' ||
+  v === 'FAILED' ||
+  v === 'INTERNAL_SEVER_ERROR';
 
 export default function CreatingContestPage() {
     const router = useRouter();
@@ -44,35 +48,18 @@ export default function CreatingContestPage() {
     });
 
     // 入力変更時のハンドラ
-    const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    const handleChange = (e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
         const { name, value } = e.target;
         setFormData((prev) => ({...prev, [name]: value}));
     }
 
     // 送信ハンドラ
-    const handleSubmit = async (e: React.FormEvent) => {
+    const handleSubmit = async (e: FormEvent) => {
         e.preventDefault();
         setLoading(true);
         setErrorMessage(null);
 
         try {
-            // ローカル・本番共通で access_token を localStorage から取得
-            const token = localStorage.getItem('access_token');
-
-            if (!token) {
-                // トークンがない場合はログインへリダイレクト
-                const currentPath = window.location.pathname;
-                localStorage.setItem('redirect_after_login', currentPath);
-
-                const loginUrl = process.env.NEXT_PUBLIC_COGNITO_LOGIN_URL;
-                if (loginUrl) {
-                    window.location.href = loginUrl;
-                } else {
-                    router.push('/login');
-                }
-                return;
-            }
-
             // 日付の変換の実行
             const startIso = new Date(formData.startDate).toISOString();
             const endIso = new Date(formData.endDate).toISOString();
@@ -85,16 +72,7 @@ export default function CreatingContestPage() {
             };
 
             // APIリクエスト
-            const res = await axios.post<CreatingContestResponse>(
-                `${API_BASE_URL}/contests`,
-                requestBody,
-                {
-                    headers: {
-                        Authorization: `Bearer ${token}`,
-                        'Content-Type': 'application/json',
-                    },
-                }
-            );
+            const res = await api.post<CreatingContestResponse>('/contests', requestBody);
 
             const resData = res.data;
 
@@ -108,12 +86,43 @@ export default function CreatingContestPage() {
         } catch (error: unknown) {
             console.error('Create contest error:', error);
 
-            // Axiosのエラーレスポンスを解析
-            if (axios.isAxiosError(error) && error.response?.data) {
-                const resData = error.response.data as CreatingContestResponse;
-                handleBackendError(resData.status, resData.message);
+            if (isAxiosError(error)) {
+                const statusCode = error.response?.status;
+
+                // 未ログイン/期限切れ
+                if (statusCode === 401) {
+                    const currentPath = typeof window !== 'undefined' ? window.location.pathname : '/contests/create';
+                    try {
+                        localStorage.setItem('redirect_after_login', currentPath);
+                    } catch {
+                        // ignore
+                    }
+                    router.replace('/login');
+                    return;
+                }
+
+                // バックエンドがCreatingContestResponse形式で返している場合はそれを優先
+                const data = error.response?.data as Partial<CreatingContestResponse> | undefined;
+                if (data && typeof data === 'object' && 'status' in data) {
+                    const status = (data as { status?: unknown }).status;
+                    const message = (data as { message?: unknown }).message;
+
+                    if (isCreationContestStatus(status)) {
+                        handleBackendError(status, typeof message === 'string' ? message : '');
+                    } else {
+                        setErrorMessage(`コンテストの作成に失敗しました: ${statusCode ?? 'unknown'}`);
+                    }
+                } else {
+                    setErrorMessage(`コンテストの作成に失敗しました: ${statusCode ?? 'unknown'}`);
+                }
+
+                return;
+            }
+
+            if (error instanceof Error) {
+                setErrorMessage(error.message);
             } else {
-                setErrorMessage('ネットワークエラーが発生しました。サーバーが起動しているか確認してください。');
+                setErrorMessage('ネットワークエラーが発生しました。接続状況を確認してください。');
             }
         } finally {
             setLoading(false);

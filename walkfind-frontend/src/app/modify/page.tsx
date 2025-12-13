@@ -2,10 +2,10 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import axios, { AxiosError } from 'axios';
+import { isAxiosError } from 'axios';
+import { useRouter } from 'next/navigation';
+import { api } from '@/lib/api';
 import ContestIcon from '@/components/ContestIcon';
-
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL;
 
 // コンテスト一覧のレスポンス型（必要な項目のみ）
 interface ContestResponse {
@@ -43,6 +43,8 @@ export default function ModifyContestListPage() {
   const [error, setError] = useState<string | null>(null);
   const [actionMessage, setActionMessage] = useState<string | null>(null);
 
+  const router = useRouter();
+
   // 開催中コンテスト一覧の取得
   useEffect(() => {
     const fetchContests = async () => {
@@ -52,7 +54,7 @@ export default function ModifyContestListPage() {
       try {
         // ★ 必要に応じてクエリパラメータやパスを既存APIに合わせて修正してください
         // 例: /contests?status=IN_PROGRESS や /contests/active など
-        const res = await axios.get<ContestResponse[]>(`${API_BASE_URL}/contests`, {
+        const res = await api.get<ContestResponse[]>('/contests', {
           params: { status: 'IN_PROGRESS' },
         });
         const contestsData = res.data;
@@ -63,12 +65,9 @@ export default function ModifyContestListPage() {
         if (contestsData.length > 0) {
           try {
             const idsParam = contestsData.map((c) => c.contestId).join(',');
-            const iconRes = await axios.get<ContestIconListResponse>(
-              `${API_BASE_URL}/contest-icons`,
-              {
-                params: { ids: idsParam },
-              }
-            );
+            const iconRes = await api.get<ContestIconListResponse>('/contest-icons', {
+              params: { ids: idsParam },
+            });
 
             const iconMap = new Map<number, string | null>();
             iconRes.data.icons.forEach((icon) => {
@@ -86,9 +85,21 @@ export default function ModifyContestListPage() {
         }
 
         setContests(contestsWithIcon);
-      } catch (err) {
-        const e = err as AxiosError;
-        console.error('Failed to fetch contests', e);
+      } catch (err: unknown) {
+        if (isAxiosError(err)) {
+          const status = err.response?.status;
+          console.error('Failed to fetch contests', err.response);
+
+          if (status === 401) {
+            // 未ログイン/期限切れ
+            localStorage.setItem('redirect_after_login', '/modify');
+            router.replace('/login');
+            return;
+          }
+        } else {
+          console.error('Failed to fetch contests', err);
+        }
+
         setError('コンテスト一覧の取得に失敗しました');
       } finally {
         setLoading(false);
@@ -96,7 +107,7 @@ export default function ModifyContestListPage() {
     };
 
     fetchContests();
-  }, []);
+  }, [router]);
 
   // コンテスト削除
   const handleDelete = async (contestId: number) => {
@@ -106,7 +117,7 @@ export default function ModifyContestListPage() {
     setActionMessage(null);
 
     try {
-      const res = await axios.delete<DeletingContestResponse>(`${API_BASE_URL}/contests/${contestId}`);
+      const res = await api.delete<DeletingContestResponse>(`/contests/${contestId}`);
       const data = res.data;
 
       if (data.status === 'SUCCESS') {
@@ -115,9 +126,20 @@ export default function ModifyContestListPage() {
       } else {
         setActionMessage(data.message ?? 'コンテストの削除に失敗しました');
       }
-    } catch (err) {
-      const e = err as AxiosError;
-      console.error('Failed to delete contest', e);
+    } catch (err: unknown) {
+      if (isAxiosError(err)) {
+        const status = err.response?.status;
+        console.error('Failed to delete contest', err.response);
+
+        if (status === 401) {
+          localStorage.setItem('redirect_after_login', '/modify');
+          router.replace('/login');
+          return;
+        }
+      } else {
+        console.error('Failed to delete contest', err);
+      }
+
       setActionMessage('コンテストの削除中にエラーが発生しました');
     }
   };

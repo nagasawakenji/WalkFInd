@@ -3,8 +3,7 @@
 import { useState, useEffect, use } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
-import axios, { AxiosError } from 'axios';
-import { fetchAuthSession } from 'aws-amplify/auth';
+import axios from 'axios';
 
 // 型定義
 interface PhotoDisplayResponse {
@@ -21,8 +20,12 @@ interface PageProps {
   params: Promise<{ id: string }>;
 }
 
+interface PhotoListResponse {
+  photoResponses: PhotoDisplayResponse[];
+  totalCount: number;
+}
 
-// 写真削除APIのレスポンス型（Java側のDelete用DTOに対応）
+// 写真削除APIのレスポンス型（バックエンドのDelete用DTOに対応）
 type DeletePhotoStatus =
   | 'SUCCESS'
   | 'NOT_FOUND'
@@ -36,11 +39,41 @@ interface DeletingPhotoResponse {
   message?: string;
 }
 
+// /users/me は多くのフィールドを返しますが、このページでは userId だけ使う
+interface UserMeResponse {
+  userId: string;
+}
 
+// APIエラー形（message が返る場合に備える）
+type ApiErrorResponse = {
+  message?: string;
+};
 
-// 環境変数
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL;
+// 環境変数（未設定時のフォールバック込み）
+const IS_LOCAL = process.env.NODE_ENV !== 'production';
+const API_BASE_URL =
+  process.env.NEXT_PUBLIC_API_BASE_URL ||
+  (IS_LOCAL
+    ? 'http://localhost:8080/api/v1'
+    : 'https://b591pb4p16.execute-api.ap-northeast-1.amazonaws.com/prod/api/v1');
 
+const COGNITO_LOGIN_URL = process.env.NEXT_PUBLIC_COGNITO_LOGIN_URL;
+
+// HttpOnly Cookie を送るため withCredentials を常に true
+const api = axios.create({
+  baseURL: API_BASE_URL,
+  withCredentials: true,
+});
+
+function extractApiErrorMessage(err: unknown): string | null {
+  if (!axios.isAxiosError(err)) return null;
+  const data = err.response?.data as unknown;
+  if (!data || typeof data !== 'object') return null;
+  if ('message' in data && typeof (data as ApiErrorResponse).message === 'string') {
+    return (data as ApiErrorResponse).message ?? null;
+  }
+  return null;
+}
 
 export default function PhotoListPage({ params }: PageProps) {
   const resolvedParams = use(params);
@@ -54,6 +87,19 @@ export default function PhotoListPage({ params }: PageProps) {
 
   const [page, setPage] = useState(0);
   const [size] = useState(18); // 3の倍数にしてグリッドの並びを綺麗にするため調整
+
+  const redirectToLogin = () => {
+    if (typeof window === 'undefined') return;
+    const currentPath = window.location.pathname + window.location.search;
+    // トークンは保存しないが、ログイン後の復帰先は保存してOK
+    window.localStorage.setItem('redirect_after_login', currentPath);
+
+    if (COGNITO_LOGIN_URL) {
+      window.location.href = COGNITO_LOGIN_URL;
+    } else {
+      window.location.href = '/login';
+    }
+  };
 
   console.log('[PhotoListPage] render', {
     contestId,
@@ -73,8 +119,8 @@ export default function PhotoListPage({ params }: PageProps) {
       console.log('[fetchPhotos] start', { contestId, page, size });
       try {
         setIsLoading(true);
-        const res = await axios.get(`${API_BASE_URL}/contests/${contestId}/photos`, {
-          params: { page, size }
+        const res = await api.get<PhotoListResponse>(`/contests/${contestId}/photos`, {
+          params: { page, size },
         });
 
         console.log('[fetchPhotos] success', {
@@ -102,14 +148,23 @@ export default function PhotoListPage({ params }: PageProps) {
     fetchPhotos();
   }, [contestId, page, size]);
 
-  // ログインユーザーIDをローカルストレージから取得（キー名は環境に合わせて調整してください）
+  // ログイン中なら /users/me から userId を取得（未ログインなら 401 なので無視）
   useEffect(() => {
-    if (typeof window === 'undefined') return;
-    const storedUserId = localStorage.getItem('user_id');
-    console.log('[currentUserId effect] storedUserId =', storedUserId);
-    if (storedUserId) {
-      setCurrentUserId(storedUserId);
-    }
+    const fetchMe = async () => {
+      try {
+        const res = await api.get<UserMeResponse>('/users/me');
+        setCurrentUserId(res.data.userId);
+      } catch (err) {
+        if (axios.isAxiosError(err) && err.response?.status === 401) {
+          // 未ログイン
+          setCurrentUserId(null);
+          return;
+        }
+        console.error('[fetchMe] error', err);
+      }
+    };
+
+    fetchMe();
   }, []);
 
   // 投票ボタンクリック時の処理
@@ -119,31 +174,11 @@ export default function PhotoListPage({ params }: PageProps) {
     setVotingId(photoId);
 
     try {
-      // 応急処置、将来的にamplifyにする
-      const token = typeof window !== 'undefined' ? localStorage.getItem('access_token') : null;
-      if (!token) {
-        const loginUrl = process.env.NEXT_PUBLIC_COGNITO_LOGIN_URL;
-        if (loginUrl) {
-          const currentPath = window.location.pathname + window.location.search;
-          localStorage.setItem("redirect_after_login", currentPath);
-          window.location.href = loginUrl;
-        }
-        return;
-      }
-
-      console.log('[handleVote] sending request', {
-        contestId: Number(contestId),
-        photoId,
-        hasToken: !!token,
-      });
-
-      await axios.post(`${API_BASE_URL}/votes`, 
-        { 
-          contestId: Number(contestId), 
-          photoId: photoId 
-        },
+      await api.post(
+        '/votes',
         {
-          headers: { Authorization: `Bearer ${token}` }
+          contestId: Number(contestId),
+          photoId,
         }
       );
 
@@ -164,6 +199,10 @@ export default function PhotoListPage({ params }: PageProps) {
           status: error.response?.status,
           data: error.response?.data,
         });
+        if (error.response?.status === 401) {
+          redirectToLogin();
+          return;
+        }
       } else {
         console.error('[handleVote] unknown error', error);
       }
@@ -188,29 +227,7 @@ export default function PhotoListPage({ params }: PageProps) {
     setDeletingId(photoId);
 
     try {
-      const token = localStorage.getItem('access_token');
-      if (!token) {
-        const loginUrl = process.env.NEXT_PUBLIC_COGNITO_LOGIN_URL;
-        if (loginUrl) {
-          const currentPath = window.location.pathname + window.location.search;
-          localStorage.setItem('redirect_after_login', currentPath);
-          window.location.href = loginUrl;
-        }
-        return;
-      }
-
-      console.log('[handleDelete] sending delete request', {
-        photoId,
-        hasToken: !!token,
-        url: `${API_BASE_URL}/photos/${photoId}`,
-      });
-
-      const res = await axios.delete<DeletingPhotoResponse>(
-        `${API_BASE_URL}/photos/${photoId}`,
-        {
-          headers: { Authorization: `Bearer ${token}` },
-        }
-      );
+      const res = await api.delete<DeletingPhotoResponse>(`/photos/${photoId}`);
 
       console.log('[handleDelete] response', {
         status: res.status,
@@ -233,13 +250,14 @@ export default function PhotoListPage({ params }: PageProps) {
           status: error.response?.status,
           data: error.response?.data,
         });
+        if (error.response?.status === 401) {
+          redirectToLogin();
+          return;
+        }
       } else {
         console.error('[handleDelete] unknown error', error);
       }
-      let msg = '写真の削除中にエラーが発生しました。';
-      if (axios.isAxiosError(error) && error.response?.data?.message) {
-        msg = error.response.data.message;
-      }
+      const msg = extractApiErrorMessage(error) ?? '写真の削除中にエラーが発生しました。';
       alert(msg);
     } finally {
       setDeletingId(null);

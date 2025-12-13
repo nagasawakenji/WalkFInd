@@ -1,13 +1,13 @@
 'use client';
 
 import { useState, FormEvent, ChangeEvent } from 'react';
-import axios, { AxiosError } from 'axios';
-import { fetchAuthSession } from 'aws-amplify/auth';
+import axios, { isAxiosError } from 'axios';
+import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import { api } from '@/lib/api';
 
-// 環境変数
-const IS_LOCAL = process.env.NEXT_PUBLIC_IS_LOCAL;
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL;
+// 環境変数（文字列なので boolean 化）
+const IS_LOCAL = process.env.NEXT_PUBLIC_IS_LOCAL === 'true';
 
 // Presigned URLのレスポンス型定義 (本番用)
 interface PresignedUrlResponse {
@@ -23,21 +23,7 @@ export default function EditProfileImagePage() {
   const [file, setFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
 
-  // トークン取得
-  const getToken = async (): Promise<string | null> => {
-    try {
-      const session = await fetchAuthSession();
-      if (session.tokens?.idToken) {
-        return session.tokens.idToken.toString();
-      }
-    } catch (e) {
-      console.warn('fetchAuthSession failed, checking localStorage');
-    }
-    if (typeof window !== 'undefined') {
-      return window.localStorage.getItem('access_token');
-    }
-    return null;
-  };
+  const router = useRouter();
 
   const handleFileChange = (e: ChangeEvent<HTMLInputElement>) => {
     const selectedFile = e.target.files?.[0] ?? null;
@@ -54,13 +40,6 @@ export default function EditProfileImagePage() {
     setLoading(true);
     setSuccessMessage('');
     setErrorMessage('');
-
-    const token = await getToken();
-    if (!token) {
-      setErrorMessage('ログイン情報が取得できませんでした。まずログインしてください。');
-      setLoading(false);
-      return;
-    }
 
     try {
       if (!file && !profileImageKey) {
@@ -80,13 +59,7 @@ export default function EditProfileImagePage() {
           const formData = new FormData();
           formData.append('file', file);
 
-          await axios.put(
-            `${API_BASE_URL}/profile/profile-image`, 
-            formData,
-            {
-              headers: { Authorization: `Bearer ${token}` },
-            }
-          );
+          await api.put('/profile/profile-image', formData);
         } else {
            if (profileImageKey) {
              console.warn("ローカル環境でのキー直接指定更新は現在サポートされていません");
@@ -105,16 +78,12 @@ export default function EditProfileImagePage() {
           const uniqueFileName = `profile-images/${Date.now()}_${file.name}`;
           
           // Presigned URL取得
-          const presignRes = await axios.get<PresignedUrlResponse>(
-            `${API_BASE_URL}/upload/presigned-url`,
-            {
-              params: {
-                key: uniqueFileName,
-                contentType: file.type || 'application/octet-stream'
-              },
-              headers: { Authorization: `Bearer ${token}` },
-            }
-          );
+          const presignRes = await api.get<PresignedUrlResponse>('/upload/presigned-url', {
+            params: {
+              key: uniqueFileName,
+              contentType: file.type || 'application/octet-stream',
+            },
+          });
 
           const { photoUrl: uploadUrl, key: generatedKey } = presignRes.data;
 
@@ -128,16 +97,7 @@ export default function EditProfileImagePage() {
         }
 
         // 2. DB更新 (PATCH)
-        await axios.patch(
-          `${API_BASE_URL}/me/profile/image`, 
-          { profileImageUrl: targetKey },
-          {
-            headers: {
-              'Content-Type': 'application/json',
-              Authorization: `Bearer ${token}`,
-            },
-          },
-        );
+        await api.patch('/me/profile/image', { profileImageUrl: targetKey });
       }
 
       setSuccessMessage('プロフィール画像を更新しました。');
@@ -145,11 +105,19 @@ export default function EditProfileImagePage() {
       setPreviewUrl(null);
       setProfileImageKey('');
 
-    } catch (err) {
-      const axiosError = err as AxiosError;
-      if (axiosError.response) {
-        console.error('Update error response:', axiosError.response);
-        setErrorMessage(`更新に失敗しました: ${axiosError.response.status}`);
+    } catch (err: unknown) {
+      if (isAxiosError(err)) {
+        const status = err.response?.status;
+        console.error('Update error response:', err.response);
+
+        if (status === 401) {
+          // 未ログイン/期限切れ
+          localStorage.setItem('redirect_after_login', '/users/me/image');
+          router.replace('/login');
+          return;
+        }
+
+        setErrorMessage(`更新に失敗しました: ${status ?? 'unknown'}`);
       } else if (err instanceof Error) {
         setErrorMessage(err.message);
       } else {
