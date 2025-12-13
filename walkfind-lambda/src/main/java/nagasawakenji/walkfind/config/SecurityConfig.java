@@ -1,5 +1,7 @@
 package nagasawakenji.walkfind.config;
 
+import jakarta.servlet.http.Cookie;
+import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.annotation.Bean;
@@ -12,7 +14,9 @@ import org.springframework.security.config.annotation.web.configurers.AbstractHt
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationConverter;
 import org.springframework.security.oauth2.server.resource.authentication.JwtGrantedAuthoritiesConverter;
+import org.springframework.security.oauth2.server.resource.web.BearerTokenResolver;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.util.StringUtils;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
@@ -35,11 +39,16 @@ public class SecurityConfig {
                 // 1. ここでcorsConfigurationSource Beanが自動的に適用されます
                 .cors(Customizer.withDefaults())
 
-                .oauth2ResourceServer(oauth2 -> oauth2.jwt(Customizer.withDefaults()))
+                .oauth2ResourceServer(oauth2 -> oauth2
+                                .bearerTokenResolver(bearerTokenResolver())
+                                .jwt(jwt -> jwt.jwtAuthenticationConverter(jwtAuthenticationConverter()))
+                        )
                 .authorizeHttpRequests(auth -> auth
                         // ★【最重要】OPTIONSメソッド（Preflight）を無条件で全許可する
                         // これがないとブラウザの事前確認が403/401ではじかれます
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
+
+                        .requestMatchers("/api/v1/auth/me").authenticated()
 
                         // /users/me はemailなどが記載されるため、認証が必要
                         .requestMatchers("/api/v1/users/me").authenticated()
@@ -97,5 +106,27 @@ public class SecurityConfig {
         jwtConverter.setJwtGrantedAuthoritiesConverter(converter);
 
         return jwtConverter;
+    }
+
+    /**
+     * HttpCookie から access_token を取り出すためのリゾルバー
+     */
+    @Bean
+    public BearerTokenResolver bearerTokenResolver() {
+        return new BearerTokenResolver() {
+            @Override
+            public String resolve(HttpServletRequest request) {
+                Cookie[] cookies = request.getCookies();
+                if (cookies == null) return null;
+
+                for (Cookie c: cookies) {
+                    if ("access_token".equals(c.getName()) && StringUtils.hasText(c.getValue())) {
+                        return c.getValue();
+                    }
+                }
+
+                return null;
+            }
+        };
     }
 }
