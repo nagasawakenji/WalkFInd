@@ -2,11 +2,13 @@ name: Flyway migrate
 
 on:
   push:
-    branches: [ "main" ]
+    branches: ["main"]
     paths:
+      - "walkfind-common/src/main/resources/db/migration/**"
       - "walkfind-lambda/src/main/resources/db/migration/**"
-      - "walkfind-lambda/pom.xml"
       - "flyway.properties"
+      - ".github/workflows/flyway-migrate.yml"
+  workflow_dispatch: {}
 
 jobs:
   migrate:
@@ -23,15 +25,17 @@ jobs:
           java-version: "17"
           cache: maven
 
+      - name: Ensure mvnw is executable
+        run: chmod +x ./mvnw
+
       - name: Flyway migrate
-        working-directory: walkfind-lambda
         env:
           FLYWAY_URL: ${{ secrets.FLYWAY_URL }}
           FLYWAY_USER: ${{ secrets.FLYWAY_USER }}
           FLYWAY_PASSWORD: ${{ secrets.FLYWAY_PASSWORD }}
         run: |
-          ../mvnw -q org.flywaydb:flyway-maven-plugin:10.22.0:migrate \
-            -Dflyway.configFiles=../flyway.properties \
-            -DFLYWAY_URL="${FLYWAY_URL}" \
-            -DFLYWAY_USER="${FLYWAY_USER}" \
-            -DFLYWAY_PASSWORD="${FLYWAY_PASSWORD}"
+          ./mvnw -q org.flywaydb:flyway-maven-plugin:10.22.0:migrate \
+            -Dflyway.url="$FLYWAY_URL" \
+            -Dflyway.user="$FLYWAY_USER" \
+            -Dflyway.password="$FLYWAY_PASSWORD" \
+            -Dflyway.locations="filesystem:walkfind-common/src/main/resources/db/migration,filesystem:walkfind-lambda/src/main/resources/db/migration"
