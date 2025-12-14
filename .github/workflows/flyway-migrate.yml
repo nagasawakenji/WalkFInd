@@ -34,8 +34,17 @@ jobs:
           FLYWAY_USER: ${{ secrets.FLYWAY_USER }}
           FLYWAY_PASSWORD: ${{ secrets.FLYWAY_PASSWORD }}
         run: |
-          ./mvnw -q org.flywaydb:flyway-maven-plugin:9.22.3:migrate \
+          set -euo pipefail
+
+          LOCATIONS="filesystem:walkfind-common/src/main/resources/db/migration"
+          if [ -d "walkfind-lambda/src/main/resources/db/migration" ]; then
+            LOCATIONS="$LOCATIONS,filesystem:walkfind-lambda/src/main/resources/db/migration"
+          fi
+
+          # Run Flyway only in the walkfind-common module (reactor builds required deps)
+          ./mvnw -q -pl walkfind-common -am \
+            org.flywaydb:flyway-maven-plugin:9.22.3:migrate \
             -Dflyway.url="$FLYWAY_URL" \
             -Dflyway.user="$FLYWAY_USER" \
             -Dflyway.password="$FLYWAY_PASSWORD" \
-            -Dflyway.locations="filesystem:walkfind-common/src/main/resources/db/migration,filesystem:walkfind-lambda/src/main/resources/db/migration"
+            -Dflyway.locations="$LOCATIONS"
