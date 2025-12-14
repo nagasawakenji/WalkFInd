@@ -29,7 +29,7 @@ interface PhotoListResponse {
 type DeletePhotoStatus =
   | 'SUCCESS'
   | 'NOT_FOUND'
-  | 'BUSINESS_RULE_VIOLATION'
+  | 'FORBIDDEN'
   | 'FAILED'
   | 'INTERNAL_SERVER_ERROR';
 

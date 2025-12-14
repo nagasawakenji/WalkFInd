@@ -2,6 +2,7 @@ package nagasawakenji.walkfind.service;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.model.DeleteObjectRequest;
@@ -13,7 +14,8 @@ public class S3DeleteService {
 
     private final S3Client s3Client;
 
-    private final String bucket = "walkfind-photos";
+    @Value("${S3_BUCKET_NAME}")
+    private String bucket;
 
     public void delete(String key) {
         s3Client.deleteObject(DeleteObjectRequest.builder()
