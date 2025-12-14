@@ -34,7 +34,7 @@ jobs:
           FLYWAY_USER: ${{ secrets.FLYWAY_USER }}
           FLYWAY_PASSWORD: ${{ secrets.FLYWAY_PASSWORD }}
         run: |
-          ./mvnw -q org.flywaydb:flyway-maven-plugin:10.22.0:migrate \
+          ./mvnw -q org.flywaydb:flyway-maven-plugin:9.22.3:migrate \
             -Dflyway.url="$FLYWAY_URL" \
             -Dflyway.user="$FLYWAY_USER" \
             -Dflyway.password="$FLYWAY_PASSWORD" \

@@ -14,7 +14,7 @@
         <aws.sdk.version>2.24.4</aws.sdk.version>
         <!-- Lombokのバージョンを一箇所で管理 -->
         <lombok.version>1.18.30</lombok.version>
-        <flyway.version>10.22.0</flyway.version>
+        <flyway.version>9.22.3</flyway.version>
     </properties>
 
     <groupId>nagasawakenji.walkfind</groupId>
@@ -50,6 +50,19 @@
                 <artifactId>java-jwt</artifactId>
                 <version>4.4.0</version>
             </dependency>
+
+            <dependency>
+                <groupId>org.flywaydb</groupId>
+                <artifactId>flyway-core</artifactId>
+                <version>${flyway.version}</version>
+            </dependency>
+
+            <!-- JDBCドライバ -->
+            <dependency>
+                <groupId>org.postgresql</groupId>
+                <artifactId>postgresql</artifactId>
+                <version>42.7.4</version>
+            </dependency>
         </dependencies>
     </dependencyManagement>
 
@@ -75,7 +88,13 @@
             <plugin>
                 <groupId>org.flywaydb</groupId>
                 <artifactId>flyway-maven-plugin</artifactId>
-                <version>${flyway.version}</version>
+                <dependencies>
+                    <dependency>
+                        <groupId>org.postgresql</groupId>
+                        <artifactId>postgresql</artifactId>
+                        <version>42.7.4</version>
+                    </dependency>
+                </dependencies>
             </plugin>
         </plugins>
     </build>
