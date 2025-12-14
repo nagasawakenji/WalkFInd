@@ -1,60 +1,53 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { fetchAuthSession, signOut } from 'aws-amplify/auth';
+import { signOut } from 'aws-amplify/auth';
 
 const COGNITO_LOGIN_URL = process.env.NEXT_PUBLIC_COGNITO_LOGIN_URL;
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL;
 
 export default function HomePage() {
   const router = useRouter();
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [authChecked, setAuthChecked] = useState(false);
 
+  const lastCheckedAtRef = useRef<number>(0);
   useEffect(() => {
+
     const checkAuth = async () => {
+      // 多重実行ガード（短時間に連続で叩かない）
+      const now = Date.now();
+      if (now - lastCheckedAtRef.current < 800) return;
+      lastCheckedAtRef.current = now;
+
       try {
-        const session = await fetchAuthSession();
-        // accessToken / idToken のどちらかが取得できればログイン状態とみなす
-        const token =
-          session.tokens?.accessToken?.toString() ??
-          session.tokens?.idToken?.toString() ??
-          null;
+        const res = await fetch(`${API_BASE_URL}/users/me`, {
+          method: 'GET',
+          credentials: 'include',
+          headers: {
+            Accept: 'application/json',
+          },
+        });
 
-        if (token) {
-          setIsLoggedIn(true);
-          setAuthChecked(true);
-          return;
-        }
+        setIsLoggedIn(res.ok);
       } catch (e) {
-        console.warn('fetchAuthSession failed on HomePage:', e);
-      }
-
-      // Amplify セッションが取れない場合は localStorage のトークンを確認
-      if (typeof window !== 'undefined') {
-        const storedAccess = window.localStorage.getItem('access_token');
-        const storedId = window.localStorage.getItem('id_token');
-        setIsLoggedIn(!!(storedAccess || storedId));
-      } else {
+        console.warn('auth check failed on HomePage:', e);
         setIsLoggedIn(false);
+      } finally {
+        setAuthChecked(true);
       }
-
-      setAuthChecked(true);
     };
 
     // 初回
     checkAuth();
 
-    // 他タブのログイン/ログアウトや、フォーカス復帰で状態更新
-    const onStorage = () => checkAuth();
+    // フォーカス復帰で状態更新（Cookie更新/期限切れに追従）
     const onFocus = () => checkAuth();
-
-    window.addEventListener('storage', onStorage);
     window.addEventListener('focus', onFocus);
 
     return () => {
-      window.removeEventListener('storage', onStorage);
       window.removeEventListener('focus', onFocus);
     };
   }, []);
@@ -106,17 +99,21 @@ export default function HomePage() {
                   e.preventDefault();
 
                   try {
-                    // Cognito/Amplify側のセッションも確実に破棄
+                    // Amplify側（使っていれば）
                     await signOut();
                   } catch (err) {
                     console.warn('signOut failed:', err);
                   }
 
-                  if (typeof window !== 'undefined') {
-                    window.localStorage.removeItem('access_token');
-                    window.localStorage.removeItem('id_token');
-                    window.localStorage.removeItem('user_id');
-                    window.localStorage.removeItem('redirect_after_login');
+                  // サーバ側Cookieを消す（実装していれば）
+                  try {
+                    await fetch(`${API_BASE_URL}/auth/logout`, {
+                      method: 'POST',
+                      credentials: 'include',
+                    });
+                  } catch (err) {
+                    // logout APIが無い/落ちていてもUIは先に戻す
+                    console.warn('backend logout failed:', err);
                   }
 
                   setIsLoggedIn(false);
