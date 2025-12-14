@@ -4,6 +4,8 @@ on:
   push:
     branches: [ "main" ]
     paths:
+      - "walkfind-common/src/main/resources/db/migration/**"
+      - "walkfind-common/pom.xml"
       - "walkfind-lambda/src/main/resources/db/migration/**"
       - "walkfind-lambda/pom.xml"
       - "flyway.properties"
