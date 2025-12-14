@@ -1,0 +1,37 @@
+name: Flyway migrate
+
+on:
+  push:
+    branches: [ "main" ]
+    paths:
+      - "walkfind-lambda/src/main/resources/db/migration/**"
+      - "walkfind-lambda/pom.xml"
+      - "flyway.properties"
+
+jobs:
+  migrate:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+          cache: maven
+
+      - name: Flyway migrate
+        working-directory: walkfind-lambda
+        env:
+          FLYWAY_URL: ${{ secrets.FLYWAY_URL }}
+          FLYWAY_USER: ${{ secrets.FLYWAY_USER }}
+          FLYWAY_PASSWORD: ${{ secrets.FLYWAY_PASSWORD }}
+        run: |
+          ../mvnw -q org.flywaydb:flyway-maven-plugin:10.22.0:migrate \
+            -Dflyway.configFiles=../flyway.properties \
+            -DFLYWAY_URL="${FLYWAY_URL}" \
+            -DFLYWAY_USER="${FLYWAY_USER}" \
+            -DFLYWAY_PASSWORD="${FLYWAY_PASSWORD}"
