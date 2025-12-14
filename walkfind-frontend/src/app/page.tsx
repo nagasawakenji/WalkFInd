@@ -2,25 +2,15 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { fetchAuthSession } from 'aws-amplify/auth';
+import { useRouter } from 'next/navigation';
+import { fetchAuthSession, signOut } from 'aws-amplify/auth';
 
-// Cognito のログインURL
-// - 環境変数 NEXT_PUBLIC_COGNITO_LOGIN_URL があればそれを優先
-// - それが無い場合、production では本番用プール、development ではローカル用プールを使う
-const DEFAULT_COGNITO_LOGIN_URL_PROD =
-  'https://ap-northeast-1lvczdifp6.auth.ap-northeast-1.amazoncognito.com/login?client_id=uut2o2ikg67fvhvll2ae3268o&response_type=code&scope=email+openid+phone&redirect_uri=https%3A%2F%2Fwalkfind.vercel.app%2Fauth%2Fcallback';
-
-const DEFAULT_COGNITO_LOGIN_URL_DEV =
-  'https://walkfind-auth.auth.ap-northeast-1.amazoncognito.com/login?client_id=3n38j4erbgfcanu6v9n87he38r&response_type=code&scope=email+openid+phone&redirect_uri=http%3A%2F%2Flocalhost%3A3000%2Fauth%2Fcallback';
-
-const COGNITO_LOGIN_URL =
-  process.env.NEXT_PUBLIC_COGNITO_LOGIN_URL ||
-  (process.env.NODE_ENV === 'production'
-    ? DEFAULT_COGNITO_LOGIN_URL_PROD
-    : DEFAULT_COGNITO_LOGIN_URL_DEV);
+const COGNITO_LOGIN_URL = process.env.NEXT_PUBLIC_COGNITO_LOGIN_URL;
 
 export default function HomePage() {
+  const router = useRouter();
   const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [authChecked, setAuthChecked] = useState(false);
 
   useEffect(() => {
     const checkAuth = async () => {
@@ -34,6 +24,7 @@ export default function HomePage() {
 
         if (token) {
           setIsLoggedIn(true);
+          setAuthChecked(true);
           return;
         }
       } catch (e) {
@@ -44,13 +35,28 @@ export default function HomePage() {
       if (typeof window !== 'undefined') {
         const storedAccess = window.localStorage.getItem('access_token');
         const storedId = window.localStorage.getItem('id_token');
-        if (storedAccess || storedId) {
-          setIsLoggedIn(true);
-        }
+        setIsLoggedIn(!!(storedAccess || storedId));
+      } else {
+        setIsLoggedIn(false);
       }
+
+      setAuthChecked(true);
     };
 
+    // 初回
     checkAuth();
+
+    // 他タブのログイン/ログアウトや、フォーカス復帰で状態更新
+    const onStorage = () => checkAuth();
+    const onFocus = () => checkAuth();
+
+    window.addEventListener('storage', onStorage);
+    window.addEventListener('focus', onFocus);
+
+    return () => {
+      window.removeEventListener('storage', onStorage);
+      window.removeEventListener('focus', onFocus);
+    };
   }, []);
 
   return (
@@ -60,9 +66,25 @@ export default function HomePage() {
           <span className="font-bold text-lg tracking-tight">WalkFind</span>
 
           {/* 未ログイン時: ログインボタン */}
-          {!isLoggedIn && (
+          {authChecked && !isLoggedIn && (
             <a
-              href={COGNITO_LOGIN_URL}
+              href={COGNITO_LOGIN_URL ?? '/login'}
+              onClick={(e) => {
+                if (typeof window === 'undefined') return;
+
+                const currentPath = window.location.pathname + window.location.search;
+                window.localStorage.setItem('redirect_after_login', currentPath);
+
+                if (!COGNITO_LOGIN_URL) {
+                  e.preventDefault();
+                  router.push('/login');
+                  return;
+                }
+
+                // Cognito Hosted UIへ確実に遷移（SPA遷移ではなくフルリダイレクト）
+                e.preventDefault();
+                window.location.href = COGNITO_LOGIN_URL;
+              }}
               className="text-xs font-semibold px-3 py-1 rounded border border-gray-500 hover:bg-white hover:text-black transition-colors"
             >
               ログイン
@@ -70,7 +92,7 @@ export default function HomePage() {
           )}
 
           {/* ログイン時: マイページ & ログアウトボタン */}
-          {isLoggedIn && (
+          {authChecked && isLoggedIn && (
             <>
               <Link
                 href="/users/me"
@@ -79,7 +101,27 @@ export default function HomePage() {
                 マイページ
               </Link>
               <Link
-                href="/logout"
+                href="/"
+                onClick={async (e) => {
+                  e.preventDefault();
+
+                  try {
+                    // Cognito/Amplify側のセッションも確実に破棄
+                    await signOut();
+                  } catch (err) {
+                    console.warn('signOut failed:', err);
+                  }
+
+                  if (typeof window !== 'undefined') {
+                    window.localStorage.removeItem('access_token');
+                    window.localStorage.removeItem('id_token');
+                    window.localStorage.removeItem('user_id');
+                    window.localStorage.removeItem('redirect_after_login');
+                  }
+
+                  setIsLoggedIn(false);
+                  router.push('/');
+                }}
                 className="text-xs font-semibold px-3 py-1 rounded border border-red-500 text-red-300 hover:bg-red-500 hover:text-white transition-colors"
               >
                 ログアウト
@@ -137,7 +179,7 @@ export default function HomePage() {
             </Link>
           </div>
 
-          {isLoggedIn && (
+          {authChecked && isLoggedIn && (
             <div className="mt-6 flex justify-center">
               <Link
                 href="/users/me"
