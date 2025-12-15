@@ -37,7 +37,9 @@ export default function ResultPage({ params }: PageProps) {
     const fetchResults = async () => {
       try {
         const res = await axios.get(`${API_BASE_URL}/results/${contestId}`);
-        setResults(res.data.contestResultResponses);
+        console.log("results api raw:", res.data);
+        console.log("contestResultResponses:", res.data?.contestResultResponses);
+        setResults(Array.isArray(res.data?.items) ? res.data.items : []);
       } catch (err) {
         console.error(err);
         
