@@ -19,39 +19,39 @@ import java.util.Map;
 
 
 @RestController
-@RequestMapping("/api/auth")
+@RequestMapping("/api/v1/auth")
 @RequiredArgsConstructor
 public class CognitoAuthController {
 
     private final AuthApplicationService authApplicationService;
 
     @PostMapping("/cognito/login")
-    public ResponseEntity<CognitoTokenResponse> login(
-            @RequestBody @Valid CognitoTokenRequest request
-    ) {
-        CognitoTokenResponse token =
-                authApplicationService.loginWithCognito(request.getCode());
+    public ResponseEntity<CognitoTokenResponse> login(@RequestBody @Valid CognitoTokenRequest request) {
+        CognitoTokenResponse token = authApplicationService.loginWithCognito(request.getCode());
 
-        // refreshToken を HttpOnly Cookie にセット
         ResponseCookie refreshCookie = ResponseCookie.from("refresh_token", token.getRefreshToken())
                 .httpOnly(true)
-                .secure(false) // 本番では true
+                .secure(false)
                 .path("/")
                 .sameSite("Lax")
                 .maxAge(token.getExpiresIn())
                 .build();
 
-        // レスポンスボディには refreshToken を含めない
-        CognitoTokenResponse safeResponse = CognitoTokenResponse.builder()
-                .idToken(token.getIdToken())
-                .accessToken(token.getAccessToken())
-                .expiresIn(token.getExpiresIn())
-                .refreshToken(null)
+        ResponseCookie accessCookie = ResponseCookie.from("access_token", token.getAccessToken())
+                .httpOnly(true)
+                .secure(false)
+                .path("/")
+                .sameSite("Lax")
+                .maxAge(token.getExpiresIn())
                 .build();
+
+        // ローカルでも本番寄せなら、ボディにトークンは返さない方が綺麗
+        CognitoTokenResponse safeResponse = CognitoTokenResponse.builder().build();
 
         return ResponseEntity
                 .status(HttpStatus.OK)
                 .header(HttpHeaders.SET_COOKIE, refreshCookie.toString())
+                .header(HttpHeaders.SET_COOKIE, accessCookie.toString())
                 .body(safeResponse);
     }
 

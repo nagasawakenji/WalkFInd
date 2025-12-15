@@ -103,6 +103,16 @@ Resources:
             RestApiId: !Ref WalkFindApi
 
         # -----------------------------------------
+        # 認証不要：auth（ログアウト）
+        # -----------------------------------------
+        AuthLogout:
+          Type: Api
+          Properties:
+            Path: /api/v1/auth/logout
+            Method: ANY
+            RestApiId: !Ref WalkFindApi
+
+        # -----------------------------------------
         # 認証不要：contests
         # -----------------------------------------
         ContestsRoot:
