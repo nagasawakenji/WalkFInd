@@ -13,7 +13,7 @@
     </resultMap>
 
     <select id="findById" resultMap="UserResultMap">
-        SELECT id, username, email, role, is_active, created_at, updated_at
+        SELECT id, username, email, role, is_active, created_at, updated_at, role
         FROM users
         WHERE id = #{userId}
     </select>

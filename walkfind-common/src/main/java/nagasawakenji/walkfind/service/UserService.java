@@ -122,6 +122,7 @@ public class UserService {
                 .userId(user.getUserId())
                 .username(user.getUserName())
                 .email(user.getEmail())
+                .role(user.getRole())
                 .joinDate(user.getCreatedAt())
                 .profileImageUrl(profileImageUrl)
                 .bestRank(bestRank)

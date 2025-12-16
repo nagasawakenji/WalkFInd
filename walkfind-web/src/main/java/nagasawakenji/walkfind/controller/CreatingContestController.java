@@ -6,6 +6,7 @@ import nagasawakenji.walkfind.domain.dto.CreatingContestRequest;
 import nagasawakenji.walkfind.domain.dto.CreatingContestResponse;
 import nagasawakenji.walkfind.domain.statusenum.CreationContestStatus;
 import nagasawakenji.walkfind.exception.DatabaseOperationException;
+import nagasawakenji.walkfind.service.AuthService;
 import nagasawakenji.walkfind.service.CreatingContestService;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -20,14 +21,18 @@ import org.springframework.web.bind.annotation.*;
 public class CreatingContestController {
 
     private final CreatingContestService creatingContestService;
+    private final AuthService authService;
 
     @PostMapping
     public ResponseEntity<CreatingContestResponse> createContest(
             @RequestBody CreatingContestRequest request
     ) {
 
+        String userId = authService.getAuthenticatedUserId();
+
         CreatingContestResponse response =
                 creatingContestService.createContest(
+                        userId,
                         request.getName(),
                         request.getTheme(),
                         request.getStartDate(),

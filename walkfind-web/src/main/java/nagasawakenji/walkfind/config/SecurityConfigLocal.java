@@ -36,6 +36,13 @@ public class SecurityConfigLocal {
                 )
 
                 .authorizeHttpRequests(auth -> auth
+
+                        // /contests/** は公開だが、/contests/mine/** は管理者用なので先に認証必須とする
+                        .requestMatchers(HttpMethod.GET, "/api/v1/contests/mine/**").authenticated()
+
+                        // 管理者用APIは公開しない（admin判定はService層で行うため、ここでは最低限 authenticated）
+                        .requestMatchers("/api/v1/admin/**").authenticated()
+
                         // ★ preflight は全許可
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
 

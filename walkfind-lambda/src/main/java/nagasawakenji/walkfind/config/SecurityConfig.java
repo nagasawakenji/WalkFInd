@@ -54,6 +54,13 @@ public class SecurityConfig {
                         .requestMatchers("/api/v1/users/me").authenticated()
                         // /users/id は公開情報のため認証は不要
                         .requestMatchers(HttpMethod.GET, "/api/v1/users/**").permitAll()
+
+                        // /contests/** は公開だが、/contests/mine/** は自分専用なので認証必須（先に定義する）
+                        .requestMatchers(HttpMethod.GET, "/api/v1/contests/mine/**").authenticated()
+
+                        // 管理者用API（admin判定はService層で行うため、ここでは最低限 authenticated）
+                        .requestMatchers("/api/v1/admin/**").authenticated()
+
                         // 認証不要なエンドポイント
                         .requestMatchers("/api/v1/contests/**", "/api/v1/results/**", "/api/v1/auth/**").permitAll()
 

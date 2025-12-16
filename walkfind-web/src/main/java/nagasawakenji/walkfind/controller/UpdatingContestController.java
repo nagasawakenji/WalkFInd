@@ -7,6 +7,8 @@ import nagasawakenji.walkfind.domain.dto.UpdatingContestResponse;
 import nagasawakenji.walkfind.domain.statusenum.UpdateContestStatus;
 import nagasawakenji.walkfind.exception.DatabaseOperationException;
 import nagasawakenji.walkfind.service.UpdatingContestService;
+import jakarta.validation.Valid;
+import nagasawakenji.walkfind.service.AuthService;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -18,6 +20,7 @@ import org.springframework.web.bind.annotation.*;
 public class UpdatingContestController {
 
     private final UpdatingContestService updatingContestService;
+    private final AuthService authService;
 
     /**
      * コンテスト情報更新API
@@ -26,12 +29,14 @@ public class UpdatingContestController {
     @PutMapping("/{contestId}")
     public ResponseEntity<UpdatingContestResponse> updateContest(
             @PathVariable("contestId") Long contestId,
-            @RequestBody UpdatingContestRequest request
+            @Valid @RequestBody UpdatingContestRequest request
     ) {
+        String userId = authService.getAuthenticatedUserId();
 
         UpdatingContestResponse response =
                 updatingContestService.updateContest(
                         contestId,
+                        userId,
                         request.getName(),
                         request.getTheme(),
                         request.getStartDate(),
@@ -44,6 +49,9 @@ public class UpdatingContestController {
 
             case NOT_FOUND ->
                     ResponseEntity.status(HttpStatus.NOT_FOUND).body(response);
+
+            case FORBIDDEN ->
+                    ResponseEntity.status(HttpStatus.FORBIDDEN).body(response);
 
             case NAME_DUPLICATED ->
                     ResponseEntity.status(HttpStatus.CONFLICT).body(response);

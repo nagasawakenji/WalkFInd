@@ -3,6 +3,7 @@ package nagasawakenji.walkfind.domain.statusenum;
 public enum UpdateContestStatus {
     SUCCESS,                // 正常に更新完了
     NOT_FOUND,              // 指定IDのコンテストが存在しない
+    FORBIDDEN,              // 権限不足
     NAME_DUPLICATED,        // 同名コンテストが既に存在
     INVALID_DATE,           // 日付の整合性エラー
     BUSINESS_RULE_VIOLATION,// ビジネスルール違反（必要なら利用）

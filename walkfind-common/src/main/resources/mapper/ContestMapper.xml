@@ -4,14 +4,28 @@
 
     <resultMap id="ContestResultMap" type="nagasawakenji.walkfind.domain.model.Contest">
         <id property="id" column="id"/>
+
+        <result property="name" column="name"/>
+        <result property="theme" column="theme"/>
+
         <result property="startDate" column="start_date"/>
         <result property="endDate" column="end_date"/>
+
+        <result property="status" column="status" typeHandler="org.apache.ibatis.type.EnumTypeHandler"/>
+
+        <result property="createdByUserId" column="created_by_user_id"/>
+
+        <result property="removedAt" column="removed_at"/>
+
+        <result property="createdAt" column="created_at"/>
+        <result property="updatedAt" column="updated_at"/>
     </resultMap>
 
     <select id="findAllActiveContests" resultMap="ContestResultMap">
         SELECT id, name, theme, start_date, end_date, status, created_at, updated_at
         FROM contests
         WHERE status IN ('UPCOMING', 'IN_PROGRESS')
+          AND removed_at IS NULL
         ORDER BY start_date ASC
     </select>
 
@@ -19,6 +33,7 @@
         SELECT id, name, theme, start_date, end_date, status, created_at, updated_at
         FROM contests
         WHERE status = 'ANNOUNCED'
+          AND removed_at IS NULL
         ORDER BY end_date DESC
         LIMIT #{size}
         OFFSET #{size} * #{page}
@@ -28,17 +43,19 @@
         SELECT *
         FROM contests
         WHERE id = #{contestId}
+          AND removed_at IS NULL
     </select>
 
     <select id="findContestStatus" resultMap="ContestResultMap">
         SELECT status, start_date, end_date
         FROM contests
         WHERE id = #{contestId}
+          AND removed_at IS NULL
     </select>
 
     <insert id="insert" useGeneratedKeys="true" keyProperty="id">
-        INSERT INTO contests (name, theme, start_date, end_date, status)
-        VALUES (#{name}, #{theme}, #{startDate}, #{endDate}, #{status})
+        INSERT INTO contests (name, theme, start_date, end_date, status, created_by_user_id)
+        VALUES (#{name}, #{theme}, #{startDate}, #{endDate}, #{status}, #{createdByUserId})
     </insert>
 
     <!-- 集計が必要なコンテストを取得する (findContestsNeedingCalculation) -->
@@ -46,7 +63,8 @@
         SELECT id, name, theme, start_date, end_date, status, created_at, updated_at
         FROM contests
         WHERE end_date <![CDATA[ < ]]> CURRENT_TIMESTAMP
-        AND status = 'CLOSED_VOTING'
+          AND status = 'CLOSED_VOTING'
+          AND removed_at IS NULL
         ORDER BY end_date ASC
     </select>
 
@@ -56,6 +74,7 @@
         SET status = #{status, typeHandler=org.apache.ibatis.type.EnumTypeHandler},
         updated_at = CURRENT_TIMESTAMP
         WHERE id = #{contestId}
+          AND removed_at IS NULL
     </update>
 
     <!-- コンテストの存在判定を名前から実行する -->
@@ -64,6 +83,7 @@
         SELECT 1
         FROM contests
         WHERE name = #{name}
+          AND removed_at IS NULL
         )
     </select>
 
@@ -72,21 +92,24 @@
         UPDATE contests
         SET status = 'IN_PROGRESS'
         WHERE status = 'UPCOMING'
-        AND start_date <![CDATA[ <= ]]> #{now}
+          AND start_date <![CDATA[ <= ]]> #{now}
+          AND removed_at IS NULL
     </update>
-    
+
     <update id="updateToClosedVoting">
         UPDATE contests
         SET status = 'CLOSED_VOTING'
         WHERE status = 'IN_PROGRESS'
-        AND end_date <![CDATA[ <= ]]> #{now}
+          AND end_date <![CDATA[ <= ]]> #{now}
+          AND removed_at IS NULL
     </update>
 
     <update id="updateToAnnouncedIfCalculated">
         UPDATE contests
         SET status = 'ANNOUNCED'
         WHERE status = 'CLOSED_VOTING'
-        AND aggregation_completed = true
+          AND aggregation_completed = true
+          AND removed_at IS NULL
     </update>
 
     <!-- コンテスト情報を更新する -->
@@ -100,12 +123,85 @@
             status = #{status, typeHandler=org.apache.ibatis.type.EnumTypeHandler},
             updated_at = CURRENT_TIMESTAMP
         WHERE id = #{id}
+          AND removed_at IS NULL
     </update>
 
-    <!-- コンテストをIDで削除する -->
-    <delete id="deleteById">
-        DELETE FROM contests
+    <!-- コンテストをIDで論理削除する -->
+    <update id="deleteById">
+        UPDATE contests
+        SET removed_at = CURRENT_TIMESTAMP,
+            updated_at = CURRENT_TIMESTAMP
         WHERE id = #{contestId}
-    </delete>
+          AND removed_at IS NULL
+    </update>
+
+    <!-- 自分の作成したコンテストのうち、upcomingのものを取得する -->
+    <select id="findMyUpcomingContests"
+            resultType="nagasawakenji.walkfind.domain.dto.MyContestResponse">
+        SELECT
+        id AS contestId,
+        name,
+        theme,
+        start_date AS startDate,
+        end_date AS endDate,
+        status
+        FROM contests
+        WHERE created_by_user_id = #{userId}
+        AND status = 'UPCOMING'
+        AND removed_at IS NULL
+        ORDER BY start_date ASC
+        LIMIT #{size}
+        OFFSET #{offset}
+    </select>
+
+    <!-- 自分の作成したコンテストのうち、upcomingのものの件数を取得する -->
+    <select id="countMyUpcomingContests" resultType="long">
+        SELECT COUNT(*)
+        FROM contests
+        WHERE created_by_user_id = #{userId}
+        AND status = 'UPCOMING'
+        AND removed_at IS NULL
+    </select>
+
+    <select id="findAdminContests" resultType="nagasawakenji.walkfind.domain.dto.AdminContestResponse">
+        SELECT
+        id AS contestId,
+        name,
+        theme,
+        start_date AS startDate,
+        end_date AS endDate,
+        status,
+        created_by_user_id AS createdByUserId,
+        removed_at AS removedAt
+        FROM contests
+        WHERE 1=1
+        <if test="includeRemoved == false">
+            AND removed_at IS NULL
+        </if>
+        <if test="status != null and status != ''">
+            AND status = #{status}
+        </if>
+        <if test="keyword != null and keyword != ''">
+            AND (name ILIKE '%' || #{keyword} || '%' OR theme ILIKE '%' || #{keyword} || '%')
+        </if>
+        ORDER BY created_at DESC
+        LIMIT #{size}
+        OFFSET #{offset}
+    </select>
+
+    <select id="countAdminContests" resultType="long">
+        SELECT COUNT(*)
+        FROM contests
+        WHERE 1=1
+        <if test="includeRemoved == false">
+            AND removed_at IS NULL
+        </if>
+        <if test="status != null and status != ''">
+            AND status = #{status}
+        </if>
+        <if test="keyword != null and keyword != ''">
+            AND (name ILIKE '%' || #{keyword} || '%' OR theme ILIKE '%' || #{keyword} || '%')
+        </if>
+    </select>
 
 </mapper>

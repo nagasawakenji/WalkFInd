@@ -30,6 +30,8 @@ class CreatingContestServiceTest {
     @InjectMocks
     private CreatingContestService creatingContestService;
 
+    private static final String REQUESTER_USER_ID = "c7b48a38-f091-70ee-39e0-eed953c95964";
+
     private OffsetDateTime now;
     private OffsetDateTime futureStart;
     private OffsetDateTime futureEnd;
@@ -42,6 +44,26 @@ class CreatingContestServiceTest {
     }
 
     // -------------------------------------
+    // 0. 認証ユーザーIDが不正
+    // -------------------------------------
+    @Test
+    @DisplayName("createContest: requesterUserId が null/blank → FAILED を返す")
+    void testInvalidRequesterUserId() {
+
+        CreatingContestResponse res1 = creatingContestService.createContest(
+                null,
+                "AAA", "theme", futureStart, futureEnd
+        );
+        assertThat(res1.getStatus()).isEqualTo(CreationContestStatus.FAILED);
+
+        CreatingContestResponse res2 = creatingContestService.createContest(
+                "   ",
+                "AAA", "theme", futureStart, futureEnd
+        );
+        assertThat(res2.getStatus()).isEqualTo(CreationContestStatus.FAILED);
+    }
+
+    // -------------------------------------
     // 1. 名前重複
     // -------------------------------------
     @Test
@@ -50,6 +72,7 @@ class CreatingContestServiceTest {
         when(contestMapper.isExistContestByName("AAA")).thenReturn(true);
 
         CreatingContestResponse res = creatingContestService.createContest(
+                REQUESTER_USER_ID,
                 "AAA", "theme", futureStart, futureEnd
         );
 
@@ -69,6 +92,7 @@ class CreatingContestServiceTest {
         when(contestMapper.isExistContestByName("AAA")).thenReturn(false);
 
         CreatingContestResponse res = creatingContestService.createContest(
+                REQUESTER_USER_ID,
                 "AAA", "theme", past, futureEnd
         );
 
@@ -86,6 +110,7 @@ class CreatingContestServiceTest {
         when(contestMapper.isExistContestByName("AAA")).thenReturn(false);
 
         CreatingContestResponse res = creatingContestService.createContest(
+                REQUESTER_USER_ID,
                 "AAA", "theme", futureStart, futureStart // 同じ
         );
 
@@ -108,12 +133,36 @@ class CreatingContestServiceTest {
         });
 
         CreatingContestResponse res = creatingContestService.createContest(
+                REQUESTER_USER_ID,
                 "AAA", "theme", futureStart, futureEnd
         );
 
         assertThat(res.getStatus()).isEqualTo(CreationContestStatus.SUCCESS);
         assertThat(res.getContestId()).isEqualTo(10L);
         assertThat(res.getName()).isEqualTo("AAA");
+    }
+
+    // -------------------------------------
+    // 4-2. createdByUserId が保存される
+    // -------------------------------------
+    @Test
+    @DisplayName("createContest: Contest.createdByUserId に requesterUserId がセットされて insert される")
+    void testCreatedByUserIdIsSet() {
+
+        when(contestMapper.isExistContestByName("AAA")).thenReturn(false);
+        when(contestMapper.insert(any())).thenReturn(1);
+
+        creatingContestService.createContest(
+                REQUESTER_USER_ID,
+                "AAA", "theme", futureStart, futureEnd
+        );
+
+        ArgumentCaptor<Contest> captor = ArgumentCaptor.forClass(Contest.class);
+        verify(contestMapper).insert(captor.capture());
+
+        Contest inserted = captor.getValue();
+        assertThat(inserted.getCreatedByUserId()).isEqualTo(REQUESTER_USER_ID);
+        assertThat(inserted.getStatus()).isEqualTo(ContestStatus.UPCOMING);
     }
 
     // -------------------------------------
@@ -127,7 +176,7 @@ class CreatingContestServiceTest {
         when(contestMapper.insert(any())).thenReturn(0);
 
         assertThatThrownBy(() ->
-                creatingContestService.createContest("AAA", "theme", futureStart, futureEnd)
+                creatingContestService.createContest(REQUESTER_USER_ID, "AAA", "theme", futureStart, futureEnd)
         )
                 .isInstanceOf(DatabaseOperationException.class)
                 .hasMessageContaining("保存に失敗");
@@ -144,7 +193,7 @@ class CreatingContestServiceTest {
         when(contestMapper.insert(any())).thenThrow(new RuntimeException("SQL error"));
 
         assertThatThrownBy(() ->
-                creatingContestService.createContest("AAA", "theme", futureStart, futureEnd)
+                creatingContestService.createContest(REQUESTER_USER_ID, "AAA", "theme", futureStart, futureEnd)
         )
                 .isInstanceOf(RuntimeException.class)
                 .hasMessageContaining("予期せぬエラー");

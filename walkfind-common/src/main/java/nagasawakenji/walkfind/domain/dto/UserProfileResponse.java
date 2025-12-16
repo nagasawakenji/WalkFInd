@@ -2,6 +2,8 @@ package nagasawakenji.walkfind.domain.dto;
 
 import lombok.Builder;
 import lombok.Value;
+import nagasawakenji.walkfind.domain.statusenum.UserRole;
+
 import java.time.OffsetDateTime;
 
 /**
@@ -14,6 +16,7 @@ public class UserProfileResponse {
     private final String username;
     private final String email;
     private final OffsetDateTime joinDate;
+    private UserRole role;
 
     // 他にも、総投稿数などがあれば、Serviceで集計してここに追加する
     private final String profileImageUrl;

@@ -23,6 +23,7 @@ public class CreatingContestService {
     /**
      * (管理者用) コンテスト作成ロジック
      *
+     * @param requesterUserId
      * @param name
      * @param theme
      * @param startDate
@@ -31,11 +32,28 @@ public class CreatingContestService {
      */
     @Transactional
     public CreatingContestResponse createContest(
+            String requesterUserId,
             String name,
             String theme,
             OffsetDateTime startDate,
             OffsetDateTime endDate
     ) {
+
+        // 認証済みユーザーID（Cognito sub）チェック（安全側に倒す）
+        if (requesterUserId == null || requesterUserId.isBlank()) {
+            return CreatingContestResponse.builder()
+                    .status(CreationContestStatus.FAILED)
+                    .message("ログイン情報が取得できませんでした。再ログインしてください")
+                    .build();
+        }
+
+        // 必須項目の簡易チェック（Controller側でバリデーションしていても安全のため）
+        if (name == null || name.isBlank() || theme == null || theme.isBlank() || startDate == null || endDate == null) {
+            return CreatingContestResponse.builder()
+                    .status(CreationContestStatus.FAILED)
+                    .message("入力内容が不正です")
+                    .build();
+        }
 
         OffsetDateTime now = OffsetDateTime.now();
         // nameの重複確認
@@ -68,6 +86,7 @@ public class CreatingContestService {
         createdContest.setStartDate(startDate);
         createdContest.setEndDate(endDate);
         createdContest.setStatus(ContestStatus.UPCOMING);
+        createdContest.setCreatedByUserId(requesterUserId);
 
         try {
             int inserted = contestMapper.insert(createdContest);
