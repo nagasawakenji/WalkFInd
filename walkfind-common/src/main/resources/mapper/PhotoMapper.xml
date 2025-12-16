@@ -10,6 +10,8 @@
         <result property="submissionDate" column="submission_date"/>
         <result property="totalVotes" column="total_votes"/>
         <result property="isApproved" column="is_approved"/>
+        <result property="removedAt" column="removed_at"/>
+        <result property="removedByUserId" column="removed_by_user_id"/>
     </resultMap>
 
     <resultMap id="PhotoResponseResultMap" type="nagasawakenji.walkfind.domain.dto.PhotoResponse">
@@ -42,6 +44,7 @@
         JOIN contests c ON p.contest_id = c.id
         WHERE p.contest_id = #{contestId}
           AND p.user_id = #{userId}
+          AND p.removed_at IS NULL
           AND c.removed_at IS NULL
     </select>
 
@@ -58,6 +61,7 @@
         JOIN users u ON p.user_id = u.id
         JOIN contests c ON p.contest_id = c.id
         WHERE p.contest_id = #{contestId}
+          AND p.removed_at IS NULL
           AND c.removed_at IS NULL
         ORDER BY p.total_votes DESC, p.submission_date ASC
         LIMIT #{size}
@@ -70,6 +74,7 @@
         FROM user_photos p
         JOIN contests c ON p.contest_id = c.id
         WHERE p.contest_id = #{contestId}
+          AND p.removed_at IS NULL
           AND c.removed_at IS NULL
     </select>
 
@@ -78,6 +83,7 @@
         FROM user_photos p
         JOIN contests c ON p.contest_id = c.id
         WHERE p.id = #{photoId}
+          AND p.removed_at IS NULL
           AND c.removed_at IS NULL
     </select>
 
@@ -88,6 +94,7 @@
         FROM contests c
         WHERE p.id = #{photoId}
           AND p.contest_id = c.id
+          AND p.removed_at IS NULL
           AND c.removed_at IS NULL
     </update>
 
@@ -101,6 +108,7 @@
         FROM user_photos p
         JOIN contests c ON p.contest_id = c.id
         WHERE p.contest_id = #{contestId}
+          AND p.removed_at IS NULL
           AND c.removed_at IS NULL
         ORDER BY total_votes DESC, submission_date ASC
     </select>
@@ -118,8 +126,40 @@
         FROM user_photos p
         JOIN contests c ON p.contest_id = c.id
         WHERE p.id = #{photoId}
+          AND p.removed_at IS NULL
           AND c.removed_at IS NULL
     </select>
+
+    <!-- contestId + photoId で写真を取得する（論理削除済みも含む。Service側で removed_at を判定する） -->
+    <select id="findByIdAndContestId" resultMap="UserPhotoResultMap">
+        SELECT
+            p.id,
+            p.contest_id,
+            p.user_id,
+            p.photo_url,
+            p.title,
+            p.description,
+            p.submission_date,
+            p.total_votes,
+            p.is_approved,
+            p.removed_at,
+            p.removed_by_user_id
+        FROM user_photos p
+        WHERE p.contest_id = #{contestId}
+          AND p.id = #{photoId}
+    </select>
+
+    <!-- 管理者による論理削除（removed_at をセット） -->
+    <update id="logicalDeleteByIdForAdmin">
+        UPDATE user_photos
+        SET
+            removed_at = CURRENT_TIMESTAMP,
+            removed_by_user_id = #{removedByUserId},
+            updated_at = CURRENT_TIMESTAMP
+        WHERE contest_id = #{contestId}
+          AND id = #{photoId}
+          AND removed_at IS NULL
+    </update>
 
     <!-- photoId で写真を削除する -->
     <delete id="deleteById">
@@ -127,6 +167,7 @@
         USING contests c
         WHERE p.id = #{photoId}
           AND p.contest_id = c.id
+          AND p.removed_at IS NULL
           AND c.removed_at IS NULL
     </delete>
 
