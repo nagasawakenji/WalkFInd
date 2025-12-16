@@ -5,6 +5,7 @@ import lombok.extern.slf4j.Slf4j;
 import nagasawakenji.walkfind.domain.dto.DeletingContestResponse;
 import nagasawakenji.walkfind.domain.statusenum.DeleteContestStatus;
 import nagasawakenji.walkfind.exception.DatabaseOperationException;
+import nagasawakenji.walkfind.service.AuthService;
 import nagasawakenji.walkfind.service.DeletingContestService;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -17,6 +18,7 @@ import org.springframework.web.bind.annotation.*;
 public class DeletingContestController {
 
     private final DeletingContestService deletingContestService;
+    private final AuthService authService;
 
     /**
      * コンテスト削除API
@@ -26,7 +28,8 @@ public class DeletingContestController {
     public ResponseEntity<DeletingContestResponse> deleteContest(
             @PathVariable("contestId") Long contestId
     ) {
-        DeletingContestResponse response = deletingContestService.deleteContest(contestId);
+        String userId = authService.getAuthenticatedUserId();
+        DeletingContestResponse response = deletingContestService.deleteContest(contestId, userId);
 
         return switch (response.getStatus()) {
             case SUCCESS ->
@@ -34,6 +37,9 @@ public class DeletingContestController {
 
             case NOT_FOUND ->
                     ResponseEntity.status(HttpStatus.NOT_FOUND).body(response);
+
+            case FORBIDDEN ->
+                    ResponseEntity.status(HttpStatus.FORBIDDEN).body(response);
 
             case BUSINESS_RULE_VIOLATION ->
                     ResponseEntity.status(HttpStatus.UNPROCESSABLE_ENTITY).body(response);

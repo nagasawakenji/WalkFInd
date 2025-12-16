@@ -1,5 +1,7 @@
 package nagasawakenji.walkfind.infra.mybatis.mapper;
 
+import nagasawakenji.walkfind.domain.dto.AdminContestResponse;
+import nagasawakenji.walkfind.domain.dto.MyContestResponse;
 import nagasawakenji.walkfind.domain.model.Contest;
 import nagasawakenji.walkfind.domain.statusenum.ContestStatus;
 import org.apache.ibatis.annotations.Mapper;
@@ -24,7 +26,7 @@ public interface ContestMapper {
     // コンテストの現在のステータスと期間を取得
     Optional<Contest> findContestStatus(Long contestId);
 
-    // 新しいコンテストを作成（管理者機能）
+    // 新しいコンテストを作成
     int insert(Contest contest);
 
     // 集計を実行するコンテストを取得する
@@ -50,4 +52,30 @@ public interface ContestMapper {
 
     // コンテストの削除
     int deleteById(@Param("contestId") Long contestId);
+
+    // 自分が作成したコンテストの取得
+    List<MyContestResponse> findMyUpcomingContests(
+            @Param("userId") String userId,
+            @Param("size") int size,
+            @Param("offset") int offset
+    );
+
+    // 自分が作成したコンテストの総数取得
+    long countMyUpcomingContests(@Param("userId") String userId);
+
+    // 管理者用: コンテストの取得
+    List<AdminContestResponse> findAdminContests(
+            @Param("size") int size,
+            @Param("offset") int offset,
+            @Param("status") String status,          // null可
+            @Param("includeRemoved") boolean includeRemoved,
+            @Param("keyword") String keyword         // null/blank可
+    );
+
+    // 管理者用: 件数取得
+    long countAdminContests(
+            @Param("status") String status,
+            @Param("includeRemoved") boolean includeRemoved,
+            @Param("keyword") String keyword
+    );
 }

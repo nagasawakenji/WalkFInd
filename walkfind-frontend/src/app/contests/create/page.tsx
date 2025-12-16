@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, type ChangeEvent, type FormEvent } from 'react';
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { isAxiosError } from 'axios';
 import { api } from '@/lib/api';
@@ -148,35 +149,45 @@ export default function CreatingContestPage() {
     };
 
     return (
-        <main className="container mx-auto px-4 py-10 max-w-2xl">
-            <div className="bg-white rounded-lg shadow-xl overflow-hidden">
-                {/* ヘッダー装飾 */}
-                <div className="bg-gradient-to-r from-blue-600 to-blue-400 h-4 w-full"></div>
-                
-                <div className="p-8">
-                    <div className="text-center mb-10">
-                        <h1 className="text-3xl font-bold text-gray-800">コンテスト新規作成</h1>
-                        <p className="text-gray-500 mt-2">
-                            新しいテーマでフォトコンテストを開催しましょう
-                        </p>
-                    </div>
+        <main className="min-h-screen bg-[#F5F5F5] font-sans text-[#333]">
+            {/* Top Nav (match other pages) */}
+            <nav className="bg-black text-white h-12 flex items-center px-4 lg:px-8 mb-8 shadow-sm">
+                <span className="font-bold text-lg tracking-tight">WalkFind</span>
+                <div className="ml-auto text-xs space-x-4">
+                    <Link href="/" className="hover:underline">
+                        ユーザー画面へ
+                    </Link>
+                    <button
+                        type="button"
+                        onClick={() => router.back()}
+                        className="hover:underline"
+                    >
+                        戻る
+                    </button>
+                </div>
+            </nav>
 
-                    {/* エラーメッセージ表示エリア */}
+            <div className="max-w-3xl mx-auto px-4 pb-12">
+                <div className="bg-white rounded border border-gray-300 p-6 md:p-8 shadow-sm">
+                    <h1 className="text-2xl font-bold mb-2 pb-2 border-b border-gray-200 text-black">
+                        コンテスト新規作成
+                    </h1>
+                    <p className="text-sm text-gray-600 mb-6">
+                        新しいテーマでフォトコンテストを開催しましょう。開催前に内容を確認してから公開できます。
+                    </p>
+
+                    {/* エラーメッセージ */}
                     {errorMessage && (
-                        <div className="mb-6 p-4 bg-red-50 border-l-4 border-red-500 text-red-700 rounded shadow-sm">
-                            <div className="flex items-center mb-1">
-                                <span className="text-xl mr-2">⚠️</span>
-                                <p className="font-bold">エラー</p>
-                            </div>
+                        <div className="mb-6 p-4 bg-red-50 border border-red-200 text-red-700 rounded">
+                            <div className="font-semibold mb-1">エラー</div>
                             <p className="text-sm">{errorMessage}</p>
                         </div>
                     )}
 
-                    <form onSubmit={handleSubmit} className="space-y-8">
-                        
+                    <form onSubmit={handleSubmit} className="space-y-6">
                         {/* コンテスト名 */}
                         <div>
-                            <label htmlFor="name" className="block text-sm font-bold text-gray-700 mb-2">
+                            <label htmlFor="name" className="block text-sm font-semibold text-gray-700 mb-2">
                                 コンテスト名 <span className="text-red-500">*</span>
                             </label>
                             <input
@@ -187,75 +198,91 @@ export default function CreatingContestPage() {
                                 value={formData.name}
                                 onChange={handleChange}
                                 placeholder="例: 第1回 下北沢お散歩フォトコンテスト"
-                                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition text-black"
+                                className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-black/10 text-black"
                             />
+                            <p className="text-xs text-gray-500 mt-1">
+                                他のコンテストと区別しやすい名称にすると参加者が迷いません。
+                            </p>
                         </div>
 
                         {/* テーマ */}
                         <div>
-                            <label htmlFor="theme" className="block text-sm font-bold text-gray-700 mb-2">
+                            <label htmlFor="theme" className="block text-sm font-semibold text-gray-700 mb-2">
                                 テーマ・詳細 <span className="text-red-500">*</span>
                             </label>
                             <textarea
                                 id="theme"
                                 name="theme"
                                 required
-                                rows={4}
+                                rows={5}
                                 value={formData.theme}
                                 onChange={handleChange}
-                                placeholder="どのような写真を募集するか、詳細なルールなどを入力してください"
-                                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition resize-none text-black"
+                                placeholder="募集する写真のテーマ、撮影ルール、NG事項などを入力してください"
+                                className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-black/10 resize-none text-black"
                             />
+                            <p className="text-xs text-gray-500 mt-1">
+                                参加者が誤解しないよう、具体例や禁止事項がある場合は明記してください。
+                            </p>
                         </div>
 
                         {/* 開催期間 */}
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                            <div>
-                                <label htmlFor="startDate" className="block text-sm font-bold text-gray-700 mb-2">
-                                    開始日時 <span className="text-red-500">*</span>
-                                </label>
-                                <input
-                                    type="datetime-local"
-                                    id="startDate"
-                                    name="startDate"
-                                    required
-                                    value={formData.startDate}
-                                    onChange={handleChange}
-                                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition text-black"
-                                />
+                        <div>
+                            <div className="text-sm font-semibold text-gray-700 mb-2">
+                                開催期間 <span className="text-red-500">*</span>
                             </div>
-
-                            <div>
-                                <label htmlFor="endDate" className="block text-sm font-bold text-gray-700 mb-2">
-                                    終了日時 <span className="text-red-500">*</span>
-                                </label>
-                                <input
-                                    type="datetime-local"
-                                    id="endDate"
-                                    name="endDate"
-                                    required
-                                    value={formData.endDate}
-                                    onChange={handleChange}
-                                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition text-black"
-                                />
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div>
+                                    <label htmlFor="startDate" className="block text-xs text-gray-600 mb-1">
+                                        開始日時
+                                    </label>
+                                    <input
+                                        type="datetime-local"
+                                        id="startDate"
+                                        name="startDate"
+                                        required
+                                        value={formData.startDate}
+                                        onChange={handleChange}
+                                        className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-black/10 text-black"
+                                    />
+                                </div>
+                                <div>
+                                    <label htmlFor="endDate" className="block text-xs text-gray-600 mb-1">
+                                        終了日時
+                                    </label>
+                                    <input
+                                        type="datetime-local"
+                                        id="endDate"
+                                        name="endDate"
+                                        required
+                                        value={formData.endDate}
+                                        onChange={handleChange}
+                                        className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-black/10 text-black"
+                                    />
+                                </div>
                             </div>
                         </div>
 
-                        {/* アクションボタン */}
-                        <div className="pt-6">
+                        {/* ボタン */}
+                        <div className="pt-2 flex items-center justify-end gap-3">
+                            <button
+                                type="button"
+                                onClick={() => router.back()}
+                                className="px-4 py-2 text-sm rounded border border-gray-400 text-gray-700 hover:bg-gray-50"
+                            >
+                                キャンセル
+                            </button>
                             <button
                                 type="submit"
                                 disabled={loading}
-                                className={`w-full py-4 px-6 rounded-lg text-white font-bold text-lg shadow-md transition duration-200
-                                ${loading 
-                                    ? 'bg-gray-400 cursor-not-allowed' 
-                                    : 'bg-blue-600 hover:bg-blue-700 hover:shadow-lg transform hover:-translate-y-0.5'
+                                className={`px-4 py-2 text-sm rounded border text-center transition-colors ${
+                                    loading
+                                        ? 'border-gray-300 bg-gray-200 text-gray-500 cursor-not-allowed'
+                                        : 'border-blue-600 bg-blue-600 text-white hover:bg-blue-700'
                                 }`}
                             >
-                                {loading ? '作成中...' : 'コンテストを作成する'}
+                                {loading ? '作成中...' : '作成する'}
                             </button>
                         </div>
-
                     </form>
                 </div>
             </div>

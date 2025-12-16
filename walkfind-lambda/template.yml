@@ -115,6 +115,7 @@ Resources:
         # -----------------------------------------
         # 認証不要：contests
         # -----------------------------------------
+
         ContestsRoot:
           Type: Api
           Properties:
@@ -126,6 +127,23 @@ Resources:
           Type: Api
           Properties:
             Path: /api/v1/contests/{proxy+}
+            Method: ANY
+            RestApiId: !Ref WalkFindApi
+
+        # -----------------------------------------
+        # 認証必要：admin (Auth削除 -> Spring Securityへ)
+        # -----------------------------------------
+        AdminRoot:
+          Type: Api
+          Properties:
+            Path: /api/v1/admin
+            Method: ANY
+            RestApiId: !Ref WalkFindApi
+
+        AdminProxy:
+          Type: Api
+          Properties:
+            Path: /api/v1/admin/{proxy+}
             Method: ANY
             RestApiId: !Ref WalkFindApi
 

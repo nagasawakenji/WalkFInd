@@ -8,9 +8,44 @@ import { signOut } from 'aws-amplify/auth';
 const COGNITO_LOGIN_URL = process.env.NEXT_PUBLIC_COGNITO_LOGIN_URL;
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL;
 
+type UserRole = 'ADMIN' | 'USER' | string;
+
+type UsersMeResponse = {
+  role?: UserRole;
+};
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null;
+}
+
+function extractRole(value: unknown): UserRole | undefined {
+  if (!isRecord(value)) return undefined;
+
+  // 1) { role: "ADMIN" }
+  const direct = value['role'];
+  if (typeof direct === 'string') return direct as UserRole;
+
+  // 2) { user: { role: "ADMIN" } }
+  const user = value['user'];
+  if (isRecord(user)) {
+    const nested = user['role'];
+    if (typeof nested === 'string') return nested as UserRole;
+  }
+
+  // 3) { profile: { role: "ADMIN" } }
+  const profile = value['profile'];
+  if (isRecord(profile)) {
+    const nested = profile['role'];
+    if (typeof nested === 'string') return nested as UserRole;
+  }
+
+  return undefined;
+}
+
 export default function HomePage() {
   const router = useRouter();
   const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [isAdmin, setIsAdmin] = useState(false);
   const [authChecked, setAuthChecked] = useState(false);
 
   const lastCheckedAtRef = useRef<number>(0);
@@ -32,9 +67,39 @@ export default function HomePage() {
         });
 
         setIsLoggedIn(res.ok);
+
+        // 可能なら role を読み取って admin 判定（レスポンス形式が違っても落ちないように安全側）
+        if (res.ok) {
+          try {
+            const contentType = res.headers.get('content-type') ?? '';
+            const raw = await res.text();
+
+            // デバッグ: 実際の /users/me の返却を確認（本番では消してOK）
+            console.log('/users/me status=', res.status, 'content-type=', contentType);
+            console.log('/users/me body=', raw);
+
+            let data: unknown = undefined;
+            if (raw) {
+              try {
+                data = JSON.parse(raw) as unknown;
+              } catch {
+                data = undefined;
+              }
+            }
+
+            const role = extractRole(data);
+            console.log('role is', role);
+            setIsAdmin(role === 'ADMIN');
+          } catch {
+            setIsAdmin(false);
+          }
+        } else {
+          setIsAdmin(false);
+        }
       } catch (e) {
         console.warn('auth check failed on HomePage:', e);
         setIsLoggedIn(false);
+        setIsAdmin(false);
       } finally {
         setAuthChecked(true);
       }
@@ -93,6 +158,33 @@ export default function HomePage() {
               >
                 マイページ
               </Link>
+
+              {/* ログイン後: コンテスト作成 & 管理（admin/ユーザーで遷移先を分岐） */}
+              <Link
+                href="/contests/create"
+                className="text-xs font-semibold px-3 py-1 rounded border border-gray-500 hover:bg-white hover:text-black transition-colors"
+              >
+                コンテスト作成
+              </Link>
+
+              {!isAdmin && (
+                <Link
+                  href="/modify"
+                  className="text-xs font-semibold px-3 py-1 rounded border border-gray-500 hover:bg-white hover:text-black transition-colors"
+                >
+                  コンテスト管理
+                </Link>
+              )}
+
+              {isAdmin && (
+                <Link
+                  href="/admin/modify"
+                  className="text-xs font-semibold px-3 py-1 rounded border border-gray-500 hover:bg-white hover:text-black transition-colors"
+                >
+                  管理者管理
+                </Link>
+              )}
+
               <Link
                 href="/"
                 onClick={async (e) => {
@@ -117,6 +209,7 @@ export default function HomePage() {
                   }
 
                   setIsLoggedIn(false);
+                  setIsAdmin(false);
                   router.push('/');
                 }}
                 className="text-xs font-semibold px-3 py-1 rounded border border-red-500 text-red-300 hover:bg-red-500 hover:text-white transition-colors"

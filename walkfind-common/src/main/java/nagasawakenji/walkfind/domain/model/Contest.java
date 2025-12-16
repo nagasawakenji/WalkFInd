@@ -15,4 +15,8 @@ public class Contest {
     private ContestStatus status;
     private OffsetDateTime createdAt;
     private OffsetDateTime updatedAt;
+    private String createdByUserId;
+    private String removedByUserId;
+    private OffsetDateTime removedAt;
+    private String removedReason;
 }

@@ -37,9 +37,12 @@
     </insert>
 
     <select id="findByContestAndUser" resultMap="UserPhotoResultMap">
-        SELECT id, photo_url
-        FROM user_photos
-        WHERE contest_id = #{contestId} AND user_id = #{userId}
+        SELECT p.id, p.photo_url
+        FROM user_photos p
+        JOIN contests c ON p.contest_id = c.id
+        WHERE p.contest_id = #{contestId}
+          AND p.user_id = #{userId}
+          AND c.removed_at IS NULL
     </select>
 
     <select id="findAllPhotosByContest" resultMap="PhotoResponseResultMap">
@@ -53,7 +56,9 @@
         p.submission_date AS submissionDate
         FROM user_photos p
         JOIN users u ON p.user_id = u.id
+        JOIN contests c ON p.contest_id = c.id
         WHERE p.contest_id = #{contestId}
+          AND c.removed_at IS NULL
         ORDER BY p.total_votes DESC, p.submission_date ASC
         LIMIT #{size}
         OFFSET #{offset}
@@ -62,52 +67,67 @@
     <select id="countTotalPhotos" resultType="long">
         SELECT
         COUNT(*)
-        FROM user_photos
-        WHERE contest_id = #{contestId}
+        FROM user_photos p
+        JOIN contests c ON p.contest_id = c.id
+        WHERE p.contest_id = #{contestId}
+          AND c.removed_at IS NULL
     </select>
 
     <select id="findPhotoDetail" resultMap="UserPhotoResultMap">
-        SELECT *
-        FROM user_photos
-        WHERE id = #{photoId}
+        SELECT p.*
+        FROM user_photos p
+        JOIN contests c ON p.contest_id = c.id
+        WHERE p.id = #{photoId}
+          AND c.removed_at IS NULL
     </select>
 
     <update id="incrementTotalVotes">
-        UPDATE user_photos
-        SET total_votes = total_votes + 1, updated_at = CURRENT_TIMESTAMP
-        WHERE id = #{photoId}
+        UPDATE user_photos p
+        SET total_votes = p.total_votes + 1,
+            updated_at = CURRENT_TIMESTAMP
+        FROM contests c
+        WHERE p.id = #{photoId}
+          AND p.contest_id = c.id
+          AND c.removed_at IS NULL
     </update>
 
     <!-- ★ 集計対象の投稿リストを取得 (total_votesが多い順、submission_dateが古い順) ★ -->
     <!-- ResultCalculationService.javaで使用 -->
     <select id="findAllSubmissionsForCalculation" resultMap="UserPhotoResultMapForCalculation">
         SELECT
-        id,
-        total_votes,
-        submission_date
-        FROM user_photos
-        WHERE contest_id = #{contestId}
+        p.id,
+        p.total_votes,
+        p.submission_date
+        FROM user_photos p
+        JOIN contests c ON p.contest_id = c.id
+        WHERE p.contest_id = #{contestId}
+          AND c.removed_at IS NULL
         ORDER BY total_votes DESC, submission_date ASC
     </select>
 
     <!-- photoId で写真を取得する -->
     <select id="findById" resultMap="UserPhotoResultMap">
         SELECT
-            id,
-            contest_id,
-            user_id,
-            photo_url,
-            submission_date,
-            total_votes,
-            is_approved
-        FROM user_photos
-        WHERE id = #{photoId}
+            p.id,
+            p.contest_id,
+            p.user_id,
+            p.photo_url,
+            p.submission_date,
+            p.total_votes,
+            p.is_approved
+        FROM user_photos p
+        JOIN contests c ON p.contest_id = c.id
+        WHERE p.id = #{photoId}
+          AND c.removed_at IS NULL
     </select>
 
     <!-- photoId で写真を削除する -->
     <delete id="deleteById">
-        DELETE FROM user_photos
-        WHERE id = #{photoId}
+        DELETE FROM user_photos p
+        USING contests c
+        WHERE p.id = #{photoId}
+          AND p.contest_id = c.id
+          AND c.removed_at IS NULL
     </delete>
 
 
