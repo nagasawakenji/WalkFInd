@@ -36,4 +36,14 @@ public interface PhotoMapper {
 
     // idで写真を削除
     int deleteById(@Param("photoId") Long photoId);
+
+    // admin権限者で写真を取得
+    Optional<UserPhoto> findByIdAndContestId(@Param("contestId") Long contestId, @Param("photoId") Long photoId);
+
+    // admin権限で写真を論理削除
+    int logicalDeleteByIdForAdmin(
+            @Param("contestId") Long contestId,
+            @Param("photoId") Long photoId,
+            @Param("removedByUserId") String removedByUserId
+    );
 }

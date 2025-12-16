@@ -374,6 +374,14 @@ export default function AdminModifyPage() {
                             >
                               編集
                             </Link>
+
+                            <Link
+                              href={`/admin/modify/${contest.contestId}/photos`}
+                              className="px-3 py-1 text-xs rounded border border-gray-500 text-gray-700 hover:bg-gray-50 text-center"
+                            >
+                              写真削除ページへ
+                            </Link>
+
                             <button
                               type="button"
                               onClick={() => handleDelete(contest.contestId)}

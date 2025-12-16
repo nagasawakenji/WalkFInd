@@ -15,4 +15,6 @@ public class UserPhoto {
     private OffsetDateTime submissionDate;
     private Integer totalVotes; // DDL: total_votes INTEGER NOT NULL DEFAULT 0
     private Boolean isApproved;
+    private OffsetDateTime removedAt;
+    private String removedByUserId;
 }
