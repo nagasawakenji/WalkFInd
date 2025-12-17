@@ -25,9 +25,10 @@ public class ContestService {
      */
     @Transactional(readOnly = true)
     public List<ContestResponse> getAllActiveContests() {
+        log.info("DEBUG: Checking Contest Status Mapping - 修正を適用しました");
+
 
         List<Contest> contests = contestMapper.findAllActiveContests();
-
         log.info("Found {} active contests.", contests.size());
 
         // Modelから一覧表示用DTOへの変換
