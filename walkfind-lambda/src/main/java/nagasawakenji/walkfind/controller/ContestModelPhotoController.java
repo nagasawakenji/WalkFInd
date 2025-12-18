@@ -52,7 +52,7 @@ public class ContestModelPhotoController {
 
     @GetMapping
     public ResponseEntity<ContestModelPhotoListResponse> list(
-            @PathVariable("cotestId") Long contestId
+            @PathVariable("contestId") Long contestId
     ) {
         // 一覧は誰でも取得OK想定（制限したいならAuthServiceでuserId取ってチェックを追加）
         ContestModelPhotoListResponse res = contestModelPhotoService.list(contestId);
@@ -62,7 +62,7 @@ public class ContestModelPhotoController {
     @DeleteMapping("/{modelPhotoId}")
     public ResponseEntity<ContestModelPhotoListResponse> delete(
             @PathVariable("contestId") Long contestId,
-            @PathVariable Long modelPhotoId
+            @PathVariable("modelPhotoId") Long modelPhotoId
     ) {
         String userId = authService.getAuthenticatedUserId();
 

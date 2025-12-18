@@ -310,7 +310,7 @@ export default function AdminModelPhotosPage() {
       <nav className="bg-black text-white h-12 flex items-center px-4 lg:px-8 mb-8 shadow-sm">
         <span className="font-bold text-lg tracking-tight">WalkFind</span>
         <div className="ml-auto text-xs space-x-4">
-          <Link href="/admin/modify" className="hover:underline">
+          <Link href="/modify" className="hover:underline">
             コンテスト管理へ戻る
           </Link>
           <Link href="/" className="hover:underline">
