@@ -1,77 +1,103 @@
 package nagasawakenji.walkfind.controller;
 
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import nagasawakenji.walkfind.domain.dto.ModelPhotoCreateRequest;
-import nagasawakenji.walkfind.domain.dto.ModelPhotoCreateResponse;
-import nagasawakenji.walkfind.domain.dto.ModelPhotoDeleteResponse;
-import nagasawakenji.walkfind.domain.dto.ModelPhotoResponse;
-import nagasawakenji.walkfind.domain.statusenum.ModelPhotoStatus;
+import nagasawakenji.walkfind.domain.dto.ContestModelPhotoCreateRequest;
+import nagasawakenji.walkfind.domain.dto.ContestModelPhotoListResponse;
+import nagasawakenji.walkfind.domain.statusenum.ContestModelPhotoCreateStatus;
 import nagasawakenji.walkfind.exception.DatabaseOperationException;
+import nagasawakenji.walkfind.service.AuthService;
 import nagasawakenji.walkfind.service.ContestModelPhotoService;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
-
-import java.util.List;
+import org.springframework.web.multipart.MultipartFile;
 
 @RestController
-@RequestMapping("/api/v1")
-@RequiredArgsConstructor
+@RequestMapping("/api/v1/contests/{contestId}/modelPhoto")
 @Slf4j
+@RequiredArgsConstructor
 public class ContestModelPhotoController {
 
-    private final ContestModelPhotoService modelPhotoService;
+    private final ContestModelPhotoService contestModelPhotoService;
+    private final AuthService authService;
 
-    /**
-     * モデル写真の追加
-     */
-    @PostMapping("/contests/{contestId}/model-photos")
-    public ResponseEntity<ModelPhotoCreateResponse> addModelPhoto(
+    @PostMapping
+    public ResponseEntity<ContestModelPhotoListResponse> create(
             @PathVariable("contestId") Long contestId,
-            @RequestBody ModelPhotoCreateRequest request
+            @Valid @RequestPart("request") ContestModelPhotoCreateRequest request,
+            @RequestPart("file") MultipartFile file
     ) {
-        ModelPhotoCreateResponse response = modelPhotoService.addModelPhoto(contestId, request);
+        String userId = authService.getAuthenticatedUserId();
 
-        if (response.getStatus() == ModelPhotoStatus.SUCCESS) {
-            return ResponseEntity.status(HttpStatus.CREATED).body(response);
-        }
-        return ResponseEntity.badRequest().body(response);
+        ContestModelPhotoListResponse res =
+                contestModelPhotoService.create(contestId, userId, request, file);
+
+        return switch (res.getStatus()) {
+            case SUCCESS ->
+                    ResponseEntity.status(HttpStatus.CREATED).body(res);
+
+            case CONTEST_NOT_FOUND, MODEL_PHOTO_NOT_FOUND ->
+                    ResponseEntity.status(HttpStatus.NOT_FOUND).body(res);
+
+            case FORBIDDEN ->
+                    ResponseEntity.status(HttpStatus.FORBIDDEN).body(res);
+
+            case INVALID_REQUEST ->
+                    ResponseEntity.badRequest().body(res);
+
+            default ->
+                    ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(res);
+        };
     }
 
-    /**
-     * 一般ユーザー: モデル写真一覧を取得 (DTO)
-     */
-    @GetMapping("/contests/{contestId}/model-photos")
-    public ResponseEntity<List<ModelPhotoResponse>> getModelPhotos(
+    @GetMapping
+    public ResponseEntity<ContestModelPhotoListResponse> list(
             @PathVariable("contestId") Long contestId
     ) {
-        return ResponseEntity.ok(modelPhotoService.getModelPhotos(contestId));
+        // 一覧は誰でも取得OK想定（制限したいならAuthServiceでuserId取ってチェックを追加）
+        ContestModelPhotoListResponse res = contestModelPhotoService.list(contestId);
+        return ResponseEntity.ok(res);
+    }
+
+    @DeleteMapping("/{modelPhotoId}")
+    public ResponseEntity<ContestModelPhotoListResponse> delete(
+            @PathVariable("contestId") Long contestId,
+            @PathVariable Long modelPhotoId
+    ) {
+        String userId = authService.getAuthenticatedUserId();
+
+        ContestModelPhotoListResponse res =
+                contestModelPhotoService.delete(contestId, modelPhotoId, userId);
+
+        return switch (res.getStatus()) {
+            case SUCCESS ->
+                    ResponseEntity.ok(res);
+
+            case CONTEST_NOT_FOUND, MODEL_PHOTO_NOT_FOUND ->
+                    ResponseEntity.status(HttpStatus.NOT_FOUND).body(res);
+
+            case FORBIDDEN ->
+                    ResponseEntity.status(HttpStatus.FORBIDDEN).body(res);
+
+            default ->
+                    ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(res);
+        };
     }
 
     /**
-     * モデル写真の削除
-     */
-    @DeleteMapping("/model-photos/{id}")
-    public ResponseEntity<ModelPhotoDeleteResponse> deleteModelPhoto(@PathVariable("id") Long id) {
-
-        ModelPhotoDeleteResponse response = modelPhotoService.deleteModelPhoto(id);
-
-        if (response.getStatus() == ModelPhotoStatus.SUCCESS) {
-            return ResponseEntity.ok(response);
-        }
-        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(response);
-    }
-
-    /**
-     * 共通エラーハンドリング
+     * データベース例外など、Service層からスローされたRuntimeExceptionを捕捉する
      */
     @ExceptionHandler({RuntimeException.class, DatabaseOperationException.class})
-    public ResponseEntity<Object> handleErrors(Exception ex) {
-        log.error("Internal Error in ContestModelPhotoController", ex);
+    public ResponseEntity<ContestModelPhotoListResponse> handleInternalErrors(Exception ex) {
+        log.error("Unhandled Internal Error during contest model photo operation.", ex);
 
-        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                .body("サーバで予期しないエラーが発生しました。");
+        ContestModelPhotoListResponse errorResult = ContestModelPhotoListResponse.builder()
+                .status(ContestModelPhotoCreateStatus.INTERNAL_SERVER_ERROR)
+                .photos(java.util.List.of())
+                .build();
+
+        return new ResponseEntity<>(errorResult, HttpStatus.INTERNAL_SERVER_ERROR);
     }
 }
