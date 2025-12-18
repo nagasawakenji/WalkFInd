@@ -262,7 +262,7 @@ Resources:
             RestApiId: !Ref WalkFindApi
 
         # -----------------------------------------
-        # 認証必要：model-photos (Auth削除)
+        # 認証必要：model-photos (Auth削除) 現在は使用していないので、すぐに削除
         # -----------------------------------------
         ModelPhotosRoot:
           Type: Api

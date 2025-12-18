@@ -381,6 +381,7 @@ export default function AdminModifyPage() {
                             >
                               写真削除ページへ
                             </Link>
+                            
 
                             <button
                               type="button"

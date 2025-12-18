@@ -283,6 +283,12 @@ export default function ModifyContestListPage() {
                             >
                               編集
                             </Link>
+                            <Link
+                              href={`/modify/${contest.contestId}/model-photos`}
+                              className="px-3 py-1 text-xs rounded border border-purple-500 text-purple-700 hover:bg-purple-50 text-center"
+                            >
+                              モデル写真管理
+                            </Link>
                             <button
                               type="button"
                               onClick={() => handleDelete(contest.contestId)}
