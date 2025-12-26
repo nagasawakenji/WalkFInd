@@ -9,6 +9,8 @@ import nagasawakenji.walkfind.exception.DatabaseOperationException;
 import nagasawakenji.walkfind.infra.mybatis.mapper.ContestMapper;
 import nagasawakenji.walkfind.infra.mybatis.mapper.ContestModelPhotoMapper;
 import nagasawakenji.walkfind.service.ContestModelPhotoService;
+import nagasawakenji.walkfind.infra.mybatis.mapper.PhotoEmbeddingMapper;
+import org.springframework.context.ApplicationEventPublisher;
 import nagasawakenji.walkfind.service.LocalStorageUploadService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -34,12 +36,21 @@ class ContestModelPhotoServiceTest {
     @Mock ContestMapper contestMapper;
     @Mock ContestModelPhotoMapper contestModelPhotoMapper;
     @Mock LocalStorageUploadService localStorageUploadService;
+    @Mock ApplicationEventPublisher eventPublisher;
+    @Mock PhotoEmbeddingMapper photoEmbeddingMapper;
+
 
     ContestModelPhotoService service;
 
     @BeforeEach
     void setUp() {
-        service = new ContestModelPhotoService(contestMapper, contestModelPhotoMapper, localStorageUploadService);
+        service = new ContestModelPhotoService(
+                contestMapper,
+                contestModelPhotoMapper,
+                localStorageUploadService,
+                eventPublisher,
+                photoEmbeddingMapper
+        );
     }
 
     private MockMultipartFile dummyFile() {
@@ -59,7 +70,7 @@ class ContestModelPhotoServiceTest {
         assertEquals(ContestModelPhotoCreateStatus.INVALID_REQUEST, res.getStatus());
         assertTrue(res.getPhotos().isEmpty());
 
-        verifyNoInteractions(contestMapper, contestModelPhotoMapper, localStorageUploadService);
+        verifyNoInteractions(contestMapper, contestModelPhotoMapper, localStorageUploadService, eventPublisher, photoEmbeddingMapper);
     }
 
     @Test
@@ -77,7 +88,7 @@ class ContestModelPhotoServiceTest {
         assertTrue(res.getPhotos().isEmpty());
 
         verify(contestMapper).findById(1L);
-        verifyNoInteractions(contestModelPhotoMapper, localStorageUploadService);
+        verifyNoInteractions(contestModelPhotoMapper, localStorageUploadService, eventPublisher, photoEmbeddingMapper);
     }
 
     @Test
@@ -97,7 +108,7 @@ class ContestModelPhotoServiceTest {
         assertTrue(res.getPhotos().isEmpty());
 
         verify(contestMapper).findById(1L);
-        verifyNoInteractions(contestModelPhotoMapper, localStorageUploadService);
+        verifyNoInteractions(contestModelPhotoMapper, localStorageUploadService, eventPublisher, photoEmbeddingMapper);
     }
 
     @Test
@@ -145,6 +156,7 @@ class ContestModelPhotoServiceTest {
         verify(contestModelPhotoMapper).insert(any(ContestModelPhoto.class));
         verify(contestModelPhotoMapper).findById(generatedId);
         verify(localStorageUploadService, never()).deleteFile(anyString());
+        verify(eventPublisher).publishEvent(any(Object.class));
     }
 
     @Test
@@ -180,6 +192,8 @@ class ContestModelPhotoServiceTest {
 
         service.create(contestId, owner, req, file);
 
+        verify(eventPublisher).publishEvent(any(Object.class));
+
         ArgumentCaptor<ContestModelPhoto> captor = ArgumentCaptor.forClass(ContestModelPhoto.class);
         verify(contestModelPhotoMapper).insert(captor.capture());
         assertEquals("saved-key.png", captor.getValue().getPhotoUrl());
@@ -205,6 +219,7 @@ class ContestModelPhotoServiceTest {
         assertThrows(RuntimeException.class, () -> service.create(contestId, owner, req, file));
         verify(contestModelPhotoMapper, never()).insert(any());
         verify(localStorageUploadService, never()).deleteFile(anyString());
+        verifyNoInteractions(eventPublisher, photoEmbeddingMapper);
     }
 
     @Test
@@ -233,6 +248,7 @@ class ContestModelPhotoServiceTest {
 
         assertTrue(ex.getMessage().contains("Failed to create contest model photo"));
         verify(localStorageUploadService).deleteFile("saved-key.png");
+        verify(eventPublisher, never()).publishEvent(any(Object.class));
     }
 
     @Test
@@ -259,6 +275,7 @@ class ContestModelPhotoServiceTest {
 
         assertThrows(DatabaseOperationException.class, () -> service.create(contestId, owner, req, file));
         verify(localStorageUploadService).deleteFile("saved-key.png");
+        verify(eventPublisher, never()).publishEvent(any(Object.class));
     }
 
     @Test
@@ -298,7 +315,7 @@ class ContestModelPhotoServiceTest {
         assertEquals(ContestModelPhotoCreateStatus.CONTEST_NOT_FOUND, res.getStatus());
         assertTrue(res.getPhotos().isEmpty());
 
-        verifyNoInteractions(contestModelPhotoMapper, localStorageUploadService);
+        verifyNoInteractions(contestModelPhotoMapper, localStorageUploadService, eventPublisher, photoEmbeddingMapper);
     }
 
     @Test
@@ -313,7 +330,7 @@ class ContestModelPhotoServiceTest {
         assertEquals(ContestModelPhotoCreateStatus.FORBIDDEN, res.getStatus());
         assertTrue(res.getPhotos().isEmpty());
 
-        verifyNoInteractions(contestModelPhotoMapper, localStorageUploadService);
+        verifyNoInteractions(contestModelPhotoMapper, localStorageUploadService, eventPublisher, photoEmbeddingMapper);
     }
 
     @Test
@@ -334,7 +351,7 @@ class ContestModelPhotoServiceTest {
         assertTrue(res.getPhotos().isEmpty());
 
         verify(contestModelPhotoMapper).findById(10L);
-        verifyNoInteractions(localStorageUploadService);
+        verifyNoInteractions(localStorageUploadService, eventPublisher, photoEmbeddingMapper);
     }
 
     @Test
@@ -364,6 +381,7 @@ class ContestModelPhotoServiceTest {
 
         verify(contestModelPhotoMapper).deleteById(modelPhotoId);
         verify(localStorageUploadService).deleteFile("k1");
+        verify(photoEmbeddingMapper).deleteModelEmbeddingById(contestId, modelPhotoId);
     }
 
     @Test
@@ -393,6 +411,7 @@ class ContestModelPhotoServiceTest {
         assertEquals(ContestModelPhotoCreateStatus.SUCCESS, res.getStatus());
         verify(contestModelPhotoMapper).deleteById(modelPhotoId);
         verify(localStorageUploadService).deleteFile("k1");
+        verify(photoEmbeddingMapper).deleteModelEmbeddingById(contestId, modelPhotoId);
     }
 
     @Test
@@ -421,5 +440,6 @@ class ContestModelPhotoServiceTest {
                 () -> service.delete(contestId, modelPhotoId, owner));
 
         verify(localStorageUploadService, never()).deleteFile(anyString());
+        verifyNoInteractions(photoEmbeddingMapper);
     }
 }

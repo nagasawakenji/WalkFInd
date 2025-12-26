@@ -1,16 +1,28 @@
 services:
   db:
-    image: postgres:15-alpine
+    image: pgvector/pgvector:pg15
     container_name: walkfind-db
     ports:
       - "5432:5432"
     environment:
-      POSTGRES_DB: walkfind       # application-local.properties と一致
-      POSTGRES_USER: walkfind     # application-local.properties と一致
-      POSTGRES_PASSWORD: walkfind # application-local.properties と一致
+      POSTGRES_DB: walkfind
+      POSTGRES_USER: walkfind
+      POSTGRES_PASSWORD: walkfind
       TZ: "Asia/Tokyo"
     volumes:
       - db-data:/var/lib/postgresql/data
+
+  elasticmq:
+    image: softwaremill/elasticmq-native
+    container_name: walkfind-elasticmq
+    ports:
+      - "9324:9324"   # SQS互換 API
+      - "9325:9325"   # Web UI（任意）
+    environment:
+      - JAVA_OPTS=-Dconfig.file=/opt/elasticmq.conf
+    volumes:
+      - ./elasticmq.conf:/opt/elasticmq.conf:ro
+    command: ["-Dconfig.file=/opt/elasticmq.conf"]
 
 volumes:
   db-data:

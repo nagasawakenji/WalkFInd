@@ -11,6 +11,8 @@ import nagasawakenji.walkfind.domain.statusenum.ContestModelPhotoCreateStatus;
 import nagasawakenji.walkfind.exception.DatabaseOperationException;
 import nagasawakenji.walkfind.infra.mybatis.mapper.ContestMapper;
 import nagasawakenji.walkfind.infra.mybatis.mapper.ContestModelPhotoMapper;
+import nagasawakenji.walkfind.infra.mybatis.mapper.PhotoEmbeddingMapper;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
@@ -26,7 +28,8 @@ public class ContestModelPhotoService {
     private final ContestMapper contestMapper;
     private final ContestModelPhotoMapper contestModelPhotoMapper;
     private final LocalStorageUploadService localStorageUploadService;
-
+    private final ApplicationEventPublisher eventPublisher;
+    private final PhotoEmbeddingMapper photoEmbeddingMapper;
 
 
 
@@ -101,6 +104,17 @@ public class ContestModelPhotoService {
                     .description(created.getDescription())
                     .createdAt(created.getCreatedAt())
                     .build();
+
+            // AFTER_COMMIT で非同期処理（例: embedding作成）をキックするためのイベントを発火
+            eventPublisher.publishEvent(
+                    new nagasawakenji.walkfind.domain.event.PhotoSubmittedEvent(
+                            "MODEL",
+                            contestId,
+                            photo.getId(),
+                            savedPhotoUrl
+                    )
+            );
+
 
             return ContestModelPhotoListResponse.builder()
                     .status(ContestModelPhotoCreateStatus.SUCCESS)
@@ -184,6 +198,14 @@ public class ContestModelPhotoService {
                     .description(existing.getDescription())
                     .createdAt(existing.getCreatedAt())
                     .build();
+
+            // embeddingも同様にベストエフォートで消す
+            try {
+                int embDeleted = photoEmbeddingMapper.deleteModelEmbeddingById(existing.getContestId(), existing.getId());
+                log.info("Deleted Model embedding. contestId={}, photoId={}, deletedRows={}", contestId, existing.getId(), embDeleted);
+            } catch (Exception e) {
+                log.warn("Failed to delete model embedding (best-effort). photoId={}", existing.getId(), e);
+            }
 
             return ContestModelPhotoListResponse.builder()
                     .status(ContestModelPhotoCreateStatus.SUCCESS)

@@ -12,6 +12,7 @@ import nagasawakenji.walkfind.exception.DatabaseOperationException;
 import nagasawakenji.walkfind.infra.mybatis.mapper.ContestMapper;
 import nagasawakenji.walkfind.infra.mybatis.mapper.PhotoMapper;
 import nagasawakenji.walkfind.infra.mybatis.mapper.UserProfileMapper;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -27,6 +28,7 @@ public class PhotoSubmissionService {
     private final S3DeleteService s3DeleteService;
     private final UserProfileMapper userProfileMapper;
     private final UserProfileContestEntryService userProfileContestEntryService;
+    private final ApplicationEventPublisher eventPublisher;
 
     // ロールバックされる際は、必ずS3へ保存した写真を削除するようにする
     @Transactional
@@ -86,6 +88,17 @@ public class PhotoSubmissionService {
                 log.error("Failed to increment total_posts for userId={}", userId);
                 throw new DatabaseOperationException("プロフィールの投稿数更新に失敗しました。");
             }
+
+            // AFTER_COMMIT で非同期処理（例: embedding作成）をキックするためのイベントを発火
+            // ※ PhotoSubmittedEvent は walkfind-common 側などに定義済みの想定
+            eventPublisher.publishEvent(
+                    new nagasawakenji.walkfind.domain.event.PhotoSubmittedEvent(
+                            "USER",
+                            contestId,
+                            newPhoto.getId(),
+                            s3Key
+                    )
+            );
 
             // 成功結果の返却
             return buildResult(newPhoto.getId(), SubmitPhotoStatus.SUCCESS, "写真の投稿が完了しました。");

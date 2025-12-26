@@ -1,0 +1,103 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="nagasawakenji.walkfind.infra.mybatis.mapper.PhotoEmbeddingMapper">
+
+    <resultMap id="SimilarModelPhotoRowMap" type="nagasawakenji.walkfind.domain.dto.SimilarModelPhotoRow">
+        <result property="modelPhotoId" column="model_photo_id"/>
+        <result property="contestId" column="contest_id"/>
+        <result property="key" column="key"/>
+        <result property="title" column="title"/>
+        <result property="description" column="description"/>
+        <result property="createdAt" column="created_at"/>
+        <result property="similarity" column="similarity"/>
+    </resultMap>
+
+    <select id="findSimilarList" resultMap="SimilarModelPhotoRowMap">
+        WITH u AS (
+        SELECT
+        embedding,
+        contest_id,
+        model_version
+        FROM photo_embeddings
+        WHERE photo_type = 'USER'
+        AND status = 'READY'
+        AND contest_id = #{contestId}
+        AND photo_id = #{userPhotoId}
+        LIMIT 1
+        )
+        SELECT
+        mp.id AS model_photo_id,
+        mp.contest_id AS contest_id,
+        mp.photo_url AS key,
+        mp.title AS title,
+        mp.description AS description,
+        mp.created_at AS created_at,
+        (1 - (mpe.embedding &lt;=&gt; u.embedding))::float8 AS similarity
+        FROM u
+        JOIN photo_embeddings mpe
+        ON mpe.contest_id = u.contest_id
+        AND mpe.photo_type = 'MODEL'
+        AND mpe.status = 'READY'
+        AND mpe.model_version = u.model_version
+        JOIN contest_model_photos mp
+        ON mp.id = mpe.photo_id
+        ORDER BY (mpe.embedding &lt;=&gt; u.embedding) ASC
+        LIMIT
+        <choose>
+            <when test="limit != null and limit &gt; 0">#{limit}</when>
+            <otherwise>10</otherwise>
+        </choose>
+    </select>
+
+    <select id="existsUserEmbeddingReady" resultType="boolean">
+        SELECT EXIST (
+          SELECT 1
+          FROM photo_embeddings
+          WHERE photo_type = 'USER'
+            AND status = 'READY'
+            AND contest_id = #{contestId}
+            AND photo_id = #{userPhotoId}
+        )
+    </select>
+
+    <select id="existsAnyModelEmbeddingReadyForContest" resultType="boolean">
+        SELECT EXISTS(
+        SELECT 1
+        FROM photo_embeddings
+        WHERE photo_type = 'MODEL'
+        AND status = 'READY'
+        AND contest_id = #{contestId}
+        )
+    </select>
+
+    <delete id="deleteUserEmbeddingById">
+        DELETE FROM photo_embeddings
+        WHERE contest_id = #{contestId}
+        AND photo_type = 'USER'
+        AND photo_id = #{userPhotoId}
+    </delete>
+
+    <delete id="deleteModelEmbeddingById">
+        DELETE FROM photo_embeddings
+        WHERE contest_id = #{contestId}
+        AND photo_type = 'MODEL'
+        AND photo_id = #{modelPhotoId}
+    </delete>
+    
+    <select id="findReadyUserPhotoIds" resultType="long">
+        SELECT photo_id
+        FROM photo_embeddings
+        WHERE contest_id = #{contestId}
+          AND photo_type = 'USER'
+          AND status = 'READY'
+          AND photo_id IN
+        <foreach collection="photoIds" item="id" open="(" separator="," close=")">
+            #{id}
+        </foreach>
+    </select>
+
+
+
+</mapper>

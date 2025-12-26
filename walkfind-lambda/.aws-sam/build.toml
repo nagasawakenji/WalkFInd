@@ -9,4 +9,13 @@ manifest_hash = ""
 packagetype = "Zip"
 functions = ["UserApiFunction", "ResultCalculationFunction", "ContestStatusBatchHandler"]
 
+[function_build_definitions.d9c30374-031a-4174-9058-6b573089f92e]
+codeuri = "/Users/ishidzuka/Downloads/walkfind/walkfind-ml-worker/src"
+runtime = "python3.11"
+architecture = "x86_64"
+handler = "walkfind_ml_worker.lambda_handler.handler"
+manifest_hash = ""
+packagetype = "Zip"
+functions = ["EmbeddingWorkerFunction"]
+
 [layer_build_definitions]

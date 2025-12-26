@@ -64,7 +64,7 @@ public class ContestModelPhotoController {
     @DeleteMapping("/{modelPhotoId}")
     public ResponseEntity<ContestModelPhotoListResponse> delete(
             @PathVariable("contestId") Long contestId,
-            @PathVariable Long modelPhotoId
+            @PathVariable("modelPhotoId") Long modelPhotoId
     ) {
         String userId = authService.getAuthenticatedUserId();
 

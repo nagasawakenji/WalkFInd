@@ -21,6 +21,11 @@
             <artifactId>spring-context</artifactId>
         </dependency>
 
+        <dependency>
+            <groupId>software.amazon.awssdk</groupId>
+            <artifactId>sqs</artifactId>
+        </dependency>
+
         <!-- トランザクション管理（@Transactional） -->
         <dependency>
             <groupId>org.springframework</groupId>

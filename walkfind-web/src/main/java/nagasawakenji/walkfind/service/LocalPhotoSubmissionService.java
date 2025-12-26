@@ -15,6 +15,7 @@ import nagasawakenji.walkfind.infra.mybatis.mapper.UserProfileMapper;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
+import org.springframework.context.ApplicationEventPublisher;
 
 import java.util.Optional;
 import java.util.UUID;
@@ -29,6 +30,7 @@ public class LocalPhotoSubmissionService {
     private final UserProfileMapper userProfileMapper;
     private final LocalStorageUploadService localStorageUploadService;
     private final UserProfileContestEntryService userProfileContestEntryService;
+    private final ApplicationEventPublisher eventPublisher;
 
     @Transactional
     public SubmitPhotoResult submitPhoto(SubmitPhotoRequest request, String userId, MultipartFile file) {
@@ -103,6 +105,15 @@ public class LocalPhotoSubmissionService {
                 log.error("Failed to increment total_posts for userId={}", userId);
                 throw new DatabaseOperationException("プロフィールの投稿数更新に失敗しました。");
             }
+            // AFTER_COMMIT で非同期処理（例: embedding作成）をキックするためのイベントを発火
+            eventPublisher.publishEvent(
+                    new nagasawakenji.walkfind.domain.event.PhotoSubmittedEvent(
+                            "USER",
+                            contestId,
+                            newPhoto.getId(),
+                            savedPhotoUrl
+                    )
+            );
 
             // 成功結果の返却
             return buildResult(newPhoto.getId(), SubmitPhotoStatus.SUCCESS, "写真の投稿が完了しました。");

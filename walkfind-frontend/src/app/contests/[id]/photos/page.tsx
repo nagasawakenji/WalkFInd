@@ -6,6 +6,8 @@ import Link from 'next/link';
 import axios from 'axios';
 
 // 型定義
+type SimilarityStatus = 'READY' | 'NOT_READY';
+
 interface PhotoDisplayResponse {
   photoId: number;
   title: string;
@@ -14,6 +16,10 @@ interface PhotoDisplayResponse {
   totalVotes: number;
   photoUrl: string;
   submissionDate: string;
+
+  // backend側の実装揺れに備えて両方受ける（どちらかが入る想定）
+  similarityStatus?: SimilarityStatus | null;
+  status?: SimilarityStatus | null;
 }
 
 interface PageProps {
@@ -365,14 +371,29 @@ export default function PhotoListPage({ params }: PageProps) {
                         </button>
 
                         {currentUserId && currentUserId === photo.userId && (
-                          <button
-                            type="button"
-                            onClick={() => handleDelete(photo.photoId)}
-                            disabled={deletingId === photo.photoId}
-                            className="bg-white border border-red-500 text-red-600 hover:bg-red-500 hover:text-white px-4 py-2 rounded-sm text-xs font-bold transition-colors disabled:opacity-50 disabled:cursor-not-allowed disabled:border-gray-300 disabled:text-gray-400 disabled:bg-gray-100"
-                          >
-                            {deletingId === photo.photoId ? 'Deleting...' : 'Delete'}
-                          </button>
+                          <>
+                            {(() => {
+                              const s = (photo.similarityStatus ?? photo.status) as SimilarityStatus | null | undefined;
+                              if (s !== 'READY') return null; // NOT_READY / null はボタン非表示
+                              return (
+                                <Link
+                                  href={`/contests/${contestId}/photos/${photo.photoId}`}
+                                  className="bg-white border border-green-600 text-green-700 hover:bg-green-600 hover:text-white px-4 py-2 rounded-sm text-xs font-bold transition-colors"
+                                >
+                                  Similarity
+                                </Link>
+                              );
+                            })()}
+
+                            <button
+                              type="button"
+                              onClick={() => handleDelete(photo.photoId)}
+                              disabled={deletingId === photo.photoId}
+                              className="bg-white border border-red-500 text-red-600 hover:bg-red-500 hover:text-white px-4 py-2 rounded-sm text-xs font-bold transition-colors disabled:opacity-50 disabled:cursor-not-allowed disabled:border-gray-300 disabled:text-gray-400 disabled:bg-gray-100"
+                            >
+                              {deletingId === photo.photoId ? 'Deleting...' : 'Delete'}
+                            </button>
+                          </>
                         )}
                       </div>
                     </div>
