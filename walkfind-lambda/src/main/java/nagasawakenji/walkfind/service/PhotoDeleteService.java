@@ -6,6 +6,7 @@ import nagasawakenji.walkfind.domain.dto.DeletingPhotoResponse;
 import nagasawakenji.walkfind.domain.model.UserPhoto;
 import nagasawakenji.walkfind.domain.statusenum.DeletePhotoStatus;
 import nagasawakenji.walkfind.exception.DatabaseOperationException;
+import nagasawakenji.walkfind.infra.mybatis.mapper.PhotoEmbeddingMapper;
 import nagasawakenji.walkfind.infra.mybatis.mapper.PhotoMapper;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -19,6 +20,7 @@ import java.util.Optional;
 public class PhotoDeleteService {
 
     private final PhotoMapper photoMapper;
+    private final PhotoEmbeddingMapper photoEmbeddingMapper;
     private final S3DeleteService s3DeleteService;
 
     @Transactional
@@ -48,6 +50,16 @@ public class PhotoDeleteService {
                     .message("この写真を削除する権限がありません。")
                     .build();
         }
+
+        // ベストエフォートで embedding を削除（失敗しても写真削除は継続する）
+        try {
+            Long contestId = photo.getContestId();
+            int embDeleted = photoEmbeddingMapper.deleteUserEmbeddingById(contestId, photoId);
+            log.info("Deleted user embedding. contestId={}, photoId={}, deletedRows={}", contestId, photoId, embDeleted);
+        } catch (Exception e) {
+            log.warn("Failed to delete user embedding (best-effort). photoId={}", photoId, e);
+        }
+
         String photoKey = photo.getPhotoUrl();
 
         try {

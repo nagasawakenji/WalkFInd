@@ -13,6 +13,13 @@ Parameters:
     Type: String
     Description: ARN of the Cognito User Pool used by API Gateway authorizer
 
+  EmbeddingQueueArn:
+    Type: String
+    Description: ARN of the embedding SQS queue
+  EmbeddingQueueUrl:
+    Type: String
+    Description: URL of the embedding SQS queue
+
 Globals:
   Function:
     Runtime: java17
@@ -76,6 +83,7 @@ Resources:
           COGNITO_ISSUER_URI: !Ref CognitoIssuerUri
           APP_DUMMY_VERSION: 2025-12-08-04
           S3_BUCKET_NAME: walkfind-photos
+          EMBEDDING_QUEUE_URL: !Ref EmbeddingQueueUrl
 
       Policies:
         - S3CrudPolicy:
@@ -90,6 +98,10 @@ Resources:
               Resource:
                 - !Sub "arn:aws:secretsmanager:${AWS::Region}:${AWS::AccountId}:secret:/walkfind/database-*"
                 - !Sub "arn:aws:secretsmanager:${AWS::Region}:${AWS::AccountId}:secret:/walkfind/cognito/prod-*"
+            - Effect: Allow
+              Action:
+                - sqs:SendMessage
+              Resource: !Ref EmbeddingQueueArn
 
       Events:
         # -----------------------------------------
@@ -298,6 +310,7 @@ Resources:
       # =======================================================
       # レイテンシ改善(コールドスタート対策)
       # =======================================================
+
       SnapStart:
         ApplyOn: PublishedVersions
 
@@ -354,6 +367,49 @@ Resources:
           Properties:
             Schedule: rate(60 minutes)
             Enabled: true
+
+  EmbeddingWorkerFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: WalkFindEmbeddingWorker
+      Runtime: python3.11
+      CodeUri: ../walkfind-ml-worker/src
+      Handler: walkfind_ml_worker.lambda_handler.handler
+      Timeout: 300
+      MemorySize: 512
+
+      Environment:
+        Variables:
+          STORAGE_PROVIDER: s3
+          S3_BUCKET_NAME: walkfind-photos
+          DB_SECRET_ARN: !Ref DbSecretArn
+
+      Policies:
+        - S3ReadPolicy:
+            BucketName: walkfind-photos
+        - Version: '2012-10-17'
+          Statement:
+            - Effect: Allow
+              Action:
+                - secretsmanager:GetSecretValue
+              Resource:
+                - !Sub "arn:aws:secretsmanager:${AWS::Region}:${AWS::AccountId}:secret:/walkfind/database-*"
+
+            - Effect: Allow
+              Action:
+                - sqs:ReceiveMessage
+                - sqs:DeleteMessage
+                - sqs:GetQueueAttributes
+                - sqs:ChangeMessageVisibility
+              Resource: !Ref EmbeddingQueueArn
+      Events:
+        EmbeddingQueueEvent:
+          Type: SQS
+          Properties:
+            Queue: !Ref EmbeddingQueueArn
+            BatchSize: 1
+            FunctionResponseTypes:
+              - ReportBatchItemFailures
 
 Outputs:
   WalkFindApiUrl:

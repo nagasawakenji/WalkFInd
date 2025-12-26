@@ -6,6 +6,7 @@ import nagasawakenji.walkfind.domain.dto.DeletingPhotoResponse;
 import nagasawakenji.walkfind.domain.model.UserPhoto;
 import nagasawakenji.walkfind.domain.statusenum.DeletePhotoStatus;
 import nagasawakenji.walkfind.exception.DatabaseOperationException;
+import nagasawakenji.walkfind.infra.mybatis.mapper.PhotoEmbeddingMapper;
 import nagasawakenji.walkfind.infra.mybatis.mapper.PhotoMapper;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -19,6 +20,7 @@ import java.util.Optional;
 public class LocalPhotoDeleteService {
 
     private final PhotoMapper photoMapper;
+    private final PhotoEmbeddingMapper photoEmbeddingMapper;
     private final LocalStorageUploadService localStorageUploadService;
 
     /**
@@ -54,6 +56,20 @@ public class LocalPhotoDeleteService {
                     .build();
         }
 
+        // Embedding(ユーザー写真)も削除（ベストエフォート）
+        // ※ embedding は photo_embeddings にあり、photo の物理削除に追随させる
+        try {
+            if (photo.getContestId() != null) {
+                int embDeleted = photoEmbeddingMapper.deleteUserEmbeddingById(photo.getContestId(), photoId);
+                log.info("Deleted user embedding rows. contestId={}, photoId={}, deleted={}", photo.getContestId(), photoId, embDeleted);
+            } else {
+                log.warn("contestId is null; skip embedding delete. photoId={}", photoId);
+            }
+        } catch (Exception e) {
+            // embedding 削除失敗はログに留め、写真削除を優先
+            log.error("Failed to delete user embedding. photoId={}", photoId, e);
+        }
+
         String photoKey = photo.getPhotoUrl(); // ローカルストレージ上のパス
 
         try {
@@ -68,7 +84,7 @@ public class LocalPhotoDeleteService {
                         .build();
             }
 
-            // 4. DB削除が成功した場合のみストレージから削除
+            // DB削除が成功した場合のみストレージから削除
             if (StringUtils.hasText(photoKey)) {
                 try {
                     localStorageUploadService.deleteFile(photoKey);
@@ -76,6 +92,15 @@ public class LocalPhotoDeleteService {
                     // ストレージ削除失敗はログにとどめ、DB側の削除は優先
                     log.error("Failed to delete local file. key={}, photoId={}", photoKey, photoId, e);
                 }
+            }
+
+            // ベストエフォートで embedding を削除（失敗しても写真削除は継続する）
+            try {
+                Long contestId = photo.getContestId();
+                int embDeleted = photoEmbeddingMapper.deleteUserEmbeddingById(contestId, photoId);
+                log.info("Deleted user embedding. contestId={}, photoId={}, deletedRows={}", contestId, photoId, embDeleted);
+            } catch (Exception e) {
+                log.warn("Failed to delete user embedding (best-effort). photoId={}", photoId, e);
             }
 
             return DeletingPhotoResponse.builder()

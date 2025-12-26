@@ -3,6 +3,7 @@ package nagasawakenji.walkfind.controller;
 import nagasawakenji.walkfind.domain.dto.PhotoDisplayResponse;
 import nagasawakenji.walkfind.domain.dto.PhotoListResponse;
 import nagasawakenji.walkfind.domain.dto.PhotoResponse;
+import nagasawakenji.walkfind.service.AuthService;
 import nagasawakenji.walkfind.service.PhotoDisplayService;
 import nagasawakenji.walkfind.exception.ContestNotFoundException;
 import lombok.RequiredArgsConstructor;
@@ -23,6 +24,7 @@ public class PhotoListController {
 
     private final PhotoDisplayService photoDisplayService;
     private final S3DownloadPresignService s3DownloadPresignService;
+    private final AuthService authService;
 
     /**
      * GET /api/v1/contests/{contestId}/photos : 特定コンテストの投稿写真リストを取得
@@ -36,7 +38,8 @@ public class PhotoListController {
                                                        @RequestParam(value = "page", defaultValue = "0") int page,
                                                        @RequestParam(value = "size", defaultValue = "20") int size) {
 
-        PhotoListResponse response = photoDisplayService.getPhotosByContest(contestId, page, size);
+        String userId = authService.getAuthenticatedUserId();
+        PhotoListResponse response = photoDisplayService.getPhotosByContest(contestId, page, size, userId);
         handlePhotoUrl(response);
         return ResponseEntity.ok(response);
     }

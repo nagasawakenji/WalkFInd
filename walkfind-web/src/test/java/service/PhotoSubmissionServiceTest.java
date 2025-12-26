@@ -2,6 +2,7 @@ package service;
 
 import nagasawakenji.walkfind.domain.dto.SubmitPhotoRequest;
 import nagasawakenji.walkfind.domain.dto.SubmitPhotoResult;
+import nagasawakenji.walkfind.domain.event.PhotoSubmittedEvent;
 import nagasawakenji.walkfind.domain.model.Contest;
 import nagasawakenji.walkfind.domain.model.UserPhoto;
 import nagasawakenji.walkfind.domain.statusenum.ContestStatus;
@@ -19,6 +20,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.util.Optional;
@@ -50,6 +52,9 @@ class PhotoSubmissionServiceTest {
 
     @Mock
     private UserProfileContestEntryService userProfileContestEntryService;
+
+    @Mock
+    private ApplicationEventPublisher eventPublisher;
 
     @InjectMocks
     private LocalPhotoSubmissionService localPhotoSubmissionService;
@@ -83,6 +88,9 @@ class PhotoSubmissionServiceTest {
         // DB insert 成功
         when(photoMapper.insert(any(UserPhoto.class))).thenReturn(1);
         when(userProfileMapper.incrementTotalPosts(userId)).thenReturn(1);
+
+        // Event 発行
+        doNothing().when(eventPublisher).publishEvent(any(PhotoSubmittedEvent.class));
 
         // Request (URLなし)
         SubmitPhotoRequest req = new SubmitPhotoRequest(contestId, "title", "url", "desc");
