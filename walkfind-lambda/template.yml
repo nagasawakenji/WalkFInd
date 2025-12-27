@@ -13,22 +13,13 @@ Parameters:
     Type: String
     Description: ARN of the Cognito User Pool used by API Gateway authorizer
 
-  EmbeddingQueueArn:
-    Type: String
-    Description: ARN of the embedding SQS queue
-  EmbeddingQueueUrl:
-    Type: String
-    Description: URL of the embedding SQS queue
-
 Globals:
   Function:
-    Runtime: java17
     Timeout: 30
     MemorySize: 1024
     Architectures:
-      - x86_64
+      - arm64
 
-  # ★追加: 画像アップロードのためのバイナリ設定
   Api:
     BinaryMediaTypes:
       - multipart/form-data
@@ -36,7 +27,17 @@ Globals:
 
 Resources:
   # =======================================================
-  # 1. Cognito User Pool
+  # SQS Queue (SAMにより自動作成)
+  # =======================================================
+  EmbeddingQueue:
+    Type: AWS::SQS::Queue
+    Properties:
+      QueueName: WalkFindEmbeddingQueue
+      VisibilityTimeout: 310
+      MessageRetentionPeriod: 1209600
+
+  # =======================================================
+  # Cognito User Pool
   # =======================================================
   WalkFindUserPool:
     Type: AWS::Cognito::UserPool
@@ -56,7 +57,7 @@ Resources:
       SupportedIdentityProviders: [ COGNITO ]
 
   # =======================================================
-  # 2. API Gateway
+  # API Gateway
   # =======================================================
   WalkFindApi:
     Type: AWS::Serverless::Api
@@ -68,12 +69,13 @@ Resources:
             UserPoolArn: !Ref CognitoUserPoolArn
 
   # =======================================================
-  # 3. Lambda Function (Spring Boot)
+  # Lambda Function (Spring Boot)
   # =======================================================
   UserApiFunction:
     Type: AWS::Serverless::Function
     Properties:
       FunctionName: WalkFindUserApi
+      Runtime: java17
       CodeUri: .
       AutoPublishAlias: live
       Handler: nagasawakenji.walkfind.handler.StreamLambdaHandler::handleRequest
@@ -81,15 +83,15 @@ Resources:
         Variables:
           DB_SECRET_ARN: !Ref DbSecretArn
           COGNITO_ISSUER_URI: !Ref CognitoIssuerUri
-          APP_DUMMY_VERSION: 2025-12-08-04
+          APP_DUMMY_VERSION: 2025-12-08-05
           S3_BUCKET_NAME: walkfind-photos
-          EMBEDDING_QUEUE_URL: !Ref EmbeddingQueueUrl
+          EMBEDDING_QUEUE_URL: !Ref EmbeddingQueue
+          WALKFIND_SQS_QUEUE_URL: !Ref EmbeddingQueue
 
       Policies:
         - S3CrudPolicy:
             BucketName: walkfind-photos
 
-        # 既存のポリシー (Secrets Manager)
         - Version: '2012-10-17'
           Statement:
             - Effect: Allow
@@ -101,215 +103,147 @@ Resources:
             - Effect: Allow
               Action:
                 - sqs:SendMessage
-              Resource: !Ref EmbeddingQueueArn
+              Resource: !GetAtt EmbeddingQueue.Arn
 
       Events:
-        # -----------------------------------------
-        # 認証不要：auth（Cognito ログイン）
-        # -----------------------------------------
         AuthLogin:
           Type: Api
           Properties:
             Path: /api/v1/auth/cognito/login
             Method: ANY
             RestApiId: !Ref WalkFindApi
-
-        # -----------------------------------------
-        # 認証不要：auth（ログアウト）
-        # -----------------------------------------
         AuthLogout:
           Type: Api
           Properties:
             Path: /api/v1/auth/logout
             Method: ANY
             RestApiId: !Ref WalkFindApi
-
-        # -----------------------------------------
-        # 認証不要：contests
-        # -----------------------------------------
-
         ContestsRoot:
           Type: Api
           Properties:
             Path: /api/v1/contests
             Method: ANY
             RestApiId: !Ref WalkFindApi
-
         ContestsProxy:
           Type: Api
           Properties:
             Path: /api/v1/contests/{proxy+}
             Method: ANY
             RestApiId: !Ref WalkFindApi
-
-        # -----------------------------------------
-        # 認証必要：admin (Auth削除 -> Spring Securityへ)
-        # -----------------------------------------
         AdminRoot:
           Type: Api
           Properties:
             Path: /api/v1/admin
             Method: ANY
             RestApiId: !Ref WalkFindApi
-
         AdminProxy:
           Type: Api
           Properties:
             Path: /api/v1/admin/{proxy+}
             Method: ANY
             RestApiId: !Ref WalkFindApi
-
-        # -----------------------------------------
-        # 認証不要：results
-        # -----------------------------------------
         ResultsRoot:
           Type: Api
           Properties:
             Path: /api/v1/results
             Method: ANY
             RestApiId: !Ref WalkFindApi
-
         ResultsProxy:
           Type: Api
           Properties:
             Path: /api/v1/results/{proxy+}
             Method: ANY
             RestApiId: !Ref WalkFindApi
-
-        # -----------------------------------------
-        # 認証不要：users（/me 以外）
-        # -----------------------------------------
         UsersRoot:
           Type: Api
           Properties:
             Path: /api/v1/users
             Method: ANY
             RestApiId: !Ref WalkFindApi
-
         UsersProxy:
           Type: Api
           Properties:
             Path: /api/v1/users/{proxy+}
             Method: ANY
             RestApiId: !Ref WalkFindApi
-
-        # -----------------------------------------
-        # 認証必要：me
-        # -----------------------------------------
         BioRoot:
           Type: Api
           Properties:
             Path: /api/v1/me/profile/bio
             Method: ANY
             RestApiId: !Ref WalkFindApi
-
         ImageRoot:
           Type: Api
           Properties:
             Path: /api/v1/me/profile/image
             Method: ANY
             RestApiId: !Ref WalkFindApi
-
-
-
-        # -----------------------------------------
-        # 認証必要：votes (Auth削除 -> Spring Securityへ)
-        # -----------------------------------------
         VotesRoot:
           Type: Api
           Properties:
             Path: /api/v1/votes
             Method: ANY
             RestApiId: !Ref WalkFindApi
-
         VotesProxy:
           Type: Api
           Properties:
             Path: /api/v1/votes/{proxy+}
             Method: ANY
             RestApiId: !Ref WalkFindApi
-
-        # -----------------------------------------
-        # 認証必要：photos (Auth削除 -> Spring Securityへ)
-        # -----------------------------------------
         PhotosRoot:
           Type: Api
           Properties:
             Path: /api/v1/photos
             Method: ANY
             RestApiId: !Ref WalkFindApi
-
         PhotosProxy:
           Type: Api
           Properties:
             Path: /api/v1/photos/{proxy+}
             Method: ANY
             RestApiId: !Ref WalkFindApi
-
-        # -----------------------------------------
-        # 認証必要：/users/me (Auth削除 -> Spring Securityへ)
-        # -----------------------------------------
         MeApi:
           Type: Api
           Properties:
             Path: /api/v1/users/me
             Method: ANY
             RestApiId: !Ref WalkFindApi
-
-        # -----------------------------------------
-        # 認証必要：upload（presigned URL） (Auth削除)
-        # -----------------------------------------
         UploadRoot:
           Type: Api
           Properties:
             Path: /api/v1/upload
             Method: ANY
             RestApiId: !Ref WalkFindApi
-
         UploadProxy:
           Type: Api
           Properties:
             Path: /api/v1/upload/{proxy+}
             Method: ANY
             RestApiId: !Ref WalkFindApi
-
-        # -----------------------------------------
-        # 認証必要：model-photos (Auth削除) 現在は使用していないので、すぐに削除
-        # -----------------------------------------
         ModelPhotosRoot:
           Type: Api
           Properties:
             Path: /api/v1/model-photos
             Method: ANY
             RestApiId: !Ref WalkFindApi
-
         ModelPhotosProxy:
           Type: Api
           Properties:
             Path: /api/v1/model-photos/{proxy+}
             Method: ANY
             RestApiId: !Ref WalkFindApi
-
-        # =======================================================
-        # Contest Icons (Authなし)
-        # =======================================================
         ContestIconsRoot:
           Type: Api
           Properties:
             Path: /api/v1/contest-icons
             Method: ANY
             RestApiId: !Ref WalkFindApi
-
         ContestIconsProxy:
           Type: Api
           Properties:
             Path: /api/v1/contest-icons/{proxy+}
             Method: ANY
             RestApiId: !Ref WalkFindApi
-
-      # =======================================================
-      # レイテンシ改善(コールドスタート対策)
-      # =======================================================
 
       SnapStart:
         ApplyOn: PublishedVersions
@@ -368,21 +302,32 @@ Resources:
             Schedule: rate(60 minutes)
             Enabled: true
 
-  EmbeddingWorkerFunction:
+  # =======================================================
+  # ML Worker Function (Docker Container)
+  # =======================================================
+  EmbeddingWorkerFunctionV2:
     Type: AWS::Serverless::Function
     Properties:
-      FunctionName: WalkFindEmbeddingWorker
+      FunctionName: WalkFindEmbeddingWorkerV2
+      PackageType: Image # Docker Imageを使用
+      Timeout: 900
+      MemorySize: 2048
       Runtime: python3.11
-      CodeUri: ../walkfind-ml-worker/src
-      Handler: walkfind_ml_worker.lambda_handler.handler
-      Timeout: 300
-      MemorySize: 512
 
       Environment:
         Variables:
           STORAGE_PROVIDER: s3
           S3_BUCKET_NAME: walkfind-photos
-          DB_SECRET_ARN: !Ref DbSecretArn
+          DB_SECRET_ID: !Ref DbSecretArn
+          # Dockerコンテナ内のパス設定
+          PYTHONPATH: /var/task/src:/var/task
+          # openclipがどうしても指定ファイルにデータを保存しないので、homeをtmp指定します
+          # もっと良い解決策があれば、後で変更します
+          HOME: /tmp
+
+          XDG_CACHE_HOME: /tmp/.cache
+          TORCH_HOME: /tmp/.torch
+          HF_HOME: /tmp/.hf
 
       Policies:
         - S3ReadPolicy:
@@ -394,22 +339,28 @@ Resources:
                 - secretsmanager:GetSecretValue
               Resource:
                 - !Sub "arn:aws:secretsmanager:${AWS::Region}:${AWS::AccountId}:secret:/walkfind/database-*"
-
             - Effect: Allow
               Action:
                 - sqs:ReceiveMessage
                 - sqs:DeleteMessage
                 - sqs:GetQueueAttributes
                 - sqs:ChangeMessageVisibility
-              Resource: !Ref EmbeddingQueueArn
+              Resource: !GetAtt EmbeddingQueue.Arn
       Events:
         EmbeddingQueueEvent:
           Type: SQS
           Properties:
-            Queue: !Ref EmbeddingQueueArn
+            # 自動作成されたQueueのARNを参照
+            Queue: !GetAtt EmbeddingQueue.Arn
             BatchSize: 1
             FunctionResponseTypes:
               - ReportBatchItemFailures
+
+    # Dockerビルドの設定
+    Metadata:
+      DockerTag: python3.11-v1
+      DockerContext: ../walkfind-ml-worker
+      Dockerfile: Dockerfile
 
 Outputs:
   WalkFindApiUrl:
