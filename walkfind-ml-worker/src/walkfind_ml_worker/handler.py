@@ -17,8 +17,7 @@ from .service.embedding_service import EmbeddingService
 # Process-level singletons (Lambda container reuse friendly)
 # =====================================================
 _cfg = Config()
-_embedder = OpenClipEmbedder(_cfg.openclip_model, _cfg.openclip_pretrained)
-
+_embedder = None
 # Prefer Secrets Manager path if Db.from_config exists; otherwise fallback to plain env/config values.
 try:
     _db = Db.from_config(_cfg)  # type: ignore[attr-defined]
@@ -36,6 +35,27 @@ except AttributeError:
 _SVC_CACHE: Dict[int, EmbeddingService] = {}
 
 _logger = logging.getLogger(__name__)
+
+
+def get_embedder():
+    """
+    モデルを遅延ロードするためのシングルトン取得関数。
+    ハンドラ実行時（Invoke Phase）に呼び出されるため、15分のタイムアウト設定が適用されます。
+    """
+    global _embedder
+    if _embedder is None:
+        # ロガーが未設定の場合に備えてprintも併用（CloudWatchには出る）
+        print("[worker] Lazy loading OpenClip model...")
+        if _logger:
+            _logger.info("[worker] Lazy loading OpenClip model...")
+            
+        _embedder = OpenClipEmbedder(_cfg.openclip_model, _cfg.openclip_pretrained)
+        
+        print("[worker] Model loaded successfully.")
+        if _logger:
+            _logger.info("[worker] Model loaded successfully.")
+            
+    return _embedder
 
 def _setup_logging() -> None:
     """Configure logging so it shows up in the terminal.
@@ -81,16 +101,17 @@ _logger.info("[worker] logging initialized level=%s", (os.getenv("LOG_LEVEL") or
 
 def _new_service(store: Any) -> EmbeddingService:
     """Create an EmbeddingService, tolerant to constructor signature differences."""
+    embedder_instance = get_embedder()
+
     # Your project may name the dependency `s3` or `store`.
     try:
-        return EmbeddingService(s3=store, db=_db, embedder=_embedder)
+        return EmbeddingService(s3=store, db=_db, embedder=embedder_instance)
     except TypeError:
         try:
-            return EmbeddingService(store=store, db=_db, embedder=_embedder)
+            return EmbeddingService(store=store, db=_db, embedder=embedder_instance)
         except TypeError:
             # Positional fallback
-            return EmbeddingService(store, _db, _embedder)
-
+            return EmbeddingService(store, _db, embedder_instance)
 
 def get_service(store: Any) -> EmbeddingService:
     """Return a cached EmbeddingService bound to the given object store."""

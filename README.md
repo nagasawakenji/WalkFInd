@@ -5,7 +5,6 @@ WalkFind は、
 です。
 
 このリポジトリは サーバーレス構成のバックエンド API を提供します。
-フロントエンドは別リポジトリとして開発予定です。
 
 ## 🏗️ Monorepo Structure（モジュール構成）
 
@@ -15,7 +14,8 @@ WalkFind は複数モジュールに分割された構成をしています。
 walkfind/
 ├── walkfind-common     ← 共通ドメインモデル & MyBatis Mapper
 ├── walkfind-web        ← ローカル開発用 Spring Boot Web アプリ
-|── walkfind-lambda     ← AWS Lambda(SAM) 用 Spring Boot アプリ
+├── walkfind-lambda     ← AWS Lambda(SAM) 用 Spring Boot アプリ
+├── walkfind-ml-worker  ← 類似度判定システム
 └── walkfind-web        ← フロントエンド
 ```
 ### ✔ walkfind-common
@@ -55,6 +55,16 @@ AWS で動作する サーバーレス（Lambda）版の Spring Boot アプリ
 
 ⸻
 
+### ✔ walkfind-ml-worker
+
+写真投稿時にembedding(512次元の特徴量ベクトル)を算出する機械学習ロジック  
+•   elasticmq or SQS による非同期処理  
+•   openclip による embedding 生成  
+
+ローカル環境ではelasticmq、本番環境ではSQSが使用されています。
+
+⸻
+
 ### ✔ walkfind-frontend
 
 アプリのuiやフロント側のロジックを実装  
@@ -88,8 +98,9 @@ AWS Lambda（Spring Boot）
 •	MyBatis  
 •	Hibernate Validator (Bean Validation)  
 •	Lombok  
-•   TypeScript
-•   React
+•   TypeScript  
+•   React  
+•   Python
 
 ___
 
@@ -127,7 +138,7 @@ src/main/resources/db/migration/
 •	Amazon S3（Presigned URL）  
 •	AWS Secrets Manager（Supabase接続情報）  
 •	CloudWatch Logs  
-
+•   AWS Simple Queue Service
 ___
 
 ###  API Endpoints（要約）
@@ -143,11 +154,11 @@ POST /api/auth/cognito/login    ← Cognitoによるログイン
 
 認証必要（Cognito）
 ```
-POST /api/v1/upload              ← Presigned URL (PUT)
-POST /api/v1/photos              ← 写真投稿
-POST /api/v1/votes               ← 投票
-GET  /api/v1/users/me            ← 自分のプロフィール
-GET  /api/v1/model-photos        ← モデル写真の取得
+POST /api/v1/contests/create              ← コンテスト作成
+POST /api/v1/contests/{contestId}/photo   ← 写真投稿
+POST /api/v1/modify                       ← 自身の作成したコンテスト情報修正
+POST /api/v1/contests/modelPhoto          ← モデル写真の投稿
+DELETE /api/v1/contests/{contestId}       ← 自身の作成したコンテストの削除
 ```
 
 ## 🗂️ Major Domain Models
@@ -266,7 +277,6 @@ FLYWAY_PASSWORD=<supabase-password>
 ```
 
 ## 今後の予定
-・機械学習による類似度計算機能の追加
 ・テストコードの拡充
 
 

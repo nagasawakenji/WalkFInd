@@ -69,7 +69,10 @@ class Db:
 
             host = s.get("host")
             port = int(s.get("port", 5432))
-            name = s.get("dbname") or s.get("db_name") or s.get("name") or "postgres"
+            # spring bootが標準でクエリパラメーターをつける関係で、secretのdb名前にパラメーターが追加されています
+            # そのため、ここで名前を整形しています
+            raw_name = s.get("dbname") or s.get("db_name") or s.get("name") or "postgres"
+            name = raw_name.split('?')[0]
             user = s.get("username") or s.get("user")
             password = s.get("password")
 
