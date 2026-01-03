@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="nagasawakenji.walkfind.infra.mybatis.mapper.ContestProjectionBasisMapper">
+
+    <resultMap id="ContestProjectionBasisRowMap" type="nagasawakenji.walkfind.domain.dto.ContestProjectionBasisRow">
+        <id     column="id"          property="id" />
+        <result column="contest_id"  property="contestId" />
+        <result column="model_version" property="modelVersion" />
+        <result column="method"      property="method" />
+        <result column="dim"         property="dim" />
+
+        <result column="mean"        property="mean"
+                typeHandler="nagasawakenji.walkfind.infra.mybatis.typehandler.FloatArrayTypeHandler"/>
+        <result column="components"  property="components"
+                typeHandler="nagasawakenji.walkfind.infra.mybatis.typehandler.FloatArrayTypeHandler"/>
+
+        <result column="created_at"  property="createdAt" />
+        <result column="updated_at"  property="updatedAt" />
+    </resultMap>
+
+    <select id="findByContestIdAndModelVersionAndMethodAndDim"
+            resultMap="ContestProjectionBasisRowMap">
+        SELECT
+        id,
+        contest_id,
+        model_version,
+        method,
+        dim,
+        mean,
+        components,
+        created_at,
+        updated_at
+        FROM contest_projection_basis
+        WHERE contest_id = #{contestId}
+        AND model_version = #{modelVersion}
+        AND method = #{method}
+        AND dim = #{dim}
+        LIMIT 1
+    </select>
+
+    <select id="findLatestModelVersion" resultType="string">
+        SELECT model_version
+        FROM contest_projection_basis
+        WHERE contest_id = #{contestId}
+        AND method = #{method}
+        AND dim = #{dim}
+        ORDER BY updated_at DESC, id DESC
+        LIMIT 1
+    </select>
+
+</mapper>

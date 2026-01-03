@@ -66,6 +66,9 @@ export default async function AnnouncedContestDetailPage({ params, searchParams 
 
   const totalSubmissions = totalCount;
 
+  // Similarityページへのリンク生成
+  const similarityPageHref = (photoId: number | string) => `/contests/${contestId}/photos/${photoId}/similarity`;
+
   return (
     <main className="min-h-screen bg-[#F5F5F5] font-sans text-[#333]">
       {/* 共通ナビゲーションバー */}
@@ -143,10 +146,22 @@ export default async function AnnouncedContestDetailPage({ params, searchParams 
                      </div>
                   </div>
 
-                  <div className="space-y-1 px-1">
+                  <div className="space-y-2 px-1">
                     <p className="text-lg font-bold text-gray-900 leading-tight group-hover:text-yellow-600 transition-colors">
-                        {winner.title}
+                      {winner.title}
                     </p>
+
+                    <div className="flex items-center justify-between">
+                      <Link
+                        href={similarityPageHref(winner.photoId)}
+                        className="inline-flex items-center gap-2 text-xs font-bold px-3 py-2 border border-gray-300 rounded-sm bg-white hover:bg-gray-50"
+                      >
+                        🧭 Similarity
+                        <span className="text-gray-400 font-mono">(PCA)</span>
+                      </Link>
+                      <span className="text-[11px] text-gray-400">※ ログインが必要な場合があります</span>
+                    </div>
+
                     <div className="flex justify-between items-end border-t border-dashed border-gray-200 pt-2 mt-2">
                         <div>
                             <p className="text-xs text-gray-500 mb-0.5">Photographer</p>
@@ -179,6 +194,13 @@ export default async function AnnouncedContestDetailPage({ params, searchParams 
             <span className="text-gray-400">📊</span> 最終ランキング
           </h2>
 
+          <div className="mb-4 bg-white border border-gray-300 rounded-sm p-4 text-sm text-gray-700">
+            <div className="font-bold text-black mb-1">🧠 Similarity（類似度）</div>
+            <div className="text-gray-600">
+              各写真の <span className="font-mono">Similarity</span> から、モデル写真との近さ（embedding + PCA可視化）を確認できます。
+            </div>
+          </div>
+
           {safeResults.length === 0 ? (
              <div className="bg-white border border-gray-300 p-8 text-center text-gray-500 rounded-sm">
                 投稿がありませんでした。
@@ -206,8 +228,18 @@ export default async function AnnouncedContestDetailPage({ params, searchParams 
                   </div>
 
                   <div className="p-4 flex flex-col flex-grow">
-                    <p className="text-base font-bold text-gray-900 mb-1 line-clamp-1">{result.title}</p>
-                    
+                    <p className="text-base font-bold text-gray-900 mb-2 line-clamp-1">{result.title}</p>
+
+                    <div className="mb-3">
+                      <Link
+                        href={similarityPageHref(result.photoId)}
+                        className="inline-flex items-center gap-2 text-xs font-bold px-3 py-2 border border-gray-300 rounded-sm bg-white hover:bg-gray-50"
+                      >
+                        🧭 Similarity
+                        <span className="text-gray-400 font-mono">(PCA)</span>
+                      </Link>
+                    </div>
+
                     <div className="mt-auto pt-3 border-t border-gray-100 flex justify-between items-center">
                         <div className="flex items-center gap-1 text-xs text-gray-600">
                             by 

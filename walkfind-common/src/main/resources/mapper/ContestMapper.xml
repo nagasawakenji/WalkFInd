@@ -194,4 +194,13 @@
         </if>
     </select>
 
+    <select id="updateToInProgressReturningIds" resultType="long">
+        UPDATE contests
+        SET status = 'IN_PROGRESS'
+        WHERE status = 'UPCOMING'
+        AND start_date <![CDATA[ <= ]]> #{now}
+        AND removed_at IS NULL
+        RETURNING id
+    </select>
+
 </mapper>

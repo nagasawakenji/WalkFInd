@@ -2,6 +2,7 @@ package nagasawakenji.walkfind.controller;
 
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import nagasawakenji.walkfind.domain.dto.CognitoTokenRequest;
 import nagasawakenji.walkfind.domain.dto.CognitoTokenResponse;
 import nagasawakenji.walkfind.exception.AuthenticationProcessingException;
@@ -13,12 +14,14 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.beans.factory.annotation.Value;
 
+import java.time.OffsetDateTime;
 import java.util.Map;
 
 
 @RestController
 @RequestMapping("/api/v1/auth")
 @RequiredArgsConstructor
+@Slf4j
 public class CognitoAuthController {
 
     private final AuthApplicationService authApplicationService;
@@ -36,6 +39,7 @@ public class CognitoAuthController {
     public ResponseEntity<CognitoTokenResponse> login(
             @RequestBody @Valid CognitoTokenRequest request
     ) {
+        log.info("/api/v1/auth/login  Loginを開始します  now_time:{}", OffsetDateTime.now());
         CognitoTokenResponse token =
                 authApplicationService.loginWithCognito(request.getCode());
 
@@ -67,6 +71,8 @@ public class CognitoAuthController {
         // レスポンスボディには refreshToken accessToken を含めない
         CognitoTokenResponse safeResponse = CognitoTokenResponse.builder()
                 .build();
+
+        log.info("/api/v1/login  Loginレスポンスを返却します  now_time:{}", OffsetDateTime.now());
 
         return ResponseEntity
                 .status(HttpStatus.OK)

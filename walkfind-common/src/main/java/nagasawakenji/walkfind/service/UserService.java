@@ -13,6 +13,7 @@ import nagasawakenji.walkfind.infra.mybatis.mapper.UserProfileMapper;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.OffsetDateTime;
 import java.util.Optional;
 
 /**
@@ -33,6 +34,8 @@ public class UserService {
      */
     @Transactional
     public User syncUser(String cognitoId, String email, String username) {
+
+        log.info("/api/v1/auth/login  ユーザー情報を取得開始します  now_time:{}", OffsetDateTime.now());
 
         // まずユーザーテーブルを確認
         User user = userMapper.findById(cognitoId).orElse(null);
@@ -84,6 +87,8 @@ public class UserService {
                 throw new DatabaseOperationException("Failed to insert profile.", e);
             }
         }
+
+        log.info("/api/v1/auth/login  ユーザー情報レスポンスを返却します  now_time:{}", OffsetDateTime.now());
 
         return user;
     }

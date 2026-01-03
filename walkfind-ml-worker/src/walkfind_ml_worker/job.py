@@ -28,8 +28,7 @@ class EmbeddingJob:
         photo_type = d.get("photoType") or d.get("photo_type")
         model_version = d.get("modelVersion") or d.get("model_version")
 
-        # Storage key: accept several aliases for backward/forward compatibility.
-        # Your current publisher sends `key`, but some code may send `storageKey` / `photoKey`.
+        # 表記揺れを限界まで吸収する ; ;
         photo_key = (
             d.get("storageKey")
             or d.get("storage_key")

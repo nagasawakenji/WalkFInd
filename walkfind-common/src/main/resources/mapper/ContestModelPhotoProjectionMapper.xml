@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="nagasawakenji.walkfind.infra.mybatis.mapper.ContestModelPhotoProjectionMapper">
+
+    <resultMap id="ContestModelPhotoProjectionRowMap"
+               type="nagasawakenji.walkfind.domain.dto.ContestModelPhotoProjectionRow">
+        <id     column="model_photo_id" property="modelPhotoId"/>
+        <result column="contest_id"     property="contestId"/>
+        <result column="model_version"  property="modelVersion"/>
+        <result column="x"              property="x"/>
+        <result column="y"              property="y"/>
+        <result column="z"              property="z"/>
+        <result column="created_at"     property="createdAt"/>
+        <result column="updated_at"     property="updatedAt"/>
+    </resultMap>
+
+    <select id="findByContestIdAndModelVersion"
+            resultMap="ContestModelPhotoProjectionRowMap">
+        SELECT
+        contest_id,
+        model_version,
+        model_photo_id,
+        x,
+        y,
+        z,
+        created_at,
+        updated_at
+        FROM contest_model_photo_projection
+        WHERE contest_id = #{contestId}
+        AND model_version = #{modelVersion}
+        ORDER BY model_photo_id ASC
+    </select>
+
+</mapper>

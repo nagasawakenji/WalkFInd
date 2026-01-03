@@ -16,7 +16,7 @@ walkfind/
 ├── walkfind-web        ← ローカル開発用 Spring Boot Web アプリ
 ├── walkfind-lambda     ← AWS Lambda(SAM) 用 Spring Boot アプリ
 ├── walkfind-ml-worker  ← 類似度判定システム
-└── walkfind-web        ← フロントエンド
+└── walkfind-frontend       ← フロントエンド
 ```
 ### ✔ walkfind-common
 

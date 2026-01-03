@@ -7,6 +7,8 @@ import nagasawakenji.walkfind.infra.CognitoOAuthClient;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.OffsetDateTime;
+
 @Service
 @RequiredArgsConstructor
 @Slf4j
@@ -21,6 +23,8 @@ public class AuthApplicationService {
     @Transactional
     public CognitoTokenResponse loginWithCognito(String code) {
         log.info("Exchanging Cognito authorization code");
+
+        log.info("/api/v1/auth/login  ログインの処理を開始します  now_time:{}", OffsetDateTime.now());
 
         // Cognito からトークン取得
         CognitoTokenResponse token = cognitoOAuthClient.fetchToken(code);
@@ -45,7 +49,8 @@ public class AuthApplicationService {
             throw new RuntimeException("Login process failed", e);
         }
 
-        // 3. トークンを返却
+        log.info("/api/v1/auth/login  トークンを返却します  now_time{}", OffsetDateTime.now());
+        // トークンを返却
         return token;
     }
 }

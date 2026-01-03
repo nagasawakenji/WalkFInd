@@ -3,25 +3,22 @@ package nagasawakenji.walkfind.infra.queue;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import nagasawakenji.walkfind.config.SqsConfig;
-import nagasawakenji.walkfind.domain.dto.EmbeddingJobMessage;
 import org.springframework.stereotype.Component;
 import software.amazon.awssdk.core.exception.SdkClientException;
 import software.amazon.awssdk.services.sqs.SqsClient;
 import software.amazon.awssdk.services.sqs.model.SendMessageRequest;
 import software.amazon.awssdk.services.sqs.model.SqsException;
 
-
 @Component
 @RequiredArgsConstructor
 @Slf4j
-public class EmbeddingQueueClient {
+public class MlWorkerQueueClient {
 
     private final SqsClient sqsClient;
     private final SqsProperties props;
     private final ObjectMapper objectMapper;
 
-    public void enqueue(EmbeddingJobMessage msg) {
+    public void enqueue(Object msg, String logKey) {
         String queueUrl = props.getQueueUrl();
         try {
             if (queueUrl == null || queueUrl.isBlank()) {
@@ -37,11 +34,10 @@ public class EmbeddingQueueClient {
                     .messageBody(body)
                     .build());
 
-            log.info("Enqueued embedding job. queueUrl={}, contestId={}, photoType={}, photoId={}",
-                    queueUrl, msg.getContestId(), msg.getPhotoType(), msg.getPhotoId());
+            log.info("Enqueued ml-worker job. queueUrl={}, key={}, bodySize={}",
+                    queueUrl, logKey, body.length());
 
         } catch (SqsException e) {
-            // AccessDenied / KMS / NonExistentQueue などがここに出る
             log.error("SQS send failed. status={}, code={}, message={}, requestId={}, queueUrl={}",
                     e.statusCode(),
                     e.awsErrorDetails() != null ? e.awsErrorDetails().errorCode() : null,
@@ -49,15 +45,10 @@ public class EmbeddingQueueClient {
                     e.requestId(),
                     queueUrl,
                     e);
-            return; // ベストエフォート（APIを500にしない）
-
         } catch (SdkClientException e) {
             log.error("SQS client/network failed. queueUrl={}", queueUrl, e);
-            return;
-
         } catch (Exception e) {
-            log.error("Failed to enqueue embedding job. queueUrl={}", queueUrl, e);
-            return;
+            log.error("Failed to enqueue ml-worker job. queueUrl={}", queueUrl, e);
         }
     }
 }
