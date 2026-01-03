@@ -78,4 +78,7 @@ public interface ContestMapper {
             @Param("includeRemoved") boolean includeRemoved,
             @Param("keyword") String keyword
     );
+
+    // status を update にしたidの取得
+    List<Long> updateToInProgressReturningIds(OffsetDateTime now);
 }

@@ -1,5 +1,6 @@
 package nagasawakenji.walkfind.infra.mybatis.mapper;
 
+import nagasawakenji.walkfind.domain.dto.PhotoEmbeddingRow;
 import nagasawakenji.walkfind.domain.dto.SimilarModelPhotoRow;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
@@ -16,6 +17,8 @@ public interface PhotoEmbeddingMapper {
 
     boolean existsAnyModelEmbeddingReadyForContest(@Param("contestId") Long contestId);
 
+    String findLatestUserEmbeddingModelVersion(@Param("contestId") Long contestId, @Param("userPhotoId") Long userPhotoId);
+
     // USER statusのembeddingを削除する
     int deleteUserEmbeddingById(@Param("contestId") Long contestId, @Param("userPhotoId") Long userPhotoId);
 
@@ -24,5 +27,16 @@ public interface PhotoEmbeddingMapper {
 
     List<Long> findReadyUserPhotoIds(@Param("contestId") Long contestId,
                                      @Param("photoIds") List<Long> photoIds);
+
+    PhotoEmbeddingRow findReadyUserEmbedding(
+            @Param("contestId") Long contestId,
+            @Param("userPhotoId") Long userPhotoId,
+            @Param("modelVersion") String modelVersion
+    );
+
+    List<PhotoEmbeddingRow> findReadyModelEmbeddingsForContest(
+            @Param("contestId") Long contestId,
+            @Param("modelVersion") String modelVersion
+    );
 
 }

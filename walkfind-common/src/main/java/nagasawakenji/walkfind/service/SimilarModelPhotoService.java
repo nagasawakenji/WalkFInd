@@ -74,6 +74,8 @@ public class SimilarModelPhotoService {
                         .build();
             }
 
+            // 現状結果発表時は全員が見れるようにしたいので、このビジネスロックをコメントアウトしています
+            /**
             // 認可：作成者 or 投稿者本人のみ（必要に応じてルール変更OK）
             boolean isContestOwner = requesterUserId.equals(contest.getCreatedByUserId());
             boolean isPhotoOwner = requesterUserId.equals(userPhoto.getUserId());
@@ -84,6 +86,7 @@ public class SimilarModelPhotoService {
                         .models(List.of())
                         .build();
             }
+             */
 
             // モデル写真が1枚もないなら、ここで即return
             if (contestModelPhotoMapper.findByContestId(contestId).isEmpty()) {

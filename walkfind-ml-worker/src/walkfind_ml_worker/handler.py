@@ -12,6 +12,7 @@ from .infra.s3_object_store import S3ObjectStore
 from .infra.local_object_store import LocalObjectStore
 from .embed.openclip_embedder import OpenClipEmbedder
 from .service.embedding_service import EmbeddingService
+from .service.pca_service import PcaBasisService
 
 # =====================================================
 # Process-level singletons (Lambda container reuse friendly)
@@ -33,6 +34,33 @@ except AttributeError:
 
 # Cache services per store instance (local: LocalObjectStore, prod: S3 store)
 _SVC_CACHE: Dict[int, EmbeddingService] = {}
+
+# PCA service singleton (does not depend on object store)
+_PCA_SVC = None
+
+
+def get_pca_service() -> PcaBasisService:
+    """Return a cached PCA service.
+
+    This is kept separate from EmbeddingService so PCA jobs do NOT trigger
+    OpenCLIP model lazy-loading.
+    """
+    global _PCA_SVC
+    if _PCA_SVC is None:
+        try:
+            _PCA_SVC = PcaBasisService(db=_db)
+        except TypeError:
+            # Positional fallback
+            _PCA_SVC = PcaBasisService(_db)
+    return _PCA_SVC
+
+
+def _get_payload_value(payload: Dict[str, Any], *keys: str, default: Any = None) -> Any:
+    """Fetch the first existing key from payload (supports camelCase/snake_case)."""
+    for k in keys:
+        if k in payload:
+            return payload[k]
+    return default
 
 _logger = logging.getLogger(__name__)
 
@@ -153,6 +181,38 @@ def handle_message(payload: Dict[str, Any], *, store: Any, raw_message: Optional
         t0 = time.time()
         _logger.info("[worker] start payload=%s", payload)
         _logger.debug("[worker] payload keys=%s", sorted(list(payload.keys())) if isinstance(payload, dict) else type(payload))
+
+        # -----------------------------------------------------
+        # PCA basis build job (best-effort)
+        # -----------------------------------------------------
+        msg_type = str(payload.get("type") or payload.get("jobType") or "EMBEDDING").upper()
+        if msg_type in {"PCA_BASIS", "PCA"}:
+            contest_id = _get_payload_value(payload, "contestId", "contest_id")
+            model_version = _get_payload_value(payload, "modelVersion", "model_version")
+            dim = _get_payload_value(payload, "dim", default=3)
+            min_ready = _get_payload_value(payload, "minReady", "min_ready", default=3)
+
+            if contest_id is None or model_version is None:
+                raise ValueError("PCA_BASIS requires contestId/contest_id and modelVersion/model_version")
+
+            pca_svc = get_pca_service()
+            res = pca_svc.run_once(
+                contestId=int(contest_id),
+                modelVersion=str(model_version),
+                dim=int(dim),
+                minReady=int(min_ready),
+            )
+            dt_ms = int((time.time() - t0) * 1000)
+            _logger.info(
+                "[worker] pca job done contestId=%s modelVersion=%s result=%s elapsedMs=%s",
+                contest_id,
+                model_version,
+                res,
+                dt_ms,
+            )
+            # Treat SKIPPED as success (ack). Next scheduler run can enqueue again.
+            return True
+
         # Preferred: EmbeddingJob.from_dict
         if hasattr(EmbeddingJob, "from_dict"):
             job = EmbeddingJob.from_dict(payload)  # type: ignore[attr-defined]

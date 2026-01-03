@@ -4,10 +4,27 @@
 
 <mapper namespace="nagasawakenji.walkfind.infra.mybatis.mapper.PhotoEmbeddingMapper">
 
+    <resultMap id="PhotoEmbeddingRowMap" type="nagasawakenji.walkfind.domain.dto.PhotoEmbeddingRow">
+        <id     column="id"           property="id"/>
+        <result column="photo_type"   property="photoType"/>
+        <result column="contest_id"   property="contestId"/>
+        <result column="photo_id"     property="photoId"/>
+        <result column="key"          property="key"/>
+        <result column="model_version" property="modelVersion"/>
+        <result column="status"       property="status"/>
+
+        <result column="embedding"    property="embedding"
+                typeHandler="nagasawakenji.walkfind.infra.mybatis.typehandler.FloatArrayTypeHandler"/>
+
+        <result column="created_at"   property="createdAt"/>
+        <result column="updated_at"   property="updatedAt"/>
+    </resultMap>
+
+
     <resultMap id="SimilarModelPhotoRowMap" type="nagasawakenji.walkfind.domain.dto.SimilarModelPhotoRow">
         <result property="modelPhotoId" column="model_photo_id"/>
         <result property="contestId" column="contest_id"/>
-        <result property="key" column="key"/>
+        <result property="key" column="storage_key"/>
         <result property="title" column="title"/>
         <result property="description" column="description"/>
         <result property="createdAt" column="created_at"/>
@@ -97,6 +114,63 @@
             #{id}
         </foreach>
     </select>
+
+    <select id="findLatestUserEmbeddingModelVersion" resultType="string">
+        SELECT model_version
+        FROM photo_embeddings
+        WHERE contest_id = #{contestId}
+          AND photo_type = 'USER'
+          AND photo_id = #{userPhotoId}
+        ORDER BY updated_at DESC
+        LIMIT 1
+    </select>
+
+    <!-- READY の USER embedding を1件取得 -->
+    <select id="findReadyUserEmbedding" resultMap="PhotoEmbeddingRowMap">
+        SELECT
+        id,
+        photo_type,
+        contest_id,
+        photo_id,
+        storage_key,
+        model_version,
+        status,
+        embedding,
+        created_at,
+        updated_at
+        FROM photo_embeddings
+        WHERE contest_id = #{contestId}
+        AND photo_type = 'USER'
+        AND model_version = #{modelVersion}
+        AND photo_id   = #{userPhotoId}
+        AND status     = 'READY'
+        ORDER BY updated_at DESC, id DESC
+        LIMIT 1
+    </select>
+
+    <!-- READY の MODEL embeddings 一覧（contest内、modelVersion指定） -->
+    <select id="findReadyModelEmbeddingsForContest" resultMap="PhotoEmbeddingRowMap">
+        SELECT
+        id,
+        photo_type,
+        contest_id,
+        photo_id,
+        storage_key,
+        model_version,
+        status,
+        embedding,
+        created_at,
+        updated_at
+        FROM photo_embeddings
+        WHERE contest_id = #{contestId}
+        AND photo_type = 'MODEL'
+        AND model_version = #{modelVersion}
+        AND status = 'READY'
+        ORDER BY photo_id ASC
+    </select>
+
+
+
 
 
 

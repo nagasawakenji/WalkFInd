@@ -8,6 +8,8 @@ import nagasawakenji.walkfind.domain.statusenum.SimilarModelPhotoStatus;
 @Builder
 public class SimilarModelPhotoInsightResponse {
     SimilarModelPhotoStatus status;
-    SimilaritySummary summary;     // ←統計・スコア
-    String comment;               // 任意（summaryに含めてもOK）
+    SimilaritySummary summary;
+    String comment;
+
+    ProjectionResponse projectionResponse;
 }

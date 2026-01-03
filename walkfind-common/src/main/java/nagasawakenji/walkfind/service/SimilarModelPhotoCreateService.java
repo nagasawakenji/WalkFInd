@@ -16,6 +16,7 @@ public class SimilarModelPhotoCreateService {
 
     private final SimilarModelPhotoService similarModelPhotoService;
     private final SimilarModelPhotoInsightService similarModelPhotoInsightService;
+    private final SimilarityProjectionService similarityProjectionService;
 
     @Transactional(readOnly = true)
     public SimilarModelPhotoInsightResponse createSimilarInsight(
@@ -36,11 +37,15 @@ public class SimilarModelPhotoCreateService {
             throw e;
         }
 
+        var projection = similarityProjectionService.buildProjection(contestId, userPhotoId, 3);
+
+
         // SUCCESS以外はsummaryを計算せず即返す
         if (response.getStatus() != SimilarModelPhotoStatus.SUCCESS) {
             return SimilarModelPhotoInsightResponse.builder()
                     .status(response.getStatus())
                     .comment(commentFor(response.getStatus()))
+                    .projectionResponse(projection)
                     .build();
         }
 
@@ -51,6 +56,7 @@ public class SimilarModelPhotoCreateService {
                 .status(SimilarModelPhotoStatus.SUCCESS)
                 .summary(summary)
                 .comment(commentFor(SimilarModelPhotoStatus.SUCCESS))
+                .projectionResponse(projection)
                 .build();
     }
 

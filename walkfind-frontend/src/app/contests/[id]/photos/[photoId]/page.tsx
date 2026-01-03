@@ -14,6 +14,25 @@ type SimilarModelPhotoStatus =
   | 'USER_PHOTO_NOT_FOUND'
   | string;
 
+type ProjectionPoint = {
+  photoId: number;
+  photoType: 'USER' | 'MODEL' | string;
+  x: number;
+  y: number;
+  z?: number | null;
+  imageUrl?: string | null;
+  title?: string | null;
+};
+
+type ProjectionResponse = {
+  dim: number;
+  method: string;
+  modelVersion: string;
+  contestId: number;
+  userPoint: ProjectionPoint;
+  modelPoints: ProjectionPoint[];
+};
+
 type SimilaritySummary = {
   avgTop3: number;
   maxSimilarity: number;
@@ -24,6 +43,7 @@ type SimilarModelPhotoInsightResponse = {
   status: SimilarModelPhotoStatus;
   comment?: string | null;
   summary?: SimilaritySummary | null;
+  projectionResponse?: ProjectionResponse | null;
 };
 
 type ApiErrorResponse = { message?: string };
@@ -55,6 +75,230 @@ function extractApiErrorMessage(err: unknown): string | null {
     return (data as ApiErrorResponse).message ?? null;
   }
   return null;
+}
+
+type PlotPoint = {
+  key: string;
+  label: string;
+  isUser: boolean;
+  sx: number;
+  sy: number;
+  raw: { x: number; y: number; z?: number | null };
+  title?: string | null;
+  imageUrl?: string | null;
+};
+
+function projectTo2D(p: { x: number; y: number; z?: number | null }, dim: number): { x: number; y: number } {
+  // dim=2: (x,y) そのまま
+  if (dim <= 2) return { x: p.x, y: p.y };
+  // dim=3: 簡易的な斜投影（見える化目的）
+  const z = p.z ?? 0;
+  return {
+    x: p.x - 0.6 * z,
+    y: p.y - 0.4 * z,
+  };
+}
+
+function buildPlotPoints(pr: ProjectionResponse): PlotPoint[] {
+  const dim = pr.dim ?? 2;
+  const all: Array<{ p: ProjectionPoint; isUser: boolean; label: string; key: string }> = [];
+
+  all.push({
+    p: pr.userPoint,
+    isUser: true,
+    label: `You (#${pr.userPoint.photoId})`,
+    key: `USER-${pr.userPoint.photoId}`,
+  });
+
+  for (const mp of pr.modelPoints ?? []) {
+    all.push({
+      p: mp,
+      isUser: false,
+      label: mp.title ? `Model: ${mp.title}` : `Model (#${mp.photoId})`,
+      key: `MODEL-${mp.photoId}`,
+    });
+  }
+
+  // 投影
+  const projected = all.map(({ p, isUser, label, key }) => {
+    const q = projectTo2D({ x: p.x, y: p.y, z: p.z }, dim);
+    return {
+      key,
+      label,
+      isUser,
+      raw: { x: p.x, y: p.y, z: p.z },
+      px: q.x,
+      py: q.y,
+      title: p.title,
+      imageUrl: p.imageUrl,
+    };
+  });
+
+  // bounds
+  const xs = projected.map((d) => d.px);
+  const ys = projected.map((d) => d.py);
+  const minX = Math.min(...xs);
+  const maxX = Math.max(...xs);
+  const minY = Math.min(...ys);
+  const maxY = Math.max(...ys);
+
+  // 0レンジ回避（全部同一点でも描けるように）
+  const spanX = Math.max(1e-6, maxX - minX);
+  const spanY = Math.max(1e-6, maxY - minY);
+
+  // 少し余白
+  const pad = 0.12;
+  const padX = spanX * pad;
+  const padY = spanY * pad;
+
+  const loX = minX - padX;
+  const hiX = maxX + padX;
+  const loY = minY - padY;
+  const hiY = maxY + padY;
+
+  const width = 420;
+  const height = 420;
+  const margin = 34;
+
+  const innerW = width - margin * 2;
+  const innerH = height - margin * 2;
+
+  return projected.map((d) => {
+    const nx = (d.px - loX) / (hiX - loX);
+    const ny = (d.py - loY) / (hiY - loY);
+    // SVGのY軸は下方向が+なので反転
+    const sx = margin + nx * innerW;
+    const sy = margin + (1 - ny) * innerH;
+    return {
+      key: d.key,
+      label: d.label,
+      isUser: d.isUser,
+      sx,
+      sy,
+      raw: d.raw,
+      title: d.title,
+      imageUrl: d.imageUrl,
+    };
+  });
+}
+
+function ProjectionPlot({ projection }: { projection: ProjectionResponse }) {
+  const points = useMemo(() => buildPlotPoints(projection), [projection]);
+
+  // 近すぎる/同一点のときのメッセージ
+  const allSame = useMemo(() => {
+    if (points.length <= 1) return true;
+    const x0 = points[0].sx;
+    const y0 = points[0].sy;
+    return points.every((p) => Math.abs(p.sx - x0) < 0.5 && Math.abs(p.sy - y0) < 0.5);
+  }, [points]);
+
+  const width = 420;
+  const height = 420;
+  const margin = 34;
+
+  return (
+    <div className="mt-6">
+      <div className="flex items-center justify-between gap-3">
+        <div>
+          <div className="text-sm font-semibold text-black">座標プロット</div>
+          <div className="text-xs text-gray-500 font-mono mt-0.5">
+            dim={projection.dim} / method={projection.method} / modelVersion={projection.modelVersion}
+          </div>
+        </div>
+        {allSame && (
+          <div className="text-xs text-amber-700 bg-amber-50 border border-amber-200 px-2 py-1 rounded-sm">
+            点が重なっています（データが少ない場合は正常です）
+          </div>
+        )}
+      </div>
+
+      <div className="mt-3 border border-gray-200 rounded-sm bg-white p-3">
+        <svg width={width} height={height} viewBox={`0 0 ${width} ${height}`} className="w-full h-auto">
+          {/* frame */}
+          <rect x={0} y={0} width={width} height={height} fill="white" />
+          <rect x={margin} y={margin} width={width - margin * 2} height={height - margin * 2} fill="#FAFAFA" stroke="#E5E7EB" />
+
+          {/* grid (simple) */}
+          {[0.25, 0.5, 0.75].map((t) => (
+            <g key={t}>
+              <line
+                x1={margin + (width - margin * 2) * t}
+                y1={margin}
+                x2={margin + (width - margin * 2) * t}
+                y2={height - margin}
+                stroke="#E5E7EB"
+              />
+              <line
+                x1={margin}
+                y1={margin + (height - margin * 2) * t}
+                x2={width - margin}
+                y2={margin + (height - margin * 2) * t}
+                stroke="#E5E7EB"
+              />
+            </g>
+          ))}
+
+          {/* points */}
+          {points.map((p) => (
+            <g key={p.key}>
+              <circle
+                cx={p.sx}
+                cy={p.sy}
+                r={p.isUser ? 6 : 5}
+                fill={p.isUser ? '#EF4444' : '#2563EB'}
+                stroke="#111827"
+                strokeWidth={0.5}
+              >
+                <title>
+                  {p.label}  (x={p.raw.x.toFixed(3)}, y={p.raw.y.toFixed(3)}{projection.dim >= 3 ? `, z=${(p.raw.z ?? 0).toFixed(3)}` : ''})
+                </title>
+              </circle>
+              {/* label */}
+              <text
+                x={p.sx + 8}
+                y={p.sy - 8}
+                fontSize={11}
+                fill="#111827"
+              >
+                {p.isUser ? 'You' : 'Model'}
+              </text>
+            </g>
+          ))}
+
+          {/* axis labels */}
+          <text x={width / 2} y={height - 8} textAnchor="middle" fontSize={11} fill="#6B7280">
+            projected-x
+          </text>
+          <text
+            x={10}
+            y={height / 2}
+            textAnchor="middle"
+            fontSize={11}
+            fill="#6B7280"
+            transform={`rotate(-90 10 ${height / 2})`}
+          >
+            projected-y
+          </text>
+        </svg>
+
+        <div className="mt-3 flex flex-wrap gap-3 text-xs text-gray-700">
+          <div className="flex items-center gap-2">
+            <span className="inline-block w-3 h-3 rounded-sm" style={{ background: '#EF4444' }} />
+            <span>Your photo</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <span className="inline-block w-3 h-3 rounded-sm" style={{ background: '#2563EB' }} />
+            <span>Model photos</span>
+          </div>
+        </div>
+
+        <div className="mt-2 text-[11px] text-gray-500">
+          ※ dim=3 の場合は簡易的な2D投影で表示しています（見える化目的）。
+        </div>
+      </div>
+    </div>
+  );
 }
 
 export default function PhotoSimilarityPage({ params }: PageProps) {
@@ -151,6 +395,7 @@ export default function PhotoSimilarityPage({ params }: PageProps) {
 
   const status = res?.status ?? null;
   const summary = res?.summary ?? null;
+  const projection = res?.projectionResponse ?? null;
 
   return (
     <main className="min-h-screen bg-[#F5F5F5] font-sans text-[#333]">
@@ -225,6 +470,10 @@ export default function PhotoSimilarityPage({ params }: PageProps) {
                     <div className="text-xl font-mono">{summary.avgTop3.toFixed(4)}</div>
                   </div>
                 </div>
+              )}
+
+              {status === 'SUCCESS' && projection && (
+                <ProjectionPlot projection={projection} />
               )}
 
               {shouldPoll(status) && (
