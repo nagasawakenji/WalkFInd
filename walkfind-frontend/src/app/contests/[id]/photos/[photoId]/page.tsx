@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useRef, useState, use } from 'react';
 import Link from 'next/link';
 import axios from 'axios';
+import { useRouter } from 'next/navigation';
 
 type SimilarModelPhotoStatus =
   | 'SUCCESS'
@@ -305,6 +306,7 @@ export default function PhotoSimilarityPage({ params }: PageProps) {
   const resolvedParams = use(params);
   const contestId = resolvedParams.id;
   const userPhotoId = resolvedParams.photoId;
+  const router = useRouter();
 
   const [res, setRes] = useState<SimilarModelPhotoInsightResponse | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -425,12 +427,12 @@ export default function PhotoSimilarityPage({ params }: PageProps) {
               </p>
             </div>
 
-            <Link
-              href={`/contests/${contestId}/photos`}
-              className="text-sm px-3 py-2 border border-gray-300 rounded-sm bg-white hover:bg-gray-50"
+            <button
+              onClick={() => router.back()}
+              className="text-sm px-3 py-2 border border-gray-300 rounded-sm bg-white hover:bg-gray-50 transition-colors text-gray-700"
             >
               ← 戻る
-            </Link>
+            </button>
           </div>
 
           {fatalError && (
