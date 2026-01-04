@@ -12,7 +12,6 @@ interface PageProps {
 // 環境変数
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL;
 
-// データ取得関数は変更なし
 async function getContestDetail(id: string): Promise<ContestDetailResponse | null> {
   try {
     const res = await fetch(
@@ -35,111 +34,128 @@ export default async function ContestDetailPage({ params }: PageProps) {
     notFound(); 
   }
 
-  // ステータスに応じたバッジの色分け
   const isProgress = contest.status === "IN_PROGRESS";
-  const statusColor = isProgress 
-    ? "bg-green-600 text-white" 
-    : "bg-gray-500 text-white";
+  
+  // 日付フォーマット用関数
+  const formatDate = (dateStr: string) => {
+    return new Date(dateStr).toLocaleDateString('ja-JP', { 
+        year: 'numeric', month: '2-digit', day: '2-digit' 
+    });
+  };
 
   return (
-    <main className="min-h-screen bg-[#F5F5F5] font-sans text-[#333]">
-       {/* 共通ナビゲーションバー（一貫性のため配置） */}
-       <nav className="bg-black text-white h-12 flex items-center px-4 lg:px-8 mb-8 shadow-sm">
-        <Link href="/" className="font-bold text-lg tracking-tight hover:text-gray-300">
+    <main className="min-h-screen bg-gray-50 font-sans text-gray-800">
+       {/* 共通ナビゲーションバー */}
+       <nav className="bg-white/80 backdrop-blur-md sticky top-0 z-50 border-b border-gray-200 h-14 flex items-center px-4 lg:px-8 shadow-sm">
+        <Link href="/" className="font-bold text-xl tracking-tighter text-black hover:text-gray-600 transition-colors">
           WalkFind
         </Link>
-        <span className="mx-2 text-gray-500">/</span>
-        <span className="text-sm text-gray-300">{contest.name}</span>
+        <span className="mx-3 text-gray-300">/</span>
+        <span className="text-sm font-medium text-black truncate">{contest.name}</span>
       </nav>
 
-      <div className="max-w-5xl mx-auto px-4 pb-12">
-        {/* ヘッダー部分：コンテスト概要パネル */}
-        <div className="bg-white rounded-sm border border-gray-300 p-6 mb-8">
-          <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-4 border-b border-gray-200 pb-4">
-            <h1 className="text-2xl md:text-3xl font-bold text-black flex items-center gap-3">
+      <div className="max-w-4xl mx-auto px-4 py-12 lg:py-16">
+        
+        {/* ---------------- ヒーローセクション（タイトル・概要） ---------------- */}
+        <div className="text-center mb-12">
+            <div className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-bold tracking-wider mb-6 border ${
+                isProgress 
+                ? "bg-green-50 text-green-700 border-green-200" 
+                : "bg-gray-100 text-gray-500 border-gray-200"
+            }`}>
+                <span className={`w-2 h-2 rounded-full mr-2 ${isProgress ? "bg-green-500 animate-pulse" : "bg-gray-400"}`}></span>
+                {isProgress ? "NOW OPEN" : contest.status}
+            </div>
+
+            <h1 className="text-4xl md:text-5xl font-extrabold text-black tracking-tight mb-4">
               {contest.name}
             </h1>
-            <span className={`mt-2 md:mt-0 px-3 py-1 text-sm font-bold rounded-sm ${statusColor}`}>
-              {contest.status}
-            </span>
-          </div>
+            
+            <p className="text-xl text-gray-500 mb-8 max-w-2xl mx-auto">
+              Theme: <span className="text-black font-semibold">{contest.theme}</span>
+            </p>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <div className="md:col-span-2">
-              <h2 className="text-lg font-bold mb-2 text-gray-700">テーマ: {contest.theme}</h2>
-              <div className="text-sm text-gray-600 leading-relaxed whitespace-pre-wrap bg-gray-50 p-4 rounded-sm border border-gray-200">
-                {contest.description}
-              </div>
+            <div className="bg-white p-6 md:p-8 rounded-2xl border border-gray-200 shadow-sm text-left max-w-2xl mx-auto">
+                 <h2 className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-3">About this contest</h2>
+                 <p className="text-gray-700 leading-relaxed whitespace-pre-wrap text-sm md:text-base">
+                    {contest.description}
+                 </p>
+                 
+                 <div className="mt-6 pt-6 border-t border-gray-100 flex flex-col sm:flex-row sm:items-center justify-between gap-4 text-sm font-mono text-gray-500">
+                    <div>
+                        <span className="block text-xs text-gray-400 mb-1">START DATE</span>
+                        {formatDate(contest.startDate)}
+                    </div>
+                    <div className="hidden sm:block text-gray-300">→</div>
+                    <div className="text-right sm:text-left">
+                        <span className="block text-xs text-gray-400 mb-1">END DATE</span>
+                        {formatDate(contest.endDate)}
+                    </div>
+                 </div>
             </div>
-
-            {/* 日付情報のサイドパネル化 */}
-            <div className="bg-white p-4 rounded-sm border border-gray-200 h-fit">
-              <h3 className="text-xs font-bold text-gray-500 uppercase mb-3 border-b border-gray-100 pb-1">
-                Contest Period
-              </h3>
-              <div className="space-y-3 text-sm">
-                <div>
-                  <p className="text-gray-500 text-xs">Start</p>
-                  <p className="font-mono font-medium">{new Date(contest.startDate).toLocaleString()}</p>
-                </div>
-                <div>
-                  <p className="text-gray-500 text-xs">End</p>
-                  <p className="font-mono font-medium">{new Date(contest.endDate).toLocaleString()}</p>
-                </div>
-              </div>
-            </div>
-          </div>
         </div>
 
-        {/* アクションボタンエリア */}
+        {/* ---------------- アクションカードエリア ---------------- */}
         {isProgress ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {/* 投票・閲覧へ */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-2xl mx-auto">
+            
+            {/* 閲覧カード: 写真メインのデザイン */}
             <Link 
               href={`/contests/${contest.contestId}/photos`}
-              className="group block bg-white border border-gray-300 rounded-sm p-6 hover:border-blue-500 hover:shadow-md transition-all duration-200 relative overflow-hidden"
+              className="group relative h-64 bg-white border border-gray-200 rounded-2xl overflow-hidden shadow-sm hover:shadow-xl hover:border-black/20 transition-all duration-300 flex flex-col items-center justify-center text-center"
             >
-              <div className="absolute top-0 left-0 w-1 h-full bg-blue-500"></div>
-              <div className="flex items-center gap-4">
-                <span className="text-3xl group-hover:scale-110 transition-transform">👀</span>
-                <div>
-                  <h3 className="text-xl font-bold text-gray-800 group-hover:text-blue-600">
-                    みんなの写真を見る
-                  </h3>
-                  <p className="text-sm text-gray-500 mt-1">
-                    投稿一覧・投票ページへ移動します
-                  </p>
+              {/* 背景装飾（写真グリッド風） */}
+              <div className="absolute inset-0 opacity-5 bg-[radial-gradient(#000_1px,transparent_1px)] [background-size:16px_16px]"></div>
+              
+              <div className="relative z-10 p-6">
+                <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4 group-hover:bg-black group-hover:text-white transition-colors duration-300">
+                    <span className="text-3xl">👀</span>
+                </div>
+                <h3 className="text-xl font-bold text-gray-900 mb-2">Gallery</h3>
+                <p className="text-sm text-gray-500 px-4">
+                    みんなの投稿を見る・投票する
+                </p>
+                <div className="mt-4 text-xs font-bold text-blue-600 underline decoration-2 underline-offset-4 group-hover:text-black">
+                    View Photos &rarr;
                 </div>
               </div>
             </Link>
 
-            {/* 投稿へ */}
+            {/* 投稿カード: クリエイティブなデザイン */}
             <Link 
               href={`/contests/${contest.contestId}/submit`}
-              className="group block bg-white border border-gray-300 rounded-sm p-6 hover:border-orange-500 hover:shadow-md transition-all duration-200 relative overflow-hidden"
+              className="group relative h-64 bg-black border border-black rounded-2xl overflow-hidden shadow-lg hover:shadow-2xl hover:scale-[1.02] transition-all duration-300 flex flex-col items-center justify-center text-center"
             >
-              <div className="absolute top-0 left-0 w-1 h-full bg-orange-500"></div>
-              <div className="flex items-center gap-4">
-                <span className="text-3xl group-hover:scale-110 transition-transform">📸</span>
-                <div>
-                  <h3 className="text-xl font-bold text-gray-800 group-hover:text-orange-600">
-                    写真を投稿する
-                  </h3>
-                  <p className="text-sm text-gray-500 mt-1">
-                    あなたの作品をアップロードします
-                  </p>
+              <div className="relative z-10 p-6 text-white">
+                <div className="w-16 h-16 bg-white/20 backdrop-blur-sm rounded-full flex items-center justify-center mx-auto mb-4 group-hover:bg-white group-hover:text-black transition-colors duration-300">
+                    <span className="text-3xl">📸</span>
+                </div>
+                <h3 className="text-xl font-bold mb-2">Submit Entry</h3>
+                <p className="text-sm text-gray-300 px-4">
+                    あなたの作品を応募する
+                </p>
+                <div className="mt-4 px-6 py-2 bg-white text-black text-xs font-bold rounded-full opacity-0 translate-y-2 group-hover:opacity-100 group-hover:translate-y-0 transition-all duration-300">
+                    Upload Now
                 </div>
               </div>
             </Link>
           </div>
         ) : (
-          <div className="mt-6 p-4 border border-gray-300 bg-gray-100 rounded-sm text-center text-gray-600 text-sm">
-            <span className="block font-bold mb-1">Entry Closed</span>
-            このコンテストは現在 <span className="font-mono bg-gray-200 px-1 rounded">{contest.status}</span> のため、投稿・投票などの操作は行えません。
+          <div className="max-w-2xl mx-auto mt-8 p-8 border border-gray-200 bg-gray-100 rounded-2xl text-center">
+            <div className="inline-block p-3 bg-gray-200 rounded-full text-2xl mb-4">🔒</div>
+            <h3 className="text-lg font-bold text-gray-800 mb-2">Contest Closed</h3>
+            <p className="text-gray-600 text-sm">
+                このコンテストの受付・投票期間は終了しました。<br/>
+                結果発表をお待ちください。
+            </p>
+            {/* 結果画面へのリンクがあればここに表示 */}
+            <div className="mt-6">
+                 <Link href={`/results/${contest.contestId}`} className="text-sm font-bold text-black underline">
+                    結果を見る &rarr;
+                 </Link>
+            </div>
           </div>
         )}
-
-        {/* ここに後で「モデル写真（ContestModelPhotoController）」の表示エリアを追加すると良いでしょう */}
       </div>
     </main>
   );

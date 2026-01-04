@@ -37,8 +37,6 @@ export default function ResultPage({ params }: PageProps) {
     const fetchResults = async () => {
       try {
         const res = await axios.get(`${API_BASE_URL}/results/${contestId}`);
-        console.log("results api raw:", res.data);
-        console.log("contestResultResponses:", res.data?.contestResultResponses);
         setResults(Array.isArray(res.data?.items) ? res.data.items : []);
       } catch (err) {
         console.error(err);
@@ -193,18 +191,31 @@ export default function ResultPage({ params }: PageProps) {
                     </Link>
                   </div>
                   
-                  <div className="mt-auto pt-4 border-t border-gray-100 flex items-center justify-between">
+                  {/* フッターエリア（スコア、類似度ボタン、Winnerバッジ） */}
+                  <div className="mt-auto pt-4 border-t border-gray-100 flex items-center justify-between flex-wrap gap-2">
                     <div>
                         <div className="text-xs text-gray-400 uppercase font-bold">Score</div>
                         <div className="text-2xl font-bold text-black font-mono">
                             {item.finalScore} <span className="text-sm text-gray-400 font-normal">pts</span>
                         </div>
                     </div>
-                    {item.finalRank === 1 && (
-                        <div className="px-3 py-1 bg-yellow-100 text-yellow-800 text-xs font-bold rounded-sm border border-yellow-200">
-                            WINNER 🏆
-                        </div>
-                    )}
+
+                    <div className="flex items-center gap-3">
+                        {/* ▼ 追加: Similarity確認ボタン ▼ */}
+                        <Link
+                            href={`/contests/${contestId}/photos/${item.photoId}`}
+                            className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white border border-gray-300 text-gray-700 text-xs font-bold rounded-sm hover:bg-black hover:text-white transition-colors"
+                        >
+                            <span>🧭</span> Similarity
+                        </Link>
+                        {/* ▲ 追加ここまで ▲ */}
+
+                        {item.finalRank === 1 && (
+                            <div className="px-3 py-1.5 bg-yellow-100 text-yellow-800 text-xs font-bold rounded-sm border border-yellow-200">
+                                WINNER 🏆
+                            </div>
+                        )}
+                    </div>
                   </div>
                 </div>
               </div>
