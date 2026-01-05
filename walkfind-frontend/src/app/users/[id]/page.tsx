@@ -4,7 +4,7 @@ import Link from "next/link";
 import Image from "next/image";
 
 // 環境変数設定
-const IS_LOCAL = process.env.NEXT_PUBLIC_IS_LOCAL;
+const IS_LOCAL = process.env.NEXT_PUBLIC_IS_LOCAL === 'true';
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL;
 
 // --- 型定義 ---
@@ -40,80 +40,49 @@ type UserHistoryResponse = {
   recentPublicPosts: PhotoDto[];
 };
 
-// レスポンスの型定義（JavaのPresignedUrlResponseに対応）
 type PresignedUrlResponse = {
   key: string;
-  photoUrl: string; // JavaのURL型はJSONでは文字列になります
+  photoUrl: string;
 };
 
-// --- ヘルパー関数: プロフィール画像のURL解決 ---
+// --- ヘルパー関数 ---
 async function resolveProfileImageUrl(originalUrl: string | null): Promise<string | null> {
   if (!originalUrl) return null;
+  if (originalUrl.startsWith("http")) return originalUrl;
 
-  // すでにhttp(s)で始まる完全なURLならそのまま返す
-  if (originalUrl.startsWith("http")) {
-    return originalUrl;
-  }
-
-  // キーの先頭にスラッシュがある場合の除去（Local/S3共通で念のため処理）
   const cleanKey = originalUrl.startsWith("/") ? originalUrl.slice(1) : originalUrl;
 
-  // ローカル環境: local-storage APIへ向ける
   if (IS_LOCAL) {
     return `${API_BASE_URL}/local-storage/${cleanKey}`;
   }
 
-  // 本番環境(S3): Presigned URLを取得するAPIを叩く
   try {
-    // URLSearchParamsを使用してクエリパラメータを正しくエンコードする
-    // これにより "profile-images/xxx.png" が正しくサーバーに伝わります
     const params = new URLSearchParams({ key: cleanKey });
     const endpoint = `${API_BASE_URL}/upload/presigned-download-url?${params.toString()}`;
-
-    // SecurityConfigで許可されたため、認証ヘッダーなしで取得可能
-    const res = await fetch(endpoint, {
-      cache: "no-store",
-    });
+    const res = await fetch(endpoint, { cache: "no-store" });
     
     if (res.ok) {
       const data: PresignedUrlResponse = await res.json();
       return data.photoUrl; 
-    } else {
-      console.warn(`Failed to resolve S3 URL for key: ${originalUrl}. Status: ${res.status}`);
-      return null;
     }
+    return null;
   } catch (error) {
-    console.error("Error resolving profile image url:", error);
+    console.error(error);
     return null;
   }
 }
 
-// --- データ取得関数 ---
-
 async function fetchUserProfile(userId: string): Promise<UserPublicProfileResponse> {
-  const res = await fetch(`${API_BASE_URL}/users/${userId}`, {
-    cache: "no-store",
-  });
-
+  const res = await fetch(`${API_BASE_URL}/users/${userId}`, { cache: "no-store" });
   if (res.status === 404) notFound();
-  if (!res.ok) {
-    const errorText = await res.text();
-    throw new Error(`Failed to fetch profile: ${res.status} - ${errorText}`);
-  }
-
+  if (!res.ok) throw new Error(`Failed to fetch profile: ${res.status}`);
   return res.json();
 }
 
 async function fetchUserHistory(userId: string): Promise<UserHistoryResponse> {
-  const res = await fetch(`${API_BASE_URL}/users/${userId}/history`, {
-    cache: "no-store",
-  });
-
+  const res = await fetch(`${API_BASE_URL}/users/${userId}/history`, { cache: "no-store" });
   if (res.status === 404) notFound();
-  if (!res.ok) {
-    return { contestResults: [], recentPublicPosts: [] };
-  }
-
+  if (!res.ok) return { contestResults: [], recentPublicPosts: [] };
   return res.json();
 }
 
@@ -126,86 +95,105 @@ interface PageProps {
 export default async function UserPage({ params }: PageProps) {
   const { id: userId } = await params;
 
-  // 1. プロフィールと履歴を並列取得
   const [profile, history] = await Promise.all([
     fetchUserProfile(userId),
     fetchUserHistory(userId),
   ]);
 
-  // 2. プロフィール画像URLを解決 (ローカル/S3の分岐処理)
-  // ここでAPIを叩いてS3の署名付きURLへ変換します
   const profileImageSrc = await resolveProfileImageUrl(profile.profileImageUrl);
-
-  // 表示名またはIDの最初の文字（アイコン用）
   const initial = (profile.nickname ?? profile.userId)[0]?.toUpperCase() ?? "U";
 
   return (
-    <main className="min-h-screen bg-[#F5F5F5] font-sans text-[#333]">
-      {/* 共通ナビゲーションバー */}
-      <nav className="bg-black text-white h-12 flex items-center px-4 lg:px-8 mb-8 shadow-sm">
-        <Link href="/" className="font-bold text-lg tracking-tight hover:text-gray-300">
-          WalkFind
-        </Link>
-        <span className="mx-2 text-gray-500">/</span>
-        <span className="text-sm text-white font-medium">Users</span>
-        <span className="mx-2 text-gray-500">/</span>
-        <span className="text-sm text-gray-300">{profile.userId}</span>
-        {IS_LOCAL && <span className="ml-4 text-xs bg-blue-600 px-2 py-0.5 rounded">LOCAL MODE</span>}
+    <main className="min-h-screen bg-gray-50 font-sans text-gray-800 pb-20">
+      
+      {/* 共通ナビゲーションバー (Fixed & H-16) */}
+      <nav className="fixed top-0 w-full z-50 bg-white/80 backdrop-blur-md border-b border-gray-200 h-16 transition-all">
+        <div className="max-w-6xl mx-auto px-4 h-full flex items-center justify-between">
+            <div className="flex items-center gap-2">
+                <Link href="/" className="font-bold text-xl tracking-tight text-black hover:text-gray-600 transition-colors">
+                  WalkFind
+                </Link>
+                <span className="text-gray-300">/</span>
+                <span className="text-sm font-medium text-black">User Profile</span>
+            </div>
+            {IS_LOCAL && (
+                <span className="text-[10px] bg-blue-100 text-blue-700 px-2 py-0.5 rounded font-mono font-bold">
+                    DEV MODE
+                </span>
+            )}
+        </div>
       </nav>
 
-      <div className="max-w-6xl mx-auto px-4 pb-12">
-        <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+      <div className="pt-24 max-w-6xl mx-auto px-4">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
           
-          {/* 左カラム：プロフィール情報 */}
-          <div className="lg:col-span-1 space-y-6">
-            <div className="bg-white border border-gray-300 rounded-sm p-6 shadow-sm text-center lg:text-left">
-              <div className="relative w-32 h-32 mx-auto lg:mx-0 bg-gray-200 rounded-sm overflow-hidden mb-4 border border-gray-300">
-                {profileImageSrc ? (
-                  <Image
-                    src={profileImageSrc}
-                    alt={profile.nickname ?? "Profile"}
-                    fill
-                    unoptimized // S3の署名付きURLは外部ドメインのため必須
-                    className="object-cover"
-                  />
-                ) : (
-                  <div className="flex items-center justify-center h-full text-4xl text-gray-400 font-bold bg-gray-100">
-                    {initial}
-                  </div>
-                )}
+          {/* 左カラム：プロフィール情報 (4/12) */}
+          <div className="lg:col-span-4 space-y-6">
+            
+            {/* プロフィールカード */}
+            <div className="bg-white border border-gray-200 rounded-2xl p-8 shadow-sm text-center relative overflow-hidden">
+              <div className="absolute top-0 left-0 w-full h-24 bg-gradient-to-b from-gray-50 to-white -z-10"></div>
+              
+              <div className="relative w-32 h-32 mx-auto bg-white rounded-full p-1 mb-4 shadow-md ring-1 ring-gray-100">
+                <div className="w-full h-full rounded-full overflow-hidden relative bg-gray-100">
+                    {profileImageSrc ? (
+                      <Image
+                        src={profileImageSrc}
+                        alt={profile.nickname ?? "Profile"}
+                        fill
+                        unoptimized
+                        className="object-cover"
+                      />
+                    ) : (
+                      <div className="flex items-center justify-center h-full text-5xl text-gray-300 font-bold bg-gray-50">
+                        {initial}
+                      </div>
+                    )}
+                </div>
               </div>
 
-              <h1 className="text-xl font-bold text-black break-words">
-                {profile.nickname ?? "No nickname"}
+              <h1 className="text-2xl font-extrabold text-black break-words mb-1 tracking-tight">
+                {profile.nickname ?? "Unknown User"}
               </h1>
-              <p className="text-sm text-gray-500 font-mono mb-4 break-all">
+              <div className="text-xs text-gray-400 font-mono mb-6 bg-gray-50 inline-block px-3 py-1 rounded-full border border-gray-100">
                 @{profile.userId}
-              </p>
+              </div>
 
               {profile.bio && (
-                <div className="text-sm text-gray-700 whitespace-pre-line border-t border-gray-100 pt-3">
+                <div className="text-sm text-gray-600 whitespace-pre-line border-t border-gray-100 pt-4 leading-relaxed">
                   {profile.bio}
                 </div>
               )}
             </div>
 
-            {/* 統計サマリカード */}
-            <div className="bg-white border border-gray-300 rounded-sm shadow-sm overflow-hidden">
-                <div className="p-3 border-b border-gray-200 bg-gray-50 text-xs font-bold text-gray-500 uppercase">
-                    Statistics
+            {/* 統計情報（モダンリスト） */}
+            <div className="bg-white border border-gray-200 rounded-2xl shadow-sm overflow-hidden">
+                <div className="px-6 py-3 border-b border-gray-100 bg-gray-50/50">
+                    <h3 className="text-xs font-bold text-gray-400 uppercase tracking-wider">
+                        Stats & Achievements
+                    </h3>
                 </div>
-                <div className="divide-y divide-gray-100">
-                    <div className="p-4 flex justify-between items-center">
-                        <span className="text-sm text-gray-600">Total Posts</span>
+                <div className="divide-y divide-gray-50">
+                    <div className="p-5 flex justify-between items-center group">
+                        <div className="flex items-center gap-3">
+                            <span className="text-xl group-hover:scale-110 transition-transform">📸</span>
+                            <span className="text-sm font-medium text-gray-600">Total Posts</span>
+                        </div>
                         <span className="text-lg font-bold text-black">{profile.totalPosts}</span>
                     </div>
-                    <div className="p-4 flex justify-between items-center">
-                        <span className="text-sm text-gray-600">Contests</span>
+                    <div className="p-5 flex justify-between items-center group">
+                        <div className="flex items-center gap-3">
+                            <span className="text-xl group-hover:scale-110 transition-transform">🏅</span>
+                            <span className="text-sm font-medium text-gray-600">Contests Joined</span>
+                        </div>
                         <span className="text-lg font-bold text-black">{profile.totalContestsEntered}</span>
                     </div>
-                    <div className="p-4 flex justify-between items-center">
-                        <span className="text-sm text-gray-600">Best Rank</span>
-                        <span className="text-lg font-bold text-blue-600">
+                    <div className="p-5 flex justify-between items-center group">
+                        <div className="flex items-center gap-3">
+                            <span className="text-xl group-hover:scale-110 transition-transform">🏆</span>
+                            <span className="text-sm font-medium text-gray-600">Best Rank</span>
+                        </div>
+                        <span className={`text-lg font-bold ${profile.bestRank > 0 ? 'text-blue-600' : 'text-gray-400'}`}>
                             {profile.bestRank > 0 ? `#${profile.bestRank}` : "-"}
                         </span>
                     </div>
@@ -213,104 +201,116 @@ export default async function UserPage({ params }: PageProps) {
             </div>
           </div>
 
-          {/* 右カラム：メインコンテンツ */}
-          <div className="lg:col-span-3 space-y-8">
+          {/* 右カラム：メインコンテンツ (8/12) */}
+          <div className="lg:col-span-8 space-y-10">
             
             {/* コンテスト成績 */}
-            <section className="bg-white border border-gray-300 rounded-sm shadow-sm p-6">
-              <h2 className="text-lg font-bold text-black mb-4 flex items-center gap-2">
-                <span className="text-xl">🏆</span> Contest History
+            <section>
+              <h2 className="text-xl font-bold text-black mb-6 flex items-center gap-2">
+                <span className="text-2xl">🏆</span> Contest History
               </h2>
 
               {history.contestResults.length === 0 ? (
-                <p className="text-sm text-gray-500 py-4 text-center bg-gray-50 border border-dashed border-gray-200 rounded-sm">
-                  コンテスト参加履歴はまだありません。
-                </p>
+                <div className="py-12 text-center bg-white border border-dashed border-gray-300 rounded-xl">
+                  <p className="text-gray-500 font-medium">No contest history yet.</p>
+                </div>
               ) : (
-                <div className="overflow-x-auto">
-                  <table className="w-full text-sm border-collapse min-w-[600px]">
-                    <thead>
-                      <tr className="bg-gray-100 text-gray-600 border-b border-gray-300">
-                        <th className="py-2 px-4 text-left font-bold">Contest Name</th>
-                        <th className="py-2 px-4 text-center font-bold">Rank</th>
-                        <th className="py-2 px-4 text-right font-bold">Participants</th>
-                        <th className="py-2 px-4 text-right font-bold">Date</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {history.contestResults.map((result, idx) => (
-                        <tr
-                          key={`${result.contestId}-${result.photoId}`}
-                          className={`border-b border-gray-100 hover:bg-blue-50 transition-colors ${idx % 2 === 0 ? 'bg-white' : 'bg-[#FAFAFA]'}`}
-                        >
-                          <td className="py-3 px-4 font-medium text-gray-800">
-                            <Link href={`/contests/announced/${result.contestId}`} className="hover:underline hover:text-blue-600">
-                              {result.contestName}
-                            </Link>
-                          </td>
-                          <td className="py-3 px-4 text-center">
-                            <span className={`inline-block w-12 py-0.5 rounded-sm font-bold text-xs ${
-                                result.rank === 1 ? 'bg-yellow-100 text-yellow-700 border border-yellow-200' : 
-                                result.rank <= 3 ? 'bg-gray-200 text-gray-700' : 'text-gray-600'
-                            }`}>
-                                #{result.rank}
-                            </span>
-                          </td>
-                          <td className="py-3 px-4 text-right text-gray-600 font-mono">
-                            {result.totalParticipants}
-                          </td>
-                          <td className="py-3 px-4 text-right text-gray-500 font-mono">
-                            {new Date(result.heldDate).toLocaleDateString("ja-JP")}
-                          </td>
+                <div className="bg-white border border-gray-200 rounded-2xl shadow-sm overflow-hidden">
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-sm text-left">
+                      <thead className="bg-gray-50 border-b border-gray-100 text-xs text-gray-500 uppercase font-bold tracking-wider">
+                        <tr>
+                          <th className="py-4 px-6">Contest</th>
+                          <th className="py-4 px-6 text-center">Rank</th>
+                          <th className="py-4 px-6 text-right">Participants</th>
+                          <th className="py-4 px-6 text-right">Date</th>
                         </tr>
-                      ))}
-                    </tbody>
-                  </table>
+                      </thead>
+                      <tbody className="divide-y divide-gray-50">
+                        {history.contestResults.map((result) => (
+                          <tr
+                            key={`${result.contestId}-${result.photoId}`}
+                            className="hover:bg-blue-50/30 transition-colors group"
+                          >
+                            <td className="py-4 px-6 font-bold text-gray-900">
+                              <Link href={`/contests/announced/${result.contestId}`} className="hover:text-blue-600 hover:underline transition-colors block truncate max-w-[200px] sm:max-w-xs">
+                                {result.contestName}
+                              </Link>
+                            </td>
+                            <td className="py-4 px-6 text-center">
+                              <span className={`
+                                inline-flex items-center justify-center min-w-[3rem] py-1 rounded-full text-xs font-bold
+                                ${result.rank === 1 ? 'bg-yellow-100 text-yellow-700 border border-yellow-200' : 
+                                  result.rank <= 3 ? 'bg-gray-100 text-gray-700 border border-gray-200' : 'text-gray-500 bg-gray-50'}
+                              `}>
+                                  {result.rank === 1 && '👑 '}#{result.rank}
+                              </span>
+                            </td>
+                            <td className="py-4 px-6 text-right text-gray-600 font-mono">
+                              {result.totalParticipants}
+                            </td>
+                            <td className="py-4 px-6 text-right text-gray-400 font-mono text-xs">
+                              {new Date(result.heldDate).toLocaleDateString("ja-JP")}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
                 </div>
               )}
             </section>
 
             {/* 最近の投稿 */}
             <section>
-              <h2 className="text-lg font-bold text-black mb-4 flex items-center gap-2">
-                <span className="text-xl">📸</span> Recent Posts
-              </h2>
+              <div className="flex items-center justify-between mb-6">
+                  <h2 className="text-xl font-bold text-black flex items-center gap-2">
+                    <span className="text-2xl">📸</span> Recent Posts
+                  </h2>
+                  <span className="text-xs font-bold text-gray-400 uppercase tracking-wider">
+                      Latest {history.recentPublicPosts.length} items
+                  </span>
+              </div>
 
               {history.recentPublicPosts.length === 0 ? (
-                <div className="bg-white border border-gray-300 rounded-sm p-8 text-center text-gray-500">
-                  公開投稿はまだありません。
+                <div className="py-12 text-center bg-white border border-dashed border-gray-300 rounded-xl">
+                  <p className="text-gray-500 font-medium">No public photos yet.</p>
                 </div>
               ) : (
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
                   {history.recentPublicPosts.map((photo) => (
                     <div
                       key={photo.photoId}
-                      className="bg-white border border-gray-300 rounded-sm hover:shadow-md transition-all duration-200 group flex flex-col"
+                      className="group bg-white rounded-xl overflow-hidden border border-gray-200 shadow-sm hover:shadow-lg transition-all duration-300 hover:-translate-y-1"
                     >
-                      <div className="relative aspect-[4/3] w-full bg-gray-200 overflow-hidden border-b border-gray-200">
+                      <div className="relative aspect-[4/3] w-full bg-gray-100 overflow-hidden">
                         {photo.photoUrl ? (
                           <Image
                             src={photo.photoUrl}
-                            alt={photo.title || "User submitted photo"}
+                            alt={photo.title || "Photo"}
                             fill
                             unoptimized
-                            className="object-cover group-hover:scale-105 transition-transform duration-500"
+                            className="object-cover transition-transform duration-700 group-hover:scale-105"
                           />
                         ) : (
-                            <div className="flex items-center justify-center h-full text-gray-400 text-xs">No Image</div>
+                            <div className="flex items-center justify-center h-full text-gray-300 text-xs">No Image</div>
                         )}
-                        <div className="absolute top-0 right-0 bg-black/60 text-white text-xs px-2 py-1 font-mono">
-                            ♥ {photo.totalVotes}
+                        
+                        {/* Vote Badge */}
+                        <div className="absolute top-2 right-2 bg-black/60 backdrop-blur-sm text-white text-[10px] font-bold px-2 py-1 rounded-full flex items-center gap-1">
+                            <span>♥</span> {photo.totalVotes}
                         </div>
                       </div>
 
-                      <div className="p-3 flex flex-col flex-grow">
-                        <h3 className="font-bold text-sm text-gray-900 mb-1 line-clamp-1 group-hover:text-blue-600 transition-colors">
+                      <div className="p-4">
+                        <h3 className="font-bold text-sm text-gray-900 mb-1 line-clamp-1 group-hover:text-black transition-colors">
                             {photo.title}
                         </h3>
-                        <p className="mt-auto text-xs text-gray-500 font-mono text-right">
-                          {new Date(photo.submissionDate).toLocaleDateString("ja-JP")}
-                        </p>
+                        <div className="flex justify-between items-center mt-2">
+                            <span className="text-[10px] text-gray-400 font-mono">
+                                {new Date(photo.submissionDate).toLocaleDateString("ja-JP")}
+                            </span>
+                        </div>
                       </div>
                     </div>
                   ))}

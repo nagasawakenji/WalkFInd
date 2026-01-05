@@ -87,8 +87,11 @@ export default function MyPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-[#F5F5F5] flex items-center justify-center">
-        <div className="animate-spin rounded-full h-10 w-10 border-t-2 border-b-2 border-gray-900"></div>
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="flex flex-col items-center gap-4">
+             <div className="animate-spin rounded-full h-10 w-10 border-t-2 border-b-2 border-black"></div>
+             <p className="text-gray-400 font-mono text-sm">Loading Profile...</p>
+        </div>
       </div>
     );
   }
@@ -96,103 +99,146 @@ export default function MyPage() {
   if (!profile) return null;
 
   return (
-    <main className="min-h-screen bg-[#F5F5F5] font-sans text-[#333]">
-      <nav className="bg-black text-white h-12 flex items-center px-4 lg:px-8 mb-8 shadow-sm">
-        <Link href="/" className="font-bold text-lg tracking-tight hover:text-gray-300">
-          WalkFind
-        </Link>
-        <span className="mx-2 text-gray-500">/</span>
-        <span className="text-sm text-white font-medium">My Page</span>
-        {IS_LOCAL && <span className="ml-4 text-xs bg-blue-600 px-2 py-0.5 rounded">LOCAL MODE</span>}
+    <main className="min-h-screen bg-gray-50 font-sans text-gray-800 pb-20">
+      
+      {/* 共通ナビゲーションバー (Fixed & H-16) */}
+      <nav className="fixed top-0 w-full z-50 bg-white/80 backdrop-blur-md border-b border-gray-200 h-16 transition-all">
+        <div className="max-w-6xl mx-auto px-4 h-full flex items-center justify-between">
+            <div className="flex items-center gap-2">
+                <Link href="/" className="font-bold text-xl tracking-tight text-black hover:text-gray-600 transition-colors">
+                  WalkFind
+                </Link>
+                <span className="text-gray-300">/</span>
+                <span className="text-sm font-medium text-black">My Page</span>
+            </div>
+            {IS_LOCAL && (
+                <span className="text-[10px] bg-blue-100 text-blue-700 px-2 py-0.5 rounded font-mono font-bold">
+                    DEV MODE
+                </span>
+            )}
+        </div>
       </nav>
 
-      <div className="max-w-5xl mx-auto px-4 pb-12">
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div className="pt-24 max-w-6xl mx-auto px-4">
+        
+        {/* ヘッダーエリア */}
+        <div className="mb-8">
+            <h1 className="text-3xl font-extrabold text-black tracking-tight mb-2">
+               Dashboard
+            </h1>
+            <p className="text-gray-500 text-sm">
+               あなたのプロフィール情報とアクティビティ状況です。
+            </p>
+        </div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          
+          {/* 左カラム: プロフィールカード */}
           <div className="lg:col-span-1 space-y-6">
-            <div className="bg-white border border-gray-300 rounded-sm p-6 shadow-sm text-center">
-              <div className="relative w-32 h-32 mx-auto bg-gray-100 rounded-sm overflow-hidden mb-4 border border-gray-200">
-                {displayImageUrl ? (
-                  <Image
-                    src={displayImageUrl}
-                    alt={profile.username}
-                    fill
-                    className="object-cover"
-                    unoptimized
-                  />
-                ) : (
-                  <div className="flex items-center justify-center h-full text-4xl text-gray-300 font-bold bg-gray-100">
-                    {(profile.username || profile.userId)[0]?.toUpperCase()}
-                  </div>
-                )}
+            <div className="bg-white border border-gray-200 rounded-2xl p-8 shadow-sm text-center relative overflow-hidden">
+              {/* 背景装飾 */}
+              <div className="absolute top-0 left-0 w-full h-24 bg-gradient-to-b from-gray-50 to-white -z-10"></div>
+              
+              <div className="relative w-32 h-32 mx-auto bg-white rounded-full p-1 mb-4 shadow-md ring-1 ring-gray-100">
+                <div className="w-full h-full rounded-full overflow-hidden relative bg-gray-100">
+                    {displayImageUrl ? (
+                    <Image
+                        src={displayImageUrl}
+                        alt={profile.username}
+                        fill
+                        className="object-cover"
+                        unoptimized
+                    />
+                    ) : (
+                    <div className="flex items-center justify-center h-full text-5xl text-gray-300 font-bold bg-gray-50">
+                        {(profile.username || profile.userId)[0]?.toUpperCase()}
+                    </div>
+                    )}
+                </div>
+                <div className="absolute bottom-1 right-1 w-4 h-4 bg-green-500 border-2 border-white rounded-full"></div>
               </div>
 
-              <h1 className="text-xl font-bold text-black break-words mb-1">
+              <h2 className="text-xl font-bold text-black break-words mb-1">
                 {profile.username}
-              </h1>
-              <p className="text-sm text-gray-500 font-mono mb-4 bg-gray-50 inline-block px-2 py-0.5 rounded-sm border border-gray-200">
+              </h2>
+              <div className="text-xs text-gray-400 font-mono mb-6 bg-gray-50 inline-block px-3 py-1 rounded-full border border-gray-100">
                 @{profile.userId}
-              </p>
+              </div>
 
-              <div className="border-t border-gray-100 pt-4 text-left space-y-3">
-                <div>
-                  <span className="text-xs font-bold text-gray-400 uppercase block mb-1">Role</span>
-                  <span className="text-xs font-bold text-white bg-gray-600 px-2 py-1 rounded-sm uppercase">
+              <div className="text-left space-y-4 border-t border-gray-100 pt-6">
+                <div className="flex justify-between items-center">
+                  <span className="text-xs font-bold text-gray-400 uppercase">Role</span>
+                  <span className="text-xs font-bold text-white bg-black px-2.5 py-1 rounded-md uppercase tracking-wider">
                     {profile.role}
                   </span>
                 </div>
                 <div>
                   <span className="text-xs font-bold text-gray-400 uppercase block mb-1">Email</span>
-                  <span className="text-sm text-gray-700 font-mono break-all">
+                  <span className="text-sm text-gray-700 font-mono break-all block truncate" title={profile.email}>
                     {profile.email}
                   </span>
                 </div>
               </div>
 
-              <div className="mt-6 pt-4 border-t border-gray-100 space-y-2">
+              <div className="mt-8 grid grid-cols-1 gap-3">
                 <Link
                   href="/users/me/bio"
-                  className="block w-full text-center py-2 bg-white border border-gray-300 text-sm font-bold text-gray-700 rounded-sm hover:bg-gray-50 hover:text-black transition-colors"
+                  className="w-full py-2.5 bg-white border border-gray-200 text-sm font-bold text-gray-700 rounded-lg hover:bg-black hover:text-white hover:border-black transition-all shadow-sm"
                 >
-                  自己紹介文を編集
+                  Edit Bio
                 </Link>
                 <Link
                   href="/users/me/image"
-                  className="block w-full text-center py-2 bg-white border border-gray-300 text-sm font-bold text-gray-700 rounded-sm hover:bg-gray-50 hover:text-black transition-colors"
+                  className="w-full py-2.5 bg-gray-50 border border-gray-200 text-sm font-bold text-gray-600 rounded-lg hover:bg-gray-100 transition-colors"
                 >
-                  プロフィール画像を変更
+                  Change Avatar
                 </Link>
               </div>
             </div>
           </div>
 
+          {/* 右カラム: 統計・アクティビティ */}
           <div className="lg:col-span-2 space-y-6">
+            
+            {/* 統計ウィジェット */}
             <div className="grid grid-cols-2 gap-4">
-              <div className="bg-white border border-gray-300 rounded-sm p-5 shadow-sm hover:border-blue-400 transition-colors">
-                <div className="text-xs font-bold text-gray-500 uppercase mb-2">Total Posts</div>
-                <div className="flex items-end gap-2">
-                  <span className="text-3xl font-bold text-black">{profile.totalPhotos}</span>
-                  <span className="text-sm text-gray-400 mb-1">shots</span>
+              <div className="bg-white border border-gray-200 rounded-2xl p-6 shadow-sm hover:shadow-md transition-shadow relative overflow-hidden group">
+                <div className="absolute right-4 top-4 text-4xl opacity-5 group-hover:opacity-10 group-hover:scale-110 transition-all">📸</div>
+                <div className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Total Posts</div>
+                <div className="flex items-baseline gap-2">
+                  <span className="text-4xl font-extrabold text-black tracking-tight">{profile.totalPhotos}</span>
+                  <span className="text-sm text-gray-500">shots</span>
                 </div>
               </div>
-              <div className="bg-white border border-gray-300 rounded-sm p-5 shadow-sm hover:border-pink-400 transition-colors">
-                <div className="text-xs font-bold text-gray-500 uppercase mb-2">Total Votes Received</div>
-                <div className="flex items-end gap-2">
-                  <span className="text-3xl font-bold text-black">{profile.totalVotesReceived}</span>
-                  <span className="text-sm text-gray-400 mb-1">votes</span>
+              
+              <div className="bg-white border border-gray-200 rounded-2xl p-6 shadow-sm hover:shadow-md transition-shadow relative overflow-hidden group">
+                <div className="absolute right-4 top-4 text-4xl opacity-5 group-hover:opacity-10 group-hover:scale-110 transition-all">❤️</div>
+                <div className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Total Votes</div>
+                <div className="flex items-baseline gap-2">
+                  <span className="text-4xl font-extrabold text-black tracking-tight">{profile.totalVotesReceived}</span>
+                  <span className="text-sm text-gray-500">received</span>
                 </div>
               </div>
             </div>
 
-            <div className="bg-white border border-gray-300 rounded-sm shadow-sm p-6 min-h-[300px]">
-              <h2 className="text-lg font-bold text-black mb-4 flex items-center gap-2 border-b border-gray-200 pb-2">
-                <span className="text-xl">⚙️</span> Dashboard
-              </h2>
+            {/* アクティビティエリア */}
+            <div className="bg-white border border-gray-200 rounded-2xl shadow-sm p-8 min-h-[320px] flex flex-col">
+              <h3 className="text-lg font-bold text-black mb-6 flex items-center gap-2">
+                 Recent Activity
+              </h3>
 
-              <div className="text-center py-12 text-gray-400">
-                <p className="mb-2">Your recent activity will appear here.</p>
-                <Link href="/contests" className="text-blue-600 hover:underline text-sm font-bold">
-                  Join a Contest &rarr;
-                </Link>
+              <div className="flex-grow flex flex-col items-center justify-center text-center py-8 bg-gray-50/50 rounded-xl border border-dashed border-gray-200">
+                 <div className="text-4xl mb-3 text-gray-300">👋</div>
+                 <p className="text-gray-900 font-bold mb-1">やあ, {profile.username}!</p>
+                 <p className="text-gray-500 text-sm mb-6 max-w-sm">
+                    新しいfindに参加して、あなたの発見を他の人にも教えてあげましょう!!
+                 </p>
+                 <Link 
+                    href="/contests" 
+                    className="px-6 py-2.5 bg-black text-white text-sm font-bold rounded-full hover:bg-gray-800 transition shadow-lg hover:shadow-xl hover:-translate-y-0.5"
+                 >
+                    Join a Contest &rarr;
+                 </Link>
               </div>
             </div>
 
