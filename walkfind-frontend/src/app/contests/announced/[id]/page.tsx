@@ -93,6 +93,8 @@ async function getModelPhotos(contestId: string): Promise<ModelPhotoItem[]> {
             const presignRes = await apiClient.get<PresignedUrlResponse>('/upload/presigned-download-url', {
               params: { key: photo.key },
             });
+
+            console.log(`[Server] Presign success: ${presignRes.data?.photoUrl?.substring(0, 20)}...`);
             return { ...photo, photoUrl: presignRes.data.photoUrl };
           }
         } catch (e) {
