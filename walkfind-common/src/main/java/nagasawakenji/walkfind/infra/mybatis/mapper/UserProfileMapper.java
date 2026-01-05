@@ -67,5 +67,7 @@ public interface UserProfileMapper {
      */
     int updateBio(@Param("userId") String userId, @Param("bio") String bio);
 
+    int anonymizeProfile(@Param("userId") String userId);
+
 
 }

@@ -17,5 +17,16 @@ public interface UserMapper {
                @Param("email") String email);
 
     // ユーザー名の変更を処理
-    int updateUsername(User user);
+    int update(
+            @Param("userId") String userId,
+            @Param("username") String username,
+            @Param("email") String email
+    );
+
+    int anonymizeUser(
+            @Param("userId") String userId,
+            @Param("username") String username,
+            @Param("email") String email,
+            @Param("isActive") boolean isActive
+    );
 }

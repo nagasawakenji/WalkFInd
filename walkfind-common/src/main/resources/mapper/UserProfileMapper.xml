@@ -138,4 +138,13 @@
         WHERE user_id = #{userId}
     </update>
 
+    <update id="anonymizeProfile">
+        UPDATE user_profiles
+        SET
+        profile_image_url = NULL,
+        bio = NULL,
+        updated_at = NOW()
+        WHERE user_id = #{userId}
+    </update>
+
 </mapper>

@@ -24,38 +24,34 @@ export default function MyPage() {
   const [profile, setProfile] = useState<UserProfileResponse | null>(null);
   const [displayImageUrl, setDisplayImageUrl] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  
+  // ★追加: 削除処理中のローディング状態
+  const [isDeleting, setIsDeleting] = useState(false);
+  
   const router = useRouter();
 
   useEffect(() => {
     const getProfile = async () => {
+      // (中略: 変更なし)
       try {
-        // ★ Cookie 認証でOK（Authorizationヘッダ不要）
         const res = await api.get<UserProfileResponse>('/users/me');
         const userData = res.data;
-
         setProfile(userData);
 
-        // プロフィール画像URLの解決
         if (userData.profileImageUrl) {
           const originalUrl = userData.profileImageUrl;
-
-          // すでに http(s) URL ならそのまま
           if (originalUrl.startsWith('http')) {
             setDisplayImageUrl(originalUrl);
           } else {
-            // キー("profile-images/xxx.jpg")の状態の場合
             if (IS_LOCAL) {
               const cleanKey = originalUrl.startsWith('/') ? originalUrl.slice(1) : originalUrl;
               const base = api.defaults.baseURL ?? '';
               setDisplayImageUrl(`${base}/local-storage/${cleanKey}`);
             } else {
-              // 本番(S3): Presigned URL を取得（Cookie認証でOK）
               try {
                 const presignRes = await api.get('/upload/presigned-download-url', {
                   params: { key: originalUrl },
                 });
-
-                // 返却形式が { photoUrl: "..."} の想定
                 setDisplayImageUrl(presignRes.data.photoUrl);
               } catch (err) {
                 console.error('Failed to get presigned download url', err);
@@ -68,22 +64,50 @@ export default function MyPage() {
         }
       } catch (error: unknown) {
         const status = isAxiosError(error) ? error.response?.status : undefined;
-
-        // ★ 未ログインならログインへ（戻り先も保存）
         if (status === 401) {
           localStorage.setItem('redirect_after_login', '/users/me');
           router.replace('/login');
           return;
         }
-
         console.error('Profile fetch error', error);
       } finally {
         setLoading(false);
       }
     };
-
     getProfile();
   }, [router]);
+
+  // ★追加: 退会処理ハンドラー
+  const handleDeleteAccount = async () => {
+    if (!profile) return;
+
+    const confirmed = window.confirm(
+      "【警告】本当にアカウントを削除して退会しますか？\n\n" +
+      "・ユーザー情報は匿名化されます（復元できません）。\n" +
+      "・投稿した写真は削除されません。\n\n" +
+      "よろしいですか？"
+    );
+
+    if (!confirmed) return;
+
+    setIsDeleting(true);
+
+    try {
+      // バックエンドの退会APIをコール
+      await api.delete('/auth/me');
+
+      alert("退会処理が完了しました。\nご利用ありがとうございました。");
+      
+      // CookieはAPIレスポンスで削除されますが、念のためフロント側でもリダイレクト
+      router.push('/'); 
+      router.refresh(); // ヘッダーの状態などを更新するため
+
+    } catch (error) {
+      console.error('Account deletion failed', error);
+      alert("退会処理に失敗しました。時間をおいて再度お試しください。");
+      setIsDeleting(false);
+    }
+  };
 
   if (loading) {
     return (
@@ -101,7 +125,7 @@ export default function MyPage() {
   return (
     <main className="min-h-screen bg-gray-50 font-sans text-gray-800 pb-20">
       
-      {/* 共通ナビゲーションバー (Fixed & H-16) */}
+      {/* 共通ナビゲーションバー */}
       <nav className="fixed top-0 w-full z-50 bg-white/80 backdrop-blur-md border-b border-gray-200 h-16 transition-all">
         <div className="max-w-6xl mx-auto px-4 h-full flex items-center justify-between">
             <div className="flex items-center gap-2">
@@ -136,7 +160,7 @@ export default function MyPage() {
           {/* 左カラム: プロフィールカード */}
           <div className="lg:col-span-1 space-y-6">
             <div className="bg-white border border-gray-200 rounded-2xl p-8 shadow-sm text-center relative overflow-hidden">
-              {/* 背景装飾 */}
+               {/* ... (既存コード: プロフィール画像など) ... */}
               <div className="absolute top-0 left-0 w-full h-24 bg-gradient-to-b from-gray-50 to-white -z-10"></div>
               
               <div className="relative w-32 h-32 mx-auto bg-white rounded-full p-1 mb-4 shadow-md ring-1 ring-gray-100">
@@ -155,6 +179,7 @@ export default function MyPage() {
                     </div>
                     )}
                 </div>
+                {/* オンラインインジケーター */}
                 <div className="absolute bottom-1 right-1 w-4 h-4 bg-green-500 border-2 border-white rounded-full"></div>
               </div>
 
@@ -197,11 +222,12 @@ export default function MyPage() {
             </div>
           </div>
 
-          {/* 右カラム: 統計・アクティビティ */}
+          {/* 右カラム: 統計・アクティビティ・Danger Zone */}
           <div className="lg:col-span-2 space-y-6">
             
             {/* 統計ウィジェット */}
             <div className="grid grid-cols-2 gap-4">
+               {/* ... (既存コード: 統計情報) ... */}
               <div className="bg-white border border-gray-200 rounded-2xl p-6 shadow-sm hover:shadow-md transition-shadow relative overflow-hidden group">
                 <div className="absolute right-4 top-4 text-4xl opacity-5 group-hover:opacity-10 group-hover:scale-110 transition-all">📸</div>
                 <div className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Total Posts</div>
@@ -223,6 +249,7 @@ export default function MyPage() {
 
             {/* アクティビティエリア */}
             <div className="bg-white border border-gray-200 rounded-2xl shadow-sm p-8 min-h-[320px] flex flex-col">
+              {/* ... (既存コード: Recent Activity) ... */}
               <h3 className="text-lg font-bold text-black mb-6 flex items-center gap-2">
                  Recent Activity
               </h3>
@@ -239,6 +266,25 @@ export default function MyPage() {
                  >
                     Join a Contest &rarr;
                  </Link>
+              </div>
+            </div>
+
+            {/* ★追加: Danger Zone (退会エリア) */}
+            <div className="border border-red-100 rounded-2xl p-6 bg-red-50/30 mt-8">
+              <h3 className="text-sm font-bold text-red-600 mb-2 uppercase tracking-wide flex items-center gap-2">
+                ⚠️ Danger Zone
+              </h3>
+              <p className="text-xs text-red-500 mb-4 leading-relaxed">
+                アカウントを削除すると、プロフィール情報は復元できません。投稿した写真は残りますが、ユーザー名は匿名化されます。
+              </p>
+              <div className="flex justify-end">
+                <button
+                  onClick={handleDeleteAccount}
+                  disabled={isDeleting}
+                  className="px-4 py-2 bg-white border border-red-200 text-red-600 text-xs font-bold rounded-lg hover:bg-red-50 hover:border-red-300 transition-all shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {isDeleting ? 'Processing...' : 'Delete Account'}
+                </button>
               </div>
             </div>
 
