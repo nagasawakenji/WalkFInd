@@ -94,6 +94,9 @@ async function getModelPhotos(contestId: string): Promise<ModelPhotoItem[]> {
               params: { key: photo.key },
             });
 
+            console.log(`[Server] Response keys:`, Object.keys(presignRes));
+            
+
             console.log(`[Server] Presign success: ${presignRes.data?.photoUrl?.substring(0, 20)}...`);
             return { ...photo, photoUrl: presignRes.data.photoUrl };
           }
