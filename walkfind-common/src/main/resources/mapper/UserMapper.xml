@@ -23,10 +23,20 @@
         VALUES (#{userId}, #{username}, #{email})
     </insert>
 
-    <update id="updateUsername">
+    <update id="update">
         UPDATE users
         SET username = #{username}, updated_at = CURRENT_TIMESTAMP
         WHERE id = #{id}
+    </update>
+
+    <update id="anonymizeUser">
+        UPDATE users
+        SET
+        username = #{username},
+        email = #{email},
+        is_active = #{isActive},
+        updated_at = NOW()
+        WHERE id = #{userId}
     </update>
 
 </mapper>
