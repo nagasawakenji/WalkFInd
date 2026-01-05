@@ -92,13 +92,11 @@ async function getModelPhotos(contestId: string): Promise<ModelPhotoItem[]> {
             // 本番環境 (Presigned URL取得)
             const presignRes = await apiClient.get<PresignedUrlResponse>('/upload/presigned-download-url', {
               params: { key: photo.key },
-            });
+            }) as unknown as PresignedUrlResponse;
 
             console.log(`[Server] Response keys:`, Object.keys(presignRes));
             
-
-            console.log(`[Server] Presign success: ${presignRes.data?.photoUrl?.substring(0, 20)}...`);
-            return { ...photo, photoUrl: presignRes.data.photoUrl };
+            return { ...photo, photoUrl: presignRes.photoUrl };
           }
         } catch (e) {
           console.error(`Failed to resolve url for model photo ${photo.id}`, e);
