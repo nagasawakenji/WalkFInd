@@ -24,6 +24,14 @@ Globals:
       - arm64
 
   Api:
+    Cors:
+      AllowMethods: "'GET,POST,PUT,DELETE,OPTIONS'"
+      AllowHeaders: "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token'"
+
+
+      AllowOrigin: "'https://walkfind.vercel.app'"
+      AllowCredentials: true
+
     BinaryMediaTypes:
       - multipart/form-data
       - image~1*
@@ -66,6 +74,20 @@ Resources:
     Type: AWS::Serverless::Api
     Properties:
       StageName: prod
+
+      GatewayResponses:
+        DEFAULT_4XX:
+          ResponseParameters:
+            Headers:
+              Access-Control-Allow-Origin: "'*'"
+              Access-Control-Allow-Headers: "'*'"
+              Access-Control-Allow-Methods: "'GET,POST,PUT,DELETE,OPTIONS'"
+        DEFAULT_5XX:
+          ResponseParameters:
+            Headers:
+              Access-Control-Allow-Origin: "'*'"
+              Access-Control-Allow-Headers: "'*'"
+              Access-Control-Allow-Methods: "'GET,POST,PUT,DELETE,OPTIONS'"
       Auth:
         Authorizers:
           CognitoAuth:
@@ -126,6 +148,18 @@ Resources:
           Properties:
             Path: /api/v1/auth/logout
             Method: ANY
+            RestApiId: !Ref WalkFindApi
+        AuthMeDelete:
+          Type: Api
+          Properties:
+            Path: /api/v1/auth/me
+            Method: DELETE
+            RestApiId: !Ref WalkFindApi
+        AuthMeGet:
+          Type: Api
+          Properties:
+            Path: /api/v1/auth/me
+            Method: GET
             RestApiId: !Ref WalkFindApi
         ContestsRoot:
           Type: Api
