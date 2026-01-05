@@ -16,7 +16,6 @@ interface PresignedUrlResponse {
 }
 
 export default function EditProfileImagePage() {
-  const [profileImageKey, setProfileImageKey] = useState('');
   const [loading, setLoading] = useState(false);
   const [successMessage, setSuccessMessage] = useState('');
   const [errorMessage, setErrorMessage] = useState('');
@@ -30,6 +29,9 @@ export default function EditProfileImagePage() {
     setFile(selectedFile);
     if (selectedFile) {
       setPreviewUrl(URL.createObjectURL(selectedFile));
+      // ファイル選択時にメッセージをリセット
+      setErrorMessage('');
+      setSuccessMessage('');
     } else {
       setPreviewUrl(null);
     }
@@ -42,8 +44,8 @@ export default function EditProfileImagePage() {
     setErrorMessage('');
 
     try {
-      if (!file && !profileImageKey) {
-        setErrorMessage('プロフィール画像を選択するか、キーを入力してください。');
+      if (!file) {
+        setErrorMessage('画像ファイルを選択してください。');
         setLoading(false);
         return;
       }
@@ -54,56 +56,41 @@ export default function EditProfileImagePage() {
       // 分岐 A: ローカル環境 (ワンショット更新)
       // =========================================================
       if (IS_LOCAL) {
-        // ローカル環境用コントローラー(/api/v1/profile) に合わせる
-        if (file) {
-          const formData = new FormData();
-          formData.append('file', file);
-
-          await api.put('/profile/profile-image', formData);
-        } else {
-           if (profileImageKey) {
-             console.warn("ローカル環境でのキー直接指定更新は現在サポートされていません");
-           }
-        }
-        
+        const formData = new FormData();
+        formData.append('file', file);
+        await api.put('/profile/profile-image', formData);
       } 
       // =========================================================
       // 分岐 B: 本番環境 (S3 Presigned URL + DB Patch)
       // =========================================================
       else {
-        let targetKey = profileImageKey;
-
-        // 1. ファイルがある場合はS3へアップロード
-        if (file) {
-          const uniqueFileName = `profile-images/${Date.now()}_${file.name}`;
-          
-          // Presigned URL取得
-          const presignRes = await api.get<PresignedUrlResponse>('/upload/presigned-url', {
+        // 1. Presigned URL取得
+        // ユニークなファイル名を生成 (profile-images/timestamp_filename)
+        const uniqueFileName = `profile-images/${Date.now()}_${file.name}`;
+        
+        const presignRes = await api.get<PresignedUrlResponse>('/upload/presigned-url', {
             params: {
-              key: uniqueFileName,
-              contentType: file.type || 'application/octet-stream',
+            key: uniqueFileName,
+            contentType: file.type || 'application/octet-stream',
             },
-          });
+        });
 
-          const { photoUrl: uploadUrl, key: generatedKey } = presignRes.data;
+        const { photoUrl: uploadUrl, key: generatedKey } = presignRes.data;
 
-          // S3へPUT
-          await axios.put(uploadUrl, file, {
+        // 2. S3へPUT (axiosを使用、認証ヘッダなし)
+        await axios.put(uploadUrl, file, {
             headers: {
-              'Content-Type': file.type || 'application/octet-stream',
+            'Content-Type': file.type || 'application/octet-stream',
             },
-          });
-          targetKey = generatedKey;
-        }
+        });
 
-        // 2. DB更新 (PATCH)
-        await api.patch('/me/profile/image', { profileImageUrl: targetKey });
+        // 3. DB更新 (PATCH)
+        await api.patch('/me/profile/image', { profileImageUrl: generatedKey });
       }
 
       setSuccessMessage('プロフィール画像を更新しました。');
-      setFile(null);
-      setPreviewUrl(null);
-      setProfileImageKey('');
+      // プレビュー等はそのまま残す（更新された実感のため）か、リセットするかはお好みで。
+      // ここでは成功を示すためファイル選択状態は維持します。
 
     } catch (err: unknown) {
       if (isAxiosError(err)) {
@@ -129,94 +116,129 @@ export default function EditProfileImagePage() {
   };
 
   return (
-    <main className="min-h-screen bg-[#F5F5F5] font-sans text-[#333]">
-      <nav className="bg-black text-white h-12 flex items-center px-4 lg:px-8 mb-8 shadow-sm">
-        <span className="font-bold text-lg tracking-tight">WalkFind</span>
+    <main className="min-h-screen bg-gray-50 font-sans text-gray-800 pb-20">
+      
+      {/* Fixed Navbar (H-16) */}
+      <nav className="fixed top-0 w-full z-50 bg-white/80 backdrop-blur-md border-b border-gray-200 h-16 transition-all">
+        <div className="max-w-2xl mx-auto px-4 h-full flex items-center justify-between">
+            <div className="flex items-center gap-2">
+                <Link href="/" className="font-bold text-xl tracking-tight text-black hover:text-gray-600 transition-colors">
+                  WalkFind
+                </Link>
+                <span className="text-gray-300">/</span>
+                <span className="text-sm font-medium text-black">Change Avatar</span>
+            </div>
+        </div>
       </nav>
 
-      <div className="max-w-2xl mx-auto px-4 pb-12">
-        <div className="bg-white rounded border border-gray-300 p-6 md:p-8">
-          <h1 className="text-xl md:text-2xl font-bold mb-4 border-b border-gray-200 pb-3">
-            プロフィール画像の変更
-            {IS_LOCAL && <span className="ml-2 text-xs text-blue-600 border border-blue-600 px-1 rounded">LOCAL</span>}
-          </h1>
+      <div className="pt-24 max-w-2xl mx-auto px-4">
+        
+        {/* ヘッダーエリア */}
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-end mb-8 gap-4">
+            <div>
+                <h1 className="text-3xl font-extrabold text-black tracking-tight mb-2 flex items-center gap-2">
+                    Change Avatar
+                    {IS_LOCAL && <span className="text-[10px] bg-blue-100 text-blue-700 px-2 py-1 rounded border border-blue-200">LOCAL</span>}
+                </h1>
+                <p className="text-gray-500 text-sm">
+                   画像をアップロードしてプロフィール画像を変更します。
+                </p>
+            </div>
+            
+            <button
+                type="button"
+                onClick={() => router.back()}
+                className="px-5 py-2.5 bg-white border border-gray-200 text-gray-700 text-sm font-bold rounded-full hover:bg-gray-100 transition-colors shadow-sm"
+            >
+                キャンセル
+            </button>
+        </div>
 
-          <p className="text-sm text-gray-600 mb-4">
-            画像をアップロードしてプロフィール画像を変更します。
-          </p>
-
-          <form onSubmit={handleSubmit} className="space-y-6">
-            <div className="space-y-3">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1" htmlFor="profileImageFile">
-                  画像ファイルを選択
-                </label>
-                <input
-                  id="profileImageFile"
-                  type="file"
-                  accept="image/*"
-                  disabled={loading}
-                  className="block w-full text-sm text-gray-900 file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 cursor-pointer"
-                  onChange={handleFileChange}
-                />
-              </div>
-
-              {previewUrl && (
-                <div className="mt-2 flex items-center gap-4 p-4 bg-gray-50 rounded border border-gray-200">
-                  <div className="w-24 h-24 rounded-full overflow-hidden border border-gray-300 bg-white flex items-center justify-center shrink-0">
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src={previewUrl} alt="プレビュー" className="w-full h-full object-cover" />
-                  </div>
-                  <div>
-                    <p className="text-sm font-bold text-gray-700">新しいアイコン</p>
-                    <p className="text-xs text-gray-500 mt-1">「保存する」ボタンを押すと反映されます。</p>
-                  </div>
+        {/* フォームカード */}
+        <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden p-6 md:p-8">
+          <form onSubmit={handleSubmit} className="space-y-8">
+            
+            {/* プレビューエリア */}
+            <div className="flex flex-col items-center justify-center space-y-4">
+                <div className={`
+                    relative w-40 h-40 rounded-full overflow-hidden border-4 
+                    ${previewUrl ? 'border-black shadow-md' : 'border-gray-100 bg-gray-50'}
+                `}>
+                    {previewUrl ? (
+                        /* eslint-disable-next-line @next/next/no-img-element */
+                        <img 
+                            src={previewUrl} 
+                            alt="Preview" 
+                            className="w-full h-full object-cover" 
+                        />
+                    ) : (
+                        <div className="flex items-center justify-center w-full h-full text-gray-300">
+                            <svg className="w-16 h-16" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
+                        </div>
+                    )}
                 </div>
-              )}
-
-              <div className="relative flex py-2 items-center">
-                <div className="flex-grow border-t border-gray-300"></div>
-                <span className="flex-shrink-0 mx-4 text-gray-400 text-xs">または S3キーを直接指定</span>
-                <div className="flex-grow border-t border-gray-300"></div>
-              </div>
-
-              <div>
-                <input
-                  id="profileImageKey"
-                  type="text"
-                  className="w-full rounded border border-gray-300 px-3 py-2 text-sm placeholder-gray-400"
-                  value={profileImageKey}
-                  onChange={(e) => setProfileImageKey(e.target.value)}
-                  placeholder="例: profile-images/my-photo.jpg (任意)"
-                  disabled={loading || !!file} 
-                />
-              </div>
+                <p className="text-xs text-gray-400">
+                    {previewUrl ? '新しい画像のプレビュー' : '画像が選択されていません'}
+                </p>
             </div>
 
+            {/* ファイル選択 */}
+            <div>
+                <label className="block text-sm font-bold text-gray-900 mb-2">
+                    画像ファイルを選択
+                </label>
+                <input
+                    id="profileImageFile"
+                    type="file"
+                    accept="image/*"
+                    disabled={loading}
+                    onChange={handleFileChange}
+                    className="block w-full text-sm text-gray-500
+                        file:mr-4 file:py-2.5 file:px-4
+                        file:rounded-full file:border-0
+                        file:text-xs file:font-bold
+                        file:bg-black file:text-white
+                        hover:file:bg-gray-800
+                        cursor-pointer
+                        border border-gray-200 rounded-xl bg-gray-50
+                    "
+                />
+            </div>
+
+            {/* メッセージエリア */}
             {successMessage && (
-              <div className="p-3 bg-green-50 border border-green-200 text-green-700 text-sm rounded">
-                ✅ {successMessage}
+              <div className="p-4 bg-green-50 border border-green-200 text-green-700 rounded-xl text-sm font-bold flex items-center gap-2 animate-in fade-in slide-in-from-top-2">
+                <span>✅</span> {successMessage}
               </div>
             )}
 
             {errorMessage && (
-              <div className="p-3 bg-red-50 border border-red-200 text-red-700 text-sm rounded">
-                ⚠️ {errorMessage}
+              <div className="p-4 bg-red-50 border border-red-200 text-red-700 rounded-xl text-sm font-bold flex items-center gap-2 animate-in fade-in slide-in-from-top-2">
+                <span>⚠️</span> {errorMessage}
               </div>
             )}
 
-            <div className="flex items-center justify-between gap-3 pt-4 border-t border-gray-100">
-              <Link href="/users/me" className="text-sm text-gray-600 hover:text-black hover:underline">
-                キャンセル
+            {/* アクションボタン */}
+            <div className="pt-4 border-t border-gray-100 flex items-center justify-end gap-3">
+              <Link
+                href="/users/me"
+                className="px-6 py-3 rounded-full text-sm font-bold text-gray-600 hover:bg-gray-100 transition-colors"
+              >
+                マイページへ戻る
               </Link>
+
               <button
                 type="submit"
-                disabled={loading}
-                className={`inline-flex items-center justify-center px-6 py-2.5 text-sm font-bold rounded text-white transition-colors
-                  ${loading ? 'bg-gray-400 cursor-not-allowed' : 'bg-blue-600 hover:bg-blue-700 shadow-sm'}
+                disabled={loading || !file}
+                className={`
+                    px-8 py-3 rounded-full text-sm font-bold text-white shadow-lg transition-all transform hover:-translate-y-0.5
+                    ${(loading || !file)
+                        ? 'bg-gray-300 cursor-not-allowed shadow-none' 
+                        : 'bg-black hover:bg-gray-800 hover:shadow-xl'
+                    }
                 `}
               >
-                {loading ? '処理中...' : '保存する'}
+                {loading ? 'Uploading...' : 'Save Changes'}
               </button>
             </div>
           </form>

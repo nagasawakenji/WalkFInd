@@ -25,7 +25,6 @@ export default function EditBioPage() {
     try {
       console.log(`[BioUpdate] Mode: ${IS_LOCAL ? 'Local' : 'Production'}`);
 
-      // ★ 修正ポイント: 環境によってパスを切り替える
       // ローカル: LocalUserProfileController (/api/v1/profile/bio)
       // 本番: UserProfileController (/api/v1/me/profile/bio)
       const endpointPath = IS_LOCAL ? '/profile/bio' : '/me/profile/bio';
@@ -33,6 +32,9 @@ export default function EditBioPage() {
       await api.patch(endpointPath, { bio });
 
       setSuccessMessage('自己紹介文を更新しました。');
+      
+      // 少し待ってから戻ると親切かもしれません（任意）
+      // setTimeout(() => router.push('/users/me'), 1500);
     } catch (err: unknown) {
       if (isAxiosError(err)) {
         const status = err.response?.status;
@@ -61,69 +63,103 @@ export default function EditBioPage() {
   const maxLength = 300;
 
   return (
-    <main className="min-h-screen bg-[#F5F5F5] font-sans text-[#333]">
-      <nav className="bg-black text-white h-12 flex items-center px-4 lg:px-8 mb-8 shadow-sm">
-        <span className="font-bold text-lg tracking-tight">WalkFind</span>
+    <main className="min-h-screen bg-gray-50 font-sans text-gray-800 pb-20">
+      
+      {/* Fixed Navbar (H-16) */}
+      <nav className="fixed top-0 w-full z-50 bg-white/80 backdrop-blur-md border-b border-gray-200 h-16 transition-all">
+        <div className="max-w-2xl mx-auto px-4 h-full flex items-center justify-between">
+            <div className="flex items-center gap-2">
+                <Link href="/" className="font-bold text-xl tracking-tight text-black hover:text-gray-600 transition-colors">
+                  WalkFind
+                </Link>
+                <span className="text-gray-300">/</span>
+                <span className="text-sm font-medium text-black">Edit Bio</span>
+            </div>
+        </div>
       </nav>
 
-      <div className="max-w-2xl mx-auto px-4 pb-12">
-        <div className="bg-white rounded border border-gray-300 p-6 md:p-8">
-          <h1 className="text-xl md:text-2xl font-bold mb-4 border-b border-gray-200 pb-3">
-            自己紹介文の編集
-            {IS_LOCAL && <span className="ml-2 text-xs text-blue-600 border border-blue-600 px-1 rounded">LOCAL</span>}
-          </h1>
-
-          <p className="text-sm text-gray-600 mb-4">
-            プロフィールに表示される自己紹介文を編集できます。
-          </p>
-
-          <form onSubmit={handleSubmit} className="space-y-4">
+      <div className="pt-24 max-w-2xl mx-auto px-4">
+        
+        {/* ヘッダーエリア */}
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-end mb-8 gap-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1" htmlFor="bio">
+                <h1 className="text-3xl font-extrabold text-black tracking-tight mb-2 flex items-center gap-2">
+                    Edit Bio
+                    {IS_LOCAL && <span className="text-[10px] bg-blue-100 text-blue-700 px-2 py-1 rounded border border-blue-200">LOCAL</span>}
+                </h1>
+                <p className="text-gray-500 text-sm">
+                   プロフィールに表示される自己紹介文を編集します。
+                </p>
+            </div>
+            
+            <button
+                type="button"
+                onClick={() => router.back()}
+                className="px-5 py-2.5 bg-white border border-gray-200 text-gray-700 text-sm font-bold rounded-full hover:bg-gray-100 transition-colors shadow-sm"
+            >
+                キャンセル
+            </button>
+        </div>
+
+        {/* フォームカード */}
+        <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden p-6 md:p-8">
+          <form onSubmit={handleSubmit} className="space-y-6">
+            
+            {/* テキストエリア */}
+            <div className="space-y-2">
+              <label className="block text-sm font-bold text-gray-900" htmlFor="bio">
                 自己紹介文
               </label>
-              <textarea
-                id="bio"
-                className="w-full min-h-[120px] rounded border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                value={bio}
-                onChange={(e) => setBio(e.target.value.slice(0, maxLength))}
-                maxLength={maxLength}
-                placeholder="例：都内の大学生です。週末に写真を撮りながら街歩きをするのが好きです。"
-                disabled={loading}
-              />
-              <div className="mt-1 text-xs text-gray-500 text-right">
-                {bio.length} / {maxLength} 文字
+              <div className="relative">
+                <textarea
+                    id="bio"
+                    className="w-full min-h-[160px] rounded-xl border border-gray-300 px-4 py-3 text-base focus:outline-none focus:ring-2 focus:ring-black/20 focus:border-black transition-all resize-none bg-gray-50 focus:bg-white"
+                    value={bio}
+                    onChange={(e) => setBio(e.target.value.slice(0, maxLength))}
+                    maxLength={maxLength}
+                    placeholder="例：何かを見つけるのが好きです。週末は発見を求めて色々歩き回っています。よろしくねー"
+                    disabled={loading}
+                />
+                <div className="absolute bottom-3 right-3 text-xs font-mono font-bold text-gray-400 bg-white/80 px-2 py-0.5 rounded-full backdrop-blur-sm border border-gray-100">
+                    {bio.length} / {maxLength}
+                </div>
               </div>
             </div>
 
+            {/* メッセージエリア */}
             {successMessage && (
-              <p className="text-sm text-green-600 bg-green-50 border border-green-200 rounded px-3 py-2">
-                ✅ {successMessage}
-              </p>
+              <div className="p-4 bg-green-50 border border-green-200 text-green-700 rounded-xl text-sm font-bold flex items-center gap-2 animate-in fade-in slide-in-from-top-2">
+                <span>✅</span> {successMessage}
+              </div>
             )}
 
             {errorMessage && (
-              <p className="text-sm text-red-600 bg-red-50 border border-red-200 rounded px-3 py-2">
-                ⚠️ {errorMessage}
-              </p>
+              <div className="p-4 bg-red-50 border border-red-200 text-red-700 rounded-xl text-sm font-bold flex items-center gap-2 animate-in fade-in slide-in-from-top-2">
+                <span>⚠️</span> {errorMessage}
+              </div>
             )}
 
-            <div className="flex items-center justify-between gap-3 pt-2 border-t border-gray-100 mt-4">
+            {/* アクションボタン */}
+            <div className="pt-4 border-t border-gray-100 flex items-center justify-end gap-3">
               <Link
                 href="/users/me"
-                className="text-sm text-gray-600 hover:text-black hover:underline"
+                className="px-6 py-3 rounded-full text-sm font-bold text-gray-600 hover:bg-gray-100 transition-colors"
               >
-                キャンセル
+                マイページへ戻る
               </Link>
 
               <button
                 type="submit"
                 disabled={loading}
-                className={`inline-flex items-center justify-center px-6 py-2.5 text-sm font-bold rounded text-white transition-colors
-                  ${loading ? 'bg-gray-400 cursor-not-allowed' : 'bg-blue-600 hover:bg-blue-700 shadow-sm'}
+                className={`
+                    px-8 py-3 rounded-full text-sm font-bold text-white shadow-lg transition-all transform hover:-translate-y-0.5
+                    ${loading 
+                        ? 'bg-gray-300 cursor-not-allowed shadow-none' 
+                        : 'bg-black hover:bg-gray-800 hover:shadow-xl'
+                    }
                 `}
               >
-                {loading ? '更新中…' : '保存する'}
+                {loading ? 'Updating...' : 'Save Changes'}
               </button>
             </div>
           </form>

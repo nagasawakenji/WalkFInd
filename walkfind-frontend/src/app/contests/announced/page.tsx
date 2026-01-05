@@ -3,7 +3,7 @@ export const dynamic = "force-dynamic";
 import Link from "next/link";
 import { apiClient } from "@/lib/axios";
 import { ContestResponse } from "@/types";
-import ContestIcon from "@/components/ContestIcon"; // ★ 追加
+import ContestIcon from "@/components/ContestIcon";
 
 // ページング付きで結果発表済みコンテストを取得
 async function getAnnouncedContests(page: number, size: number): Promise<ContestResponse[]> {
@@ -22,122 +22,138 @@ type PageProps = {
 };
 
 export default async function AnnouncedContestPage({ searchParams }: PageProps) {
-  // Next.js 15対応: searchParamsをawaitする
   const resolvedSearchParams = await searchParams;
   const page = Number(resolvedSearchParams?.page ?? "0");
-  const size = 18; // グリッド表示に合わせて調整
+  const size = 18;
 
   const contests = await getAnnouncedContests(page, size);
 
+  // 次のページがあるかどうかの簡易判定（取得数がsizeと同じなら次がある可能性が高い）
+  const hasNextPage = contests.length === size;
+
   return (
-    <main className="min-h-screen bg-[#F5F5F5] font-sans text-[#333]">
-      {/* 共通ナビゲーションバー */}
-      <nav className="bg-black text-white h-12 flex items-center px-4 lg:px-8 mb-8 shadow-sm">
-        <Link href="/" className="font-bold text-lg tracking-tight hover:text-gray-300">
-          WalkFind
-        </Link>
-        <span className="mx-2 text-gray-500">/</span>
-        <span className="text-sm text-white font-medium">Announced Contests</span>
+    <main className="min-h-screen bg-gray-50 font-sans text-gray-800 pb-20">
+      
+      {/* 共通ナビゲーションバー（統一デザイン） */}
+      <nav className="fixed top-0 w-full z-50 bg-white/80 backdrop-blur-md border-b border-gray-200 h-16 transition-all">
+        <div className="max-w-7xl mx-auto px-4 h-full flex items-center justify-between">
+          <Link href="/" className="font-bold text-xl tracking-tight text-black hover:text-gray-600 transition-colors">
+             WalkFind
+          </Link>
+          <div className="text-sm font-medium text-gray-500">
+             Archive
+          </div>
+        </div>
       </nav>
 
-      <div className="max-w-7xl mx-auto px-4 pb-12">
+      <div className="pt-24 max-w-7xl mx-auto px-4">
         
-        {/* 大きな白いパネル（画像のような外枠） */}
-        <div className="bg-white border border-gray-200 rounded-sm p-8 shadow-sm">
-            
-          {/* パネル内ヘッダー */}
-          <div className="mb-8 border-b border-gray-100 pb-4">
-            <h1 className="text-2xl font-bold text-black flex items-center gap-2">
-              結果発表済みコンテスト
+        {/* ヘッダーエリア */}
+        <div className="mb-12 text-center md:text-left border-b border-gray-200 pb-8">
+            <h1 className="text-3xl md:text-4xl font-extrabold text-black mb-3 tracking-tight">
+               Past Results
             </h1>
-          </div>
+            <p className="text-gray-500 max-w-2xl text-sm md:text-base">
+               過去に開催されたfindです。<br className="hidden md:inline"/>
+               過去のfindから何が見つかったかをみてみましょう!!
+            </p>
+        </div>
 
-          {contests.length === 0 ? (
-            <div className="py-20 text-center text-gray-500">
-              <p className="text-lg mb-2">結果発表済みのコンテストはありません。</p>
-              <p className="text-sm font-mono text-gray-400">No archived contests found.</p>
+        {contests.length === 0 ? (
+            <div className="py-24 text-center bg-white border border-dashed border-gray-300 rounded-xl">
+              <div className="text-4xl mb-4 text-gray-300">📂</div>
+              <p className="text-lg font-bold text-gray-700 mb-1">No Archives Found</p>
+              <p className="text-sm text-gray-500">結果発表済みのコンテストはまだありません。</p>
             </div>
-          ) : (
+        ) : (
             <>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {/* グリッドレイアウト */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 lg:gap-8">
                 {contests.map((contest) => (
-                  <div
+                  <Link
                     key={contest.contestId}
-                    className="bg-white border border-blue-200 rounded-sm p-1 hover:shadow-md transition-shadow duration-200 flex flex-col h-full"
+                    href={`/contests/announced/${contest.contestId}`} // 詳細ページへ
+                    className="group flex flex-col bg-white border border-gray-200 rounded-xl overflow-hidden hover:shadow-xl hover:border-black/10 transition-all duration-300 transform hover:-translate-y-1"
                   >
-                    {/* アイコンエリア */}
-                    <div className="h-40 bg-gray-50 border border-gray-100 flex items-center justify-center rounded-sm mb-3">
-                      {/* ★ アイコンがあれば画像、なければ📷（ContestIcon内でフォールバック） */}
-                      <ContestIcon iconUrl={contest.iconUrl ?? null} size={80} />
+                    {/* アイコン/画像エリア */}
+                    <div className="h-48 bg-gray-100 relative flex items-center justify-center overflow-hidden">
+                       <div className="transition-transform duration-500 group-hover:scale-110">
+                          <ContestIcon iconUrl={contest.iconUrl ?? null} size={100} />
+                       </div>
+                       
+                       {/* ステータスバッジ（右上） */}
+                       <div className="absolute top-3 right-3 bg-gray-900/80 backdrop-blur-sm text-white text-[10px] font-bold px-2.5 py-1 rounded-full border border-white/10">
+                          FINISHED
+                       </div>
                     </div>
 
-                    <div className="px-3 pb-4 flex flex-col flex-grow">
-                      {/* ステータスと日付 */}
-                      <div className="flex justify-between items-center mb-3 text-xs">
-                        <span className="px-2 py-1 font-bold text-white bg-green-600 rounded-sm">
-                          {contest.status}
-                        </span>
-                        <span className="text-gray-500 font-mono">
-                          End: {new Date(contest.endDate).toLocaleDateString()}
-                        </span>
+                    <div className="p-6 flex flex-col flex-grow">
+                      <div className="flex-grow">
+                          {/* 日付 */}
+                          <div className="text-xs font-mono text-gray-400 mb-2">
+                             Ended: {new Date(contest.endDate).toLocaleDateString()}
+                          </div>
+                          
+                          {/* タイトル */}
+                          <h2 className="text-xl font-bold text-gray-900 mb-2 leading-tight group-hover:text-black transition-colors line-clamp-2">
+                             {contest.name}
+                          </h2>
+                          
+                          {/* テーマ */}
+                          <p className="text-sm text-gray-500 line-clamp-2">
+                             <span className="font-bold text-gray-400 mr-1 text-xs uppercase tracking-wider">Theme:</span>
+                             {contest.theme}
+                          </p>
                       </div>
                       
-                      {/* タイトル（リンク） */}
-                      <Link 
-                        href={`/contests/announced/${contest.contestId}`}
-                        className="text-lg font-bold text-blue-600 hover:underline mb-4 line-clamp-2 block"
-                      >
-                        {contest.name}
-                      </Link>
-                      
-                      {/* 点線区切り */}
-                      <div className="border-t border-dashed border-gray-300 my-2 w-full"></div>
-
-                      {/* テーマ表示 */}
-                      <div className="mt-1 text-sm text-gray-600">
-                        <span className="font-bold text-gray-400 uppercase mr-2 text-xs">THEME:</span>
-                        {contest.theme}
+                      {/* 下部アクション */}
+                      <div className="mt-6 pt-4 border-t border-gray-100 flex items-center justify-between">
+                         <span className="text-xs font-bold text-gray-400 group-hover:text-black transition-colors">
+                            View Results
+                         </span>
+                         <span className="w-6 h-6 rounded-full bg-gray-100 flex items-center justify-center text-gray-400 group-hover:bg-black group-hover:text-white transition-all">
+                            &rarr;
+                         </span>
                       </div>
                     </div>
-                  </div>
+                  </Link>
                 ))}
               </div>
 
-              {/* ページング */}
-              <div className="flex justify-center items-center gap-2 mt-12 pt-8 border-t border-gray-100">
+              {/* ページネーション（モダン円形） */}
+              <div className="flex justify-center items-center gap-3 mt-16 pb-8">
                 {page > 0 ? (
                   <Link
                     href={`/contests/announced?page=${page - 1}`}
-                    className="px-4 py-2 bg-white border border-gray-300 text-sm font-medium rounded-sm hover:bg-gray-50 text-gray-700 transition"
+                    className="w-10 h-10 flex items-center justify-center bg-white border border-gray-200 rounded-full hover:bg-black hover:text-white hover:border-black transition-all shadow-sm"
                   >
-                    &laquo; Prev
+                    &larr;
                   </Link>
                 ) : (
-                  <button disabled className="px-4 py-2 bg-gray-100 border border-gray-200 text-sm font-medium rounded-sm text-gray-400 cursor-not-allowed">
-                    &laquo; Prev
+                  <button disabled className="w-10 h-10 flex items-center justify-center bg-gray-50 border border-gray-200 rounded-full text-gray-300 cursor-not-allowed">
+                    &larr;
                   </button>
                 )}
 
-                <div className="px-4 py-2 bg-white border border-gray-300 text-sm font-mono rounded-sm text-black min-w-[3rem] text-center">
-                  {page + 1}
+                <div className="text-sm font-mono font-bold text-gray-500">
+                   Page {page + 1}
                 </div>
 
-                {contests.length === size ? (
+                {hasNextPage ? (
                   <Link
                     href={`/contests/announced?page=${page + 1}`}
-                    className="px-4 py-2 bg-white border border-gray-300 text-sm font-medium rounded-sm hover:bg-gray-50 text-gray-700 transition"
+                    className="w-10 h-10 flex items-center justify-center bg-white border border-gray-200 rounded-full hover:bg-black hover:text-white hover:border-black transition-all shadow-sm"
                   >
-                    Next &raquo;
+                    &rarr;
                   </Link>
                 ) : (
-                  <button disabled className="px-4 py-2 bg-gray-100 border border-gray-200 text-sm font-medium rounded-sm text-gray-400 cursor-not-allowed">
-                    Next &raquo;
+                  <button disabled className="w-10 h-10 flex items-center justify-center bg-gray-50 border border-gray-200 rounded-full text-gray-300 cursor-not-allowed">
+                    &rarr;
                   </button>
                 )}
               </div>
             </>
-          )}
-        </div>
+        )}
       </div>
     </main>
   );

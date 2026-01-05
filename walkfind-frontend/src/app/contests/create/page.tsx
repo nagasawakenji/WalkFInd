@@ -6,7 +6,9 @@ import { useRouter } from 'next/navigation';
 import { isAxiosError } from 'axios';
 import { api } from '@/lib/api';
 
+// ----------------------
 // 型定義
+// ----------------------
 interface CreatingContestRequest {
     name: string;
     theme: string;
@@ -36,6 +38,9 @@ const isCreationContestStatus = (v: unknown): v is CreationContestStatus =>
   v === 'FAILED' ||
   v === 'INTERNAL_SEVER_ERROR';
 
+// ----------------------
+// Page Component
+// ----------------------
 export default function CreatingContestPage() {
     const router = useRouter();
     const [loading, setLoading] = useState(false);
@@ -102,7 +107,6 @@ export default function CreatingContestPage() {
                     return;
                 }
 
-                // バックエンドがCreatingContestResponse形式で返している場合はそれを優先
                 const data = error.response?.data as Partial<CreatingContestResponse> | undefined;
                 if (data && typeof data === 'object' && 'status' in data) {
                     const status = (data as { status?: unknown }).status;
@@ -116,7 +120,6 @@ export default function CreatingContestPage() {
                 } else {
                     setErrorMessage(`コンテストの作成に失敗しました: ${statusCode ?? 'unknown'}`);
                 }
-
                 return;
             }
 
@@ -138,7 +141,7 @@ export default function CreatingContestPage() {
             case 'INVALID_DATE':
                 setErrorMessage('開催期間が不正です。開始日は終了日より前である必要があります。');
                 break;
-            case 'INTERNAL_SEVER_ERROR': // Java側のスペル (SEVER) に合わせる
+            case 'INTERNAL_SEVER_ERROR':
                 setErrorMessage('サーバー内部エラーが発生しました。時間を置いて再度お試しください。');
                 break;
             case 'FAILED':
@@ -149,45 +152,61 @@ export default function CreatingContestPage() {
     };
 
     return (
-        <main className="min-h-screen bg-[#F5F5F5] font-sans text-[#333]">
-            {/* Top Nav (match other pages) */}
-            <nav className="bg-black text-white h-12 flex items-center px-4 lg:px-8 mb-8 shadow-sm">
-                <span className="font-bold text-lg tracking-tight">WalkFind</span>
-                <div className="ml-auto text-xs space-x-4">
-                    <Link href="/" className="hover:underline">
-                        ユーザー画面へ
-                    </Link>
-                    <button
-                        type="button"
-                        onClick={() => router.back()}
-                        className="hover:underline"
-                    >
-                        戻る
-                    </button>
+        <main className="min-h-screen bg-gray-50 font-sans text-gray-800 pb-20">
+            {/* Fixed Navbar (H-16) */}
+            <nav className="fixed top-0 w-full z-50 bg-white/80 backdrop-blur-md border-b border-gray-200 h-16 transition-all">
+                <div className="max-w-4xl mx-auto px-4 h-full flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                        <Link href="/" className="font-bold text-xl tracking-tight text-black hover:text-gray-600 transition-colors">
+                            WalkFind
+                        </Link>
+                        <span className="text-gray-300">/</span>
+                        <span className="text-sm font-medium text-black">Create</span>
+                    </div>
                 </div>
             </nav>
 
-            <div className="max-w-3xl mx-auto px-4 pb-12">
-                <div className="bg-white rounded border border-gray-300 p-6 md:p-8 shadow-sm">
-                    <h1 className="text-2xl font-bold mb-2 pb-2 border-b border-gray-200 text-black">
-                        コンテスト新規作成
-                    </h1>
-                    <p className="text-sm text-gray-600 mb-6">
-                        新しいテーマでフォトコンテストを開催しましょう。開催前に内容を確認してから公開できます。
-                    </p>
+            <div className="pt-24 max-w-3xl mx-auto px-4">
+                
+                {/* ページヘッダー */}
+                <div className="flex flex-col md:flex-row justify-between items-start md:items-end mb-8 gap-4">
+                    <div>
+                        <h1 className="text-3xl font-extrabold text-black tracking-tight mb-2">
+                            Create New Contest
+                        </h1>
+                        <p className="text-gray-500 text-sm">
+                            新しいfindを開催しましょう。<br className="hidden md:inline"/>
+                            テーマと期間を設定するだけで、すぐに募集を開始できます。
+                        </p>
+                    </div>
 
-                    {/* エラーメッセージ */}
+                    <button
+                        type="button"
+                        onClick={() => router.back()}
+                        className="px-5 py-2.5 bg-white border border-gray-200 text-gray-700 text-sm font-bold rounded-full hover:bg-gray-100 transition-colors shadow-sm"
+                    >
+                        キャンセル
+                    </button>
+                </div>
+
+                {/* フォームパネル */}
+                <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
+                    {/* エラーメッセージエリア */}
                     {errorMessage && (
-                        <div className="mb-6 p-4 bg-red-50 border border-red-200 text-red-700 rounded">
-                            <div className="font-semibold mb-1">エラー</div>
-                            <p className="text-sm">{errorMessage}</p>
+                        <div className="p-4 bg-red-50 border-b border-red-100 flex items-start gap-3">
+                            <span className="text-red-500 text-xl">⚠️</span>
+                            <div>
+                                <p className="text-red-700 font-bold text-sm">作成できませんでした</p>
+                                <p className="text-red-600 text-xs mt-1">{errorMessage}</p>
+                            </div>
                         </div>
                     )}
 
-                    <form onSubmit={handleSubmit} className="space-y-6">
+                    <form onSubmit={handleSubmit} className="p-6 md:p-8 space-y-8">
+                        
                         {/* コンテスト名 */}
-                        <div>
-                            <label htmlFor="name" className="block text-sm font-semibold text-gray-700 mb-2">
+                        <div className="space-y-2">
+                            <label htmlFor="name" className="block text-sm font-bold text-gray-900">
                                 コンテスト名 <span className="text-red-500">*</span>
                             </label>
                             <input
@@ -197,43 +216,43 @@ export default function CreatingContestPage() {
                                 required
                                 value={formData.name}
                                 onChange={handleChange}
-                                placeholder="例: 第1回 下北沢お散歩フォトコンテスト"
-                                className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-black/10 text-black"
+                                placeholder="例: 道端の変な標識"
+                                className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-black/20 focus:border-black transition-all bg-gray-50 focus:bg-white text-base"
                             />
-                            <p className="text-xs text-gray-500 mt-1">
-                                他のコンテストと区別しやすい名称にすると参加者が迷いません。
+                            <p className="text-xs text-gray-400">
+                                他のコンテストと被らない、ユニークで分かりやすい名前を入力してください。
                             </p>
                         </div>
 
                         {/* テーマ */}
-                        <div>
-                            <label htmlFor="theme" className="block text-sm font-semibold text-gray-700 mb-2">
+                        <div className="space-y-2">
+                            <label htmlFor="theme" className="block text-sm font-bold text-gray-900">
                                 テーマ・詳細 <span className="text-red-500">*</span>
                             </label>
                             <textarea
                                 id="theme"
                                 name="theme"
                                 required
-                                rows={5}
+                                rows={6}
                                 value={formData.theme}
                                 onChange={handleChange}
-                                placeholder="募集する写真のテーマ、撮影ルール、NG事項などを入力してください"
-                                className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-black/10 resize-none text-black"
+                                placeholder="募集する写真のテーマ、撮影ルール、審査基準などを詳しく入力してください..."
+                                className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-black/20 focus:border-black transition-all bg-gray-50 focus:bg-white resize-none text-base leading-relaxed"
                             />
-                            <p className="text-xs text-gray-500 mt-1">
-                                参加者が誤解しないよう、具体例や禁止事項がある場合は明記してください。
+                            <p className="text-xs text-gray-400">
+                                参加者がどのような写真を撮ればよいか、具体的に記載しましょう。
                             </p>
                         </div>
 
                         {/* 開催期間 */}
-                        <div>
-                            <div className="text-sm font-semibold text-gray-700 mb-2">
-                                開催期間 <span className="text-red-500">*</span>
+                        <div className="p-5 bg-gray-50 rounded-xl border border-gray-100">
+                            <div className="text-sm font-bold text-gray-900 mb-4 flex items-center gap-2">
+                                📅 開催期間設定 <span className="text-red-500">*</span>
                             </div>
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                <div>
-                                    <label htmlFor="startDate" className="block text-xs text-gray-600 mb-1">
-                                        開始日時
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                <div className="space-y-2">
+                                    <label htmlFor="startDate" className="block text-xs font-bold text-gray-500 uppercase tracking-wider">
+                                        START DATE
                                     </label>
                                     <input
                                         type="datetime-local"
@@ -242,12 +261,12 @@ export default function CreatingContestPage() {
                                         required
                                         value={formData.startDate}
                                         onChange={handleChange}
-                                        className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-black/10 text-black"
+                                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-black/20 bg-white"
                                     />
                                 </div>
-                                <div>
-                                    <label htmlFor="endDate" className="block text-xs text-gray-600 mb-1">
-                                        終了日時
+                                <div className="space-y-2">
+                                    <label htmlFor="endDate" className="block text-xs font-bold text-gray-500 uppercase tracking-wider">
+                                        END DATE
                                     </label>
                                     <input
                                         type="datetime-local"
@@ -256,31 +275,36 @@ export default function CreatingContestPage() {
                                         required
                                         value={formData.endDate}
                                         onChange={handleChange}
-                                        className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-black/10 text-black"
+                                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-black/20 bg-white"
                                     />
                                 </div>
                             </div>
                         </div>
 
-                        {/* ボタン */}
-                        <div className="pt-2 flex items-center justify-end gap-3">
-                            <button
-                                type="button"
-                                onClick={() => router.back()}
-                                className="px-4 py-2 text-sm rounded border border-gray-400 text-gray-700 hover:bg-gray-50"
-                            >
-                                キャンセル
-                            </button>
+                        {/* 送信エリア */}
+                        <div className="pt-4 border-t border-gray-100 flex items-center justify-end gap-4">
+                            <p className="text-xs text-gray-400">
+                                ※ 作成後は編集できない項目があります。内容をよくご確認ください。
+                            </p>
                             <button
                                 type="submit"
                                 disabled={loading}
-                                className={`px-4 py-2 text-sm rounded border text-center transition-colors ${
-                                    loading
-                                        ? 'border-gray-300 bg-gray-200 text-gray-500 cursor-not-allowed'
-                                        : 'border-blue-600 bg-blue-600 text-white hover:bg-blue-700'
-                                }`}
+                                className={`
+                                    px-8 py-3 rounded-full font-bold text-sm shadow-lg transition-all transform hover:-translate-y-0.5
+                                    ${loading
+                                        ? 'bg-gray-200 text-gray-400 cursor-not-allowed shadow-none'
+                                        : 'bg-black text-white hover:bg-gray-800 hover:shadow-xl'
+                                    }
+                                `}
                             >
-                                {loading ? '作成中...' : '作成する'}
+                                {loading ? (
+                                    <span className="flex items-center gap-2">
+                                        <span className="w-4 h-4 border-2 border-gray-400 border-t-white rounded-full animate-spin"></span>
+                                        Creating...
+                                    </span>
+                                ) : (
+                                    'Create Contest'
+                                )}
                             </button>
                         </div>
                     </form>
