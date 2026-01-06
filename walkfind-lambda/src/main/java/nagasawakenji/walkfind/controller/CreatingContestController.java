@@ -23,7 +23,7 @@ public class CreatingContestController {
     private final CreatingContestService creatingContestService;
     private final AuthService authService;
 
-    @PreAuthorize("hasRole('admin')")
+
     @PostMapping
     public ResponseEntity<CreatingContestResponse> createContest(
             @RequestBody CreatingContestRequest request

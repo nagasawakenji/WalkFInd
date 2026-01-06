@@ -9,11 +9,11 @@ manifest_hash = ""
 packagetype = "Zip"
 functions = ["UserApiFunction", "ResultCalculationFunction", "ContestStatusBatchHandler"]
 
-[function_build_definitions.c8c0341f-66a9-4721-9a9f-2fc5cbbf3fe3]
+[function_build_definitions.0d366d72-2802-4196-adb4-38c67939d5d1]
 packagetype = "Image"
 functions = ["EmbeddingWorkerFunctionV2"]
 
-[function_build_definitions.c8c0341f-66a9-4721-9a9f-2fc5cbbf3fe3.metadata]
+[function_build_definitions.0d366d72-2802-4196-adb4-38c67939d5d1.metadata]
 DockerTag = "python3.11-v1"
 DockerContext = "/Users/ishidzuka/Downloads/walkfind/walkfind-ml-worker"
 Dockerfile = "Dockerfile"

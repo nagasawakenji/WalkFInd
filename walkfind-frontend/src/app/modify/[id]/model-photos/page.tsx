@@ -427,7 +427,7 @@ export default function AdminModelPhotosPage() {
                         {/* File Input */}
                         <input
                             type="file"
-                            accept="image/*"
+                            accept="image/jpeg, image/png, image/webp, image/gif"
                             onChange={handleFileChange}
                             className="block w-full text-xs text-gray-500
                                 file:mr-4 file:py-2 file:px-4
