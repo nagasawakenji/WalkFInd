@@ -1,14 +1,80 @@
+// src/app/contests/announced/page.tsx
 export const dynamic = "force-dynamic";
 
 import Link from "next/link";
-import { apiClient } from "@/lib/axios";
+import { api } from "@/lib/api"; // 統一のため @/lib/api を使用
 import { ContestResponse } from "@/types";
-import ContestIcon from "@/components/ContestIcon";
 
-// ページング付きで結果発表済みコンテストを取得
-async function getAnnouncedContests(page: number, size: number): Promise<ContestResponse[]> {
+// ----------------------
+// 型定義 (ContestListPageと同様)
+// ----------------------
+type ContestWithIcon = ContestResponse & {
+  iconUrl: string | null;
+};
+
+interface ContestIconResponse {
+  contestId: number;
+  iconUrl: string | null;
+}
+
+interface ContestIconListResponse {
+  icons: ContestIconResponse[];
+  totalCount: number;
+}
+
+type AnnouncedContestApiResponse = ContestResponse[] | { contests: ContestResponse[] };
+
+// ----------------------
+// データ取得ロジック
+// ----------------------
+async function getAnnouncedContestsWithIcons(page: number, size: number): Promise<ContestWithIcon[]> {
   try {
-    return await apiClient.get(`/contests/announced?page=${page}&size=${size}`);
+    // ① 一覧取得
+    const res = await api.get<AnnouncedContestApiResponse>(`/contests/announced`, {
+      params: { page, size }
+    });
+    
+    // データ取り出し（配列かオブジェクトかを判定）
+    let contests: ContestResponse[] = [];
+    if (Array.isArray(res.data)) {
+      contests = res.data;
+    } else if ('contests' in res.data && Array.isArray(res.data.contests)) {
+      contests = res.data.contests;
+    }
+
+    if (!contests || contests.length === 0) {
+      return [];
+    }
+
+    // ② アイコン取得のためのIDリスト作成
+    const idsParam = contests.map((c) => c.contestId).join(',');
+    let iconMap = new Map<number, string | null>();
+
+    // ③ アイコン一括取得
+    if (idsParam) {
+      try {
+        const iconRes = await api.get<ContestIconListResponse>('/contest-icons', {
+           params: { ids: idsParam } 
+        });
+        
+        if (iconRes.data && Array.isArray(iconRes.data.icons)) {
+          iconMap = new Map(
+            iconRes.data.icons.map((icon) => [icon.contestId, icon.iconUrl])
+          );
+        }
+      } catch (e) {
+        console.error("Failed to fetch icons:", e);
+      }
+    }
+
+    // ④ マージ
+    const merged: ContestWithIcon[] = contests.map((c) => ({
+      ...c,
+      iconUrl: iconMap.get(c.contestId) ?? null,
+    }));
+
+    return merged;
+
   } catch (error) {
     console.error("Failed to fetch announced contests:", error);
     return [];
@@ -26,15 +92,15 @@ export default async function AnnouncedContestPage({ searchParams }: PageProps) 
   const page = Number(resolvedSearchParams?.page ?? "0");
   const size = 18;
 
-  const contests = await getAnnouncedContests(page, size);
+  const contests = await getAnnouncedContestsWithIcons(page, size);
 
-  // 次のページがあるかどうかの簡易判定（取得数がsizeと同じなら次がある可能性が高い）
+  // 次のページがあるかどうかの簡易判定
   const hasNextPage = contests.length === size;
 
   return (
     <main className="min-h-screen bg-gray-50 font-sans text-gray-800 pb-20">
       
-      {/* 共通ナビゲーションバー（統一デザイン） */}
+      {/* 共通ナビゲーションバー */}
       <nav className="fixed top-0 w-full z-50 bg-white/80 backdrop-blur-md border-b border-gray-200 h-16 transition-all">
         <div className="max-w-7xl mx-auto px-4 h-full flex items-center justify-between">
           <Link href="/" className="font-bold text-xl tracking-tight text-black hover:text-gray-600 transition-colors">
@@ -61,7 +127,7 @@ export default async function AnnouncedContestPage({ searchParams }: PageProps) 
 
         {contests.length === 0 ? (
             <div className="py-24 text-center bg-white border border-dashed border-gray-300 rounded-xl">
-              <div className="text-4xl mb-4 text-gray-300">📂</div>
+              <div className="text-6xl mb-4">📂</div>
               <p className="text-lg font-bold text-gray-700 mb-1">No Archives Found</p>
               <p className="text-sm text-gray-500">結果発表済みのコンテストはまだありません。</p>
             </div>
@@ -72,14 +138,27 @@ export default async function AnnouncedContestPage({ searchParams }: PageProps) 
                 {contests.map((contest) => (
                   <Link
                     key={contest.contestId}
-                    href={`/contests/announced/${contest.contestId}`} // 詳細ページへ
+                    href={`/contests/announced/${contest.contestId}`} 
                     className="group flex flex-col bg-white border border-gray-200 rounded-xl overflow-hidden hover:shadow-xl hover:border-black/10 transition-all duration-300 transform hover:-translate-y-1"
                   >
-                    {/* アイコン/画像エリア */}
-                    <div className="h-48 bg-gray-100 relative flex items-center justify-center overflow-hidden">
-                       <div className="transition-transform duration-500 group-hover:scale-110">
-                          <ContestIcon iconUrl={contest.iconUrl ?? null} size={100} />
-                       </div>
+                    {/* アイコン/画像エリア（デザイン修正済） */}
+                    <div className="h-48 bg-gray-100 relative flex items-center justify-center overflow-hidden font-sans">
+                       
+                       {/* アイコンURLがある場合は画像、なければカメラ絵文字を表示 */}
+                       {contest.iconUrl ? (
+                         <div className="w-full h-full transition-transform duration-500 group-hover:scale-110">
+                            {/* eslint-disable-next-line @next/next/no-img-element */}
+                            <img 
+                              src={contest.iconUrl} 
+                              alt={contest.name} 
+                              className="w-full h-full object-cover"
+                            />
+                         </div>
+                       ) : (
+                         <span className="text-6xl transition-transform duration-500 group-hover:scale-110 select-none">
+                            📷
+                         </span>
+                       )}
                        
                        {/* ステータスバッジ（右上） */}
                        <div className="absolute top-3 right-3 bg-gray-900/80 backdrop-blur-sm text-white text-[10px] font-bold px-2.5 py-1 rounded-full border border-white/10">
@@ -120,7 +199,7 @@ export default async function AnnouncedContestPage({ searchParams }: PageProps) 
                 ))}
               </div>
 
-              {/* ページネーション（モダン円形） */}
+              {/* ページネーション */}
               <div className="flex justify-center items-center gap-3 mt-16 pb-8">
                 {page > 0 ? (
                   <Link
