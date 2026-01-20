@@ -31,8 +31,7 @@ public class AuthApplicationService {
     @Value("${aws.cognito.userPoolId:}")
     private String userPoolId;
 
-    // ★ 修正1: UserMapper を削除し、UserService を追加
-    // private final nagasawakenji.walkfind.infra.mybatis.mapper.UserMapper userMapper; // 削除
+
     private final UserService userService; // 追加
 
     @Transactional
