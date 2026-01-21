@@ -16,7 +16,7 @@ walkfind/
 ├── walkfind-web        ← ローカル開発用 Spring Boot Web アプリ
 ├── walkfind-lambda     ← AWS Lambda(SAM) 用 Spring Boot アプリ
 ├── walkfind-ml-worker  ← 類似度判定システム
-└── walkfind-frontend       ← フロントエンド
+└── walkfind-frontend   ← フロントエンド
 ```
 ### ✔ walkfind-common
 
@@ -68,27 +68,14 @@ AWS で動作する サーバーレス（Lambda）版の Spring Boot アプリ
 ### ✔ walkfind-frontend
 
 アプリのuiやフロント側のロジックを実装  
-•   react による fetching
+•   vercelによる自動CD機能(mainブランチにmerge時に実行)   
+•   ReactによるUIの実装
 
 ## 🧱 Architecture Overview
 
 WalkFind バックエンド全体の構成図は以下です。
 
-```
-User
-  │
-  ▼
-AWS Cognito（メール認証）
-  │IdToken
-  ▼
-API Gateway  ── (認証不要・必要エンドポイントを明確に分離)
-  │
-  ▼
-AWS Lambda（Spring Boot）
-  │
-  ├── Supabase（PostgreSQL） ← Flywayでマイグレーション
-  └── Amazon S3（写真保存）
-```
+![Image](https://github.com/user-attachments/assets/79be1140-4da8-412f-a772-a36d4c602c2a)
 
 ## 🛠️ Tech Stack
 
@@ -278,6 +265,7 @@ FLYWAY_PASSWORD=<supabase-password>
 
 ## 今後の予定
 ・テストコードの拡充
+・ログ監視設計の追記
 
 
 
